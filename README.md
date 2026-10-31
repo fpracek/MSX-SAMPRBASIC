@@ -1,32 +1,32 @@
 # SamPr Basic
 
-**Un ambiente di sviluppo BASIC completo che gira sull'MSX: editor a schermo intero, compilatore che produce vero codice Z80, assembler in linea e debugger — senza bisogno di un PC.**
+**A complete BASIC development environment that runs on the MSX itself: a full-screen editor, a compiler that produces real Z80 machine code, an inline assembler and a debugger — no PC required.**
 
-Scrivi il programma, premi **F5**: in pochi secondi il programma gira alla velocità della macchina. Nato per i videogiochi (grafica bitmap, sprite, suono a 3 voci, joystick, mapper, cartucce), funziona su **MSX1** (editor a 40 colonne) e **MSX2** (80 colonne) con **MSX-DOS 1 e 2**.
+Write your program, press **F5**: a few seconds later it runs at the speed of the machine. Built with games in mind (bitmap graphics, sprites, 3-voice sound, joysticks, mappers, cartridges), it works on **MSX1** (40-column editor) and **MSX2** (80 columns) under **MSX-DOS 1 and 2**.
 
 *SamPr Basic 1.0 — © 2026 Fausto Pracek*
 
-| Editor con parole chiave colorate | Aiuto in linea (F6 / F7) |
+| Editor with colored keywords | Online help (F6 / F7) |
 |:--:|:--:|
-| ![Editor](doc/img/editor.png) | ![Aiuto](doc/img/help_topic.png) |
+| ![Editor](doc/img/editor.png) | ![Help](doc/img/help_topic.png) |
 
-| Apertura file con cartelle | Debugger con variabili locali |
+| File browser with folders | Debugger with local variables |
 |:--:|:--:|
-| ![Apertura file](doc/img/browser.png) | ![Debugger](doc/img/debugger.png) |
+| ![File browser](doc/img/browser.png) | ![Debugger](doc/img/debugger.png) |
 
-## Perché
+## Why SamPr Basic
 
-- **Compilatore vero, sull'MSX.** Ogni istruzione BASIC diventa codice macchina: niente interprete. Il compilatore stesso è un programma Z80 di 15 KB che gira sotto MSX-DOS.
-- **Un linguaggio moderno ma piccolo.** Interi a 16 bit e stringhe; `SUB`/`FUNCTION` con parametri, variabili locali e ricorsione; `IF/ELSEIF`, `SELECT CASE`, `DO/LOOP`; etichette **o** numeri di riga (a scelta con `OPTION`); maiuscole e minuscole equivalenti. Niente virgola mobile: per un gioco costerebbe solo velocità e memoria.
-- **Tutto ciò che serve a un gioco è un'istruzione:** `SCREEN 5-8` (anche 10-12), `PSET/LINE/CIRCLE/PAINT/DRAW`, `COPY`, pagine e scroll hardware, `PALETTE`, sprite 8x8/16x16 con colori per riga, `PLAY` MML a tre voci, `SOUND`, `STICK/STRIG`, accesso diretto alla VRAM a 17 bit.
-- **Assembler Z80 in linea** con `__ASM … __ENDASM` (tutte le istruzioni documentate, variabili e etichette BASIC visibili dal blocco).
-- **Debugger passo-passo** (`OPTION DEBUG`): breakpoint, variabili globali e **locali/parametri** (`>`), comando **E** per interrogare qualsiasi variabile (`V(3)`, `N$`…).
-- **Tre uscite con una sola opzione** (`OPTION TARGET`), senza impostazioni in conflitto.
-- **Cartucce ROM da 16 KB a 2 MB** (ASCII8, ASCII16, Konami, SCC) con il codice su più **segmenti**, uno per file, e segmenti già compilati `.BIN` per assembler e dati.
-- **File su disco** (testo e ad accesso casuale), **mapper RAM**, `BLOAD/BSAVE`, cartelle di MSX-DOS 2.
-- **Manuale PDF** di oltre 40 pagine e aiuto in linea con tutte le istruzioni.
+- **A real compiler, on the MSX.** Every BASIC statement becomes machine code: no interpreter. The compiler itself is a 15 KB Z80 program that runs under MSX-DOS.
+- **A modern but small language.** 16-bit integers and strings; `SUB`/`FUNCTION` with parameters, local variables and recursion; `IF/ELSEIF`, `SELECT CASE`, `DO/LOOP`; labels **or** line numbers (your choice, via `OPTION`); case-insensitive. No floating point: for a game it would only cost speed and memory.
+- **Everything a game needs is one statement:** `SCREEN 5-8` (also 10-12), `PSET/LINE/CIRCLE/PAINT/DRAW`, `COPY`, hardware pages and scrolling, `PALETTE`, 8x8/16x16 sprites with per-line colors, 3-voice MML `PLAY`, `SOUND`, `STICK/STRIG`, direct 17-bit VRAM access.
+- **Inline Z80 assembler** with `__ASM … __ENDASM` (every documented instruction; BASIC variables and labels are visible from the block).
+- **Step debugger** (`OPTION DEBUG`): breakpoints, global variables and **locals/parameters** (`>`), and an **E** command to inspect any variable (`V(3)`, `N$`…).
+- **Three kinds of output from a single option** (`OPTION TARGET`), so there are no conflicting settings.
+- **ROM cartridges from 16 KB to 2 MB** (ASCII8, ASCII16, Konami, SCC) with code split over several **segments**, one file each, plus precompiled `.BIN` segments for assembler code and data.
+- **Disk files** (text and random access), **RAM mapper**, `BLOAD/BSAVE`, MSX-DOS 2 folders.
+- **PDF manual** of over 40 pages and an online help covering every statement.
 
-## Esempio
+## Example
 
 ```basic
 OPTION LABELS
@@ -34,74 +34,74 @@ CLS
 FOR i = 1 TO 10
   PRINT "7 x"; i; "="; 7 * i
 NEXT i
-CALL saluta("MSX")
+CALL greet("MSX")
 
-SUB saluta(n$)
-  PRINT "Ciao, "; n$
+SUB greet(n$)
+  PRINT "Hello, "; n$
 END SUB
 ```
 
-## Avvio rapido
+## Quick start
 
-1. Copia sul disco MSX-DOS i file della cartella [`dist/`](dist): `SAMPRBAS.COM` (editor), `QBC.COM` (compilatore), `RT.BIN` (runtime) e, se servono, `RTD.BIN` (debug), `QASM.OVL` (assembler), `QBCR.COM`+`RTROM.BIN` (cartucce), `QBCB.COM`+`RTBIN.BIN` (BIN), `HELP.TXT`+`HELP.IDX` (aiuto).
-2. Avvia `SAMPRBAS PROVA` (apre `PROVA.SPB`, o lo crea con quel nome). Con MSX-DOS 2 si può dare un percorso: `SAMPRBAS \GIOCHI\PROVA`.
-3. Scrivi il programma e premi **F5**. Alla fine del programma l'editor si riapre; se c'è un errore il cursore è sulla riga sbagliata.
+1. Copy the files of the [`dist/`](dist) folder to your MSX-DOS disk: `SAMPRBAS.COM` (editor), `QBC.COM` (compiler), `RT.BIN` (runtime) and, as needed, `RTD.BIN` (debugger), `QASM.OVL` (assembler), `QBCR.COM`+`RTROM.BIN` (cartridges), `QBCB.COM`+`RTBIN.BIN` (BIN programs), `HELP.TXT`+`HELP.IDX` (online help).
+2. Start `SAMPRBAS MYPROG` (it opens `MYPROG.SPB`, or creates it with that name). Under MSX-DOS 2 you can give a path: `SAMPRBAS \GAMES\MYPROG`.
+3. Write your program and press **F5**. When the program ends the editor reopens; on a compile error the cursor is placed on the offending line.
 
-Per provare tutto sul PC con [openMSX](https://openmsx.org): `avvia_nms8250.bat` (MSX2, 80 colonne) o `avvia_hb75p.bat` (Sony HB-75P, MSX1, 40 colonne) montano il disco di prova [`disco_prova/`](disco_prova) (con i programmi d'esempio `.SPB`; servono anche `MSXDOS.SYS` e `COMMAND.COM`, che non sono inclusi).
+To try everything on a PC with [openMSX](https://openmsx.org): `avvia_nms8250.bat` (MSX2, 80 columns) or `avvia_hb75p.bat` (Sony HB-75P, MSX1, 40 columns) mount the sample disk [`disco_prova/`](disco_prova) (with the example `.SPB` programs; `MSXDOS.SYS` and `COMMAND.COM` are also needed and are not included).
 
-## Che cosa produce: `OPTION TARGET`
+## What it produces: `OPTION TARGET`
 
-| Valore | Risultato |
+| Value | Result |
 |---|---|
-| `DOS` (predefinito) | `NOME.COM` per MSX-DOS, con i file su disco |
-| `BIN` | `NOME.BIN` per MSX-BASIC: `CLEAR 200,&H83FF` e `BLOAD "NOME.BIN",R`, senza DOS |
-| `ROM_16`, `ROM_32` | cartuccia semplice da 16 o 32 KB |
-| `ROM_ASCII8`, `ROM_ASCII16` | cartuccia a banchi ASCII |
-| `ROM_KONAMI`, `ROM_KONAMISCC` | cartuccia a banchi Konami (senza o con SCC) |
+| `DOS` (default) | `NAME.COM` for MSX-DOS, with disk files |
+| `BIN` | `NAME.BIN` for MSX-BASIC: `CLEAR 200,&H83FF` then `BLOAD "NAME.BIN",R`, no DOS |
+| `ROM_16`, `ROM_32` | plain 16 or 32 KB cartridge |
+| `ROM_ASCII8`, `ROM_ASCII16` | ASCII bank-switched cartridge |
+| `ROM_KONAMI`, `ROM_KONAMISCC` | Konami bank-switched cartridge (without or with SCC) |
 
-### Cartucce su più file
+### Multi-file cartridges
 
-Un programma grande si scrive in un file per segmento, `NOME000.SPB` (principale, con le `OPTION`) e `NOME001.SPB`, `NOME002.SPB`… (5 caratteri + 3 cifre). Il compilatore li legge tutti e li collega in un'unica `NOME.ROM`; si preme F5 da qualunque file. Un `NOMEnnn.BIN` è un segmento già compilato (assembler, sprite, font) e viene inserito così com'è. In editor, **File ▸ Segment… (F8)** salva il file corrente e passa al segmento indicato.
+A large program is written with one file per segment: `NAME000.SPB` (main, holds the `OPTION`s) and `NAME001.SPB`, `NAME002.SPB`… (5 characters + 3 digits). The compiler reads them all and links them into one `NAME.ROM`; press F5 from any file. A `NAMEnnn.BIN` is an already compiled segment (assembler code, sprites, fonts) and is inserted as it is. In the editor, **File ▸ Segment… (F8)** saves the current file and switches to the requested segment.
 
 ## Editor
 
-Menu a tendina da tastiera (**Esc**, **F1–F4**) e col mouse; selezione, copia/incolla, annulla/ripeti, cerca/sostituisci; finestra di apertura con le cartelle (DOS 2) e salto con la lettera iniziale; **F5** compila ed esegue; **F6** aiuto sulla parola sotto il cursore; **F7** indice dell'aiuto; **F8** cambia segmento. I sorgenti hanno estensione **`.SPB`** (*SamPr Basic*); in *Save As* si digitano al massimo 8 caratteri.
+Drop-down menus from the keyboard (**Esc**, **F1–F4**) and with the mouse; selection, copy/paste, undo/redo, find/replace; a file window with folders (DOS 2) and jump-by-first-letter; **F5** compiles and runs; **F6** help on the word under the cursor; **F7** help index; **F8** change segment. Sources use the **`.SPB`** extension (*SamPr Basic*); *Save As* accepts up to 8 characters.
 
-## Documentazione
+## Documentation
 
-- **[Manuale d'uso e riferimento (PDF)](dist/SamPrBasic-Manuale.pdf)**: copertina, installazione, editor, linguaggio, ogni istruzione con sintassi ed esempio, assembler, debugger, cartucce, BIN, errori e limiti.
-- Aiuto in linea nell'editor (menu Help).
-- Dettagli di realizzazione: [`onmsx/README.md`](onmsx/README.md) (compilatore e runtime, stadi 1–27), [`editor/README.md`](editor/README.md) (editor), [`DESIGN-ONMSX.md`](DESIGN-ONMSX.md) (progetto).
-- Il PDF e `HELP.TXT`/`HELP.IDX` si generano dalla stessa sorgente: [`doc/`](doc) (`gen_pdf.py`, `gen_help.py`).
+- **[User manual and reference (PDF)](dist/SamPrBasic-Manual.pdf)**: cover, installation, editor, language, every statement with syntax and example, assembler, debugger, cartridges, BIN, errors and limits.
+- Online help in the editor (Help menu).
+- Implementation notes: [`onmsx/README.md`](onmsx/README.md) (compiler and runtime, stages 1–28), [`editor/README.md`](editor/README.md) (editor), [`DESIGN-ONMSX.md`](DESIGN-ONMSX.md) (design).
+- The PDF and `HELP.TXT`/`HELP.IDX` are generated from the same source: [`doc/`](doc) (`gen_pdf.py`, `gen_help.py`).
 
-## Compatibilità e collaudo
+## Compatibility and testing
 
-MSX1 e MSX2/2+/turbo R; MSX-DOS 1.03 e 2 (Nextor). Collaudato su [openMSX](https://openmsx.org) con Philips NMS 8250, Sony HB-75P (+ interfaccia disco), Panasonic FS-A1ST: centinaia di controlli automatici sugli schermi, i pixel della VRAM, i registri del PSG e i byte delle ROM prodotte. **Non è stato provato su un MSX reale.**
+MSX1 and MSX2/2+/turbo R; MSX-DOS 1.03 and 2 (Nextor). Tested on [openMSX](https://openmsx.org) with the Philips NMS 8250, Sony HB-75P (+ disk interface) and Panasonic FS-A1ST: hundreds of automatic checks on screens, VRAM pixels, PSG registers and the bytes of the ROMs produced. **It has not been tried on real MSX hardware.**
 
-Suite principali (richiedono openMSX, [sjasmplus](https://github.com/z00m128/sjasmplus) e Python 3 con `reportlab`/`Pillow` per i documenti):
+Main suites (they need openMSX, [sjasmplus](https://github.com/z00m128/sjasmplus) and Python 3, with `reportlab`/`Pillow` for the documents):
 
 ```
-cd onmsx  && python qtest.py        # compilatore (programmi DOS)
-cd onmsx  && python rtest.py        # cartucce ROM, tutti i mapper
-cd onmsx  && python mtest.py        # cartucce su più file, segmenti .BIN
-cd onmsx  && python btest.py        # programmi BIN (compila sotto DOS, esegue da MSX-BASIC)
-cd onmsx  && python gtest.py        # grafica, sprite, palette
-cd editor && python etest.py        # editor (e molte altre: esel, emenu, ecom, ehelp, ebrowse, eseg, edir…)
+cd onmsx  && python qtest.py        # compiler (DOS programs)
+cd onmsx  && python rtest.py        # ROM cartridges, every mapper
+cd onmsx  && python mtest.py        # multi-file cartridges, .BIN segments
+cd onmsx  && python btest.py        # BIN programs (compiled under DOS, run from MSX-BASIC)
+cd onmsx  && python gtest.py        # graphics, sprites, palette
+cd editor && python etest.py        # editor (and many more: esel, emenu, ecom, ehelp, ebrowse, eseg, edir…)
 ```
 
-## Struttura
+## Layout
 
-| Cartella | Contenuto |
+| Folder | Contents |
 |---|---|
-| [`onmsx/`](onmsx) | compilatore (`qbc.asm`), runtime (`rtcom.asm` e moduli), assembler in linea, debugger, test |
-| [`editor/`](editor) | editor (`editor.asm`, `fileio.asm`), aiuto, finestra dei file, test |
-| [`doc/`](doc) | manuale PDF, aiuto in linea, schermate, generatori |
-| [`dist/`](dist), [`disco_prova/`](disco_prova) | file da copiare sul disco MSX, programmi d'esempio |
+| [`onmsx/`](onmsx) | compiler (`qbc.asm`), runtime (`rtcom.asm` and modules), inline assembler, debugger, tests |
+| [`editor/`](editor) | editor (`editor.asm`, `fileio.asm`), help, file window, tests |
+| [`doc/`](doc) | PDF manual, online help, screenshots, generators |
+| [`dist/`](dist), [`disco_prova/`](disco_prova) | files to copy to the MSX disk, example programs |
 
-## Limiti noti
+## Known limits
 
-Solo interi a 16 bit (niente virgola mobile; l'implementazione sperimentale è nel tag git `float-archive`). Sorgente di circa 12,5 KB per file (15 KB per le cartucce), programma compilato fino a 16 KB (le cartucce hanno più segmenti). I programmi BIN non hanno file, mapper RAM e debugger.
+16-bit integers only (no floating point; an experimental implementation lives in the git tag `float-archive`). Source of about 12.5 KB per file (15 KB for cartridges), compiled program up to 16 KB (cartridges have several segments). BIN programs have no files, RAM mapper or debugger.
 
 ---
 
-*Il progetto è nato come prototipo cross Python → Z80: il vecchio README è in [`doc/PROTOTIPO-PYTHON.md`](doc/PROTOTIPO-PYTHON.md).*
+*The project started as a cross prototype Python → Z80: the old README is kept in [`doc/PROTOTIPO-PYTHON.md`](doc/PROTOTIPO-PYTHON.md).*

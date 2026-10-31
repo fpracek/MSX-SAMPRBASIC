@@ -1,4 +1,4 @@
-' VRAM a 128 KB, palette e joystick
+' 128 KB VRAM, palette and joystick
 SCREEN 5
 VBANK 1
 VFILL 0, 1000, 255

@@ -1,4 +1,4 @@
-' MSXQB - esempio
+' SamPr Basic - example
 INPUT "Name"; n$
 DIM sq(5)
 FOR i = 1 TO 5 : sq(i) = i * i : NEXT i

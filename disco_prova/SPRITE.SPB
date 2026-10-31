@@ -1,4 +1,4 @@
-' SamPr Basic - sprite 16x16 (una faccina)
+' SamPr Basic - 16x16 sprite (a smiley)
 COLOR 15, 1
 SCREEN 5, 2
 CLS

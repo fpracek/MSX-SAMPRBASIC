@@ -1,4 +1,4 @@
-' Pagine, COPY, operatori logici, DATA/READ (SCREEN 5)
+' Pages, COPY, logical operators, DATA/READ (SCREEN 5)
 COLOR 15, 0
 SCREEN 5
 SET PAGE 0, 1

@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Capitoli narrativi del manuale. Ogni capitolo: (titolo, [blocchi]); blocco = ('p', testo) | ('h', sottotitolo) | ('code', testo) | ('ul', [voci]) | ('table', [righe], [larghezze]) | ('img', file, didascalia)."""
+"""Narrative chapters of the manual. Each chapter: (title, [blocks]); block = ('p', text) | ('h', heading) | ('code', text) | ('ul', [items]) | ('table', [rows], [widths]) | ('img', file, caption)."""
 
 CHAPTERS = []
 
@@ -8,228 +8,228 @@ def CH(title, blocks):
     CHAPTERS.append((title, blocks))
 
 
-CH('Presentazione', [
-    ('p', "<b>SamPr Basic</b> è un ambiente di sviluppo completo che gira <b>direttamente su un computer MSX</b>: un editor a schermo intero, un compilatore BASIC "
-          "che produce vero codice macchina Z80 e un debugger, tutto senza bisogno di un PC. Si scrive il programma, si preme <b>F5</b> e dopo pochi secondi "
-          "il programma gira alla velocità della macchina."),
-    ('h', 'Che cosa offre'),
+CH('Introduction', [
+    ('p', "<b>SamPr Basic</b> is a complete development environment that runs <b>directly on an MSX computer</b>: a full-screen editor, a BASIC compiler "
+          "that produces real Z80 machine code and a debugger, all without needing a PC. You write the program, press <b>F5</b> and after a few seconds "
+          "the program runs at the speed of the machine."),
+    ('h', 'What it offers'),
     ('ul', [
-        "<b>Compilatore vero</b>: ogni istruzione BASIC diventa codice Z80; il risultato è un file .COM (MSX-DOS) o una cartuccia .ROM.",
-        "<b>Editor</b> con menu a tendina (anche da tastiera), mouse, selezione, copia/incolla, annulla/ripeti, ricerca e sostituzione, colori per le parole chiave.",
-        "<b>Linguaggio strutturato</b>: SUB e FUNCTION con parametri, variabili locali e ricorsione; IF/ELSEIF, SELECT CASE, DO/LOOP; etichette o numeri di riga.",
-        "<b>Pensato per i giochi</b>: grafica bitmap MSX2, sprite, accesso diretto alla VRAM, scorrimento, joystick, suono a tre voci con il linguaggio MML.",
-        "<b>Assembler Z80 in linea</b> con <font face='Courier'>__ASM ... __ENDASM</font> per le parti critiche.",
-        "<b>Debugger</b> passo-passo con breakpoint e variabili (<font face='Courier'>OPTION DEBUG</font>).",
-        "<b>Cartucce ROM</b> da 16 KB a 2 MB (ASCII8, ASCII16, KONAMI, SCC) con codice su più segmenti e dati incorporati.",
-        "<b>File su disco</b> di testo e ad accesso casuale; <b>mapper RAM</b> per grandi quantità di dati; BLOAD/BSAVE.",
-        "<b>MSX1 e MSX2</b>: su MSX1 l'editor lavora a 40 colonne, su MSX2 a 80, scelta automatica.",
-        "<b>Aiuto in linea</b> (F6 sulla parola sotto il cursore, F7 per l'indice) con tutte le istruzioni documentate.",
+        "<b>A real compiler</b>: every BASIC statement becomes Z80 code; the result is a .COM file (MSX-DOS) or a .ROM cartridge.",
+        "<b>Editor</b> with pull-down menus (also from the keyboard), mouse, selection, copy/paste, undo/redo, find and replace, keyword colors.",
+        "<b>Structured language</b>: SUB and FUNCTION with parameters, local variables and recursion; IF/ELSEIF, SELECT CASE, DO/LOOP; labels or line numbers.",
+        "<b>Built for games</b>: MSX2 bitmap graphics, sprites, direct VRAM access, scrolling, joystick, three-voice sound with the MML language.",
+        "<b>Inline Z80 assembler</b> with <font face='Courier'>__ASM ... __ENDASM</font> for the critical parts.",
+        "Step-by-step <b>debugger</b> with breakpoints and variables (<font face='Courier'>OPTION DEBUG</font>).",
+        "<b>ROM cartridges</b> from 16 KB to 2 MB (ASCII8, ASCII16, KONAMI, SCC) with code spread over several segments and embedded data.",
+        "<b>Disk files</b>, text and random access; <b>RAM mapper</b> for large amounts of data; BLOAD/BSAVE.",
+        "<b>MSX1 and MSX2</b>: on MSX1 the editor works in 40 columns, on MSX2 in 80, chosen automatically.",
+        "<b>Online help</b> (F6 on the word under the cursor, F7 for the index) with all statements documented.",
     ]),
-    ('h', 'Filosofia'),
-    ('p', "Il linguaggio è un BASIC moderno ma volutamente piccolo: interi a 16 bit e stringhe, nessun numero in virgola mobile (che per i videogiochi "
-          "costerebbe velocità e memoria senza dare vantaggi). Tutto ciò che serve a un gioco — sprite, scroll, suono, joystick, mapper — è una "
-          "istruzione o una funzione. Le maiuscole e le minuscole sono equivalenti ovunque."),
+    ('h', 'Philosophy'),
+    ('p', "The language is a modern but deliberately small BASIC: 16-bit integers and strings, no floating-point numbers (which for video games "
+          "would cost speed and memory without any benefit). Everything a game needs — sprites, scrolling, sound, joystick, mapper — is a "
+          "statement or a function. Upper and lower case are equivalent everywhere."),
 ])
 
-CH('Installazione e avvio', [
-    ('p', "Servono un MSX (MSX1 con almeno 64 KB di RAM o MSX2) con unità a dischi e MSX-DOS 1 o 2 (o Nextor). Si copiano sul disco i file seguenti:"),
-    ('table', [['File', 'Funzione'],
-               ['SAMPRBAS.COM', "L'editor: si avvia con <font face='Courier'>SAMPRBAS NOME.SPB</font>"],
-               ['QBC.COM', 'Il compilatore (lanciato da F5)'],
-               ['RT.BIN', 'Il runtime del programma compilato'],
-               ['RTD.BIN', 'Runtime con debugger (per OPTION DEBUG)'],
-               ['QASM.OVL', "L'assemblatore in linea (per __ASM)"],
-               ['QBCR.COM, RTROM.BIN, RTROMD.BIN', 'Per produrre cartucce ROM'],
-               ['QBCB.COM, RTBIN.BIN', 'Per produrre programmi BIN per MSX-BASIC'],
-               ['HELP.TXT, HELP.IDX', "L'aiuto in linea (facoltativi)"]], [150, 330]),
-    ('p', "Avviare l'editor con <font face='Courier'>SAMPRBAS</font> (programma nuovo) oppure <font face='Courier'>SAMPRBAS PROVA.SPB</font>. Sull'MSX1 il DOS chiede la data all'avvio: "
-          "premere Invio. Sul PC si può provare tutto con l'emulatore openMSX: nella cartella del progetto ci sono "
-          "<font face='Courier'>avvia_nms8250.bat</font> (MSX2, 80 colonne) e <font face='Courier'>avvia_hb75p.bat</font> (Sony HB-75P MSX1, 40 colonne), che montano il disco di prova."),
-    ('h', 'File dei programmi: estensione .SPB'),
-    ('p', "I sorgenti hanno estensione <b>.SPB</b> (SamPr Basic). Avviando <font face='Courier'>SAMPRBAS PROVA</font> l'editor apre PROVA.SPB se esiste; "
-          "altrimenti parte con un file nuovo che ha già quel nome (l'estensione .SPB si aggiunge da sola se manca). In <b>Save As</b> si digitano al massimo "
-          "8 caratteri e l'editor aggiunge .SPB. Il programma compilato prende lo stesso nome con estensione .COM (o .ROM per le cartucce)."),
-    ('h', 'Primo programma'),
-    ('code', 'PRINT "Ciao MSX!"\nFOR i = 1 TO 5\n  PRINT i; " x 2 ="; i * 2\nNEXT i'),
-    ('p', "Scrivere il programma nell'editor e premere <b>F5</b>. Alla fine l'esecuzione attende un tasto e riporta all'editor. Se c'è un errore, l'editor si "
-          "riapre con il cursore sulla riga sbagliata e il messaggio nella barra del titolo."),
+CH('Installation and start', [
+    ('p', "You need an MSX (MSX1 with at least 64 KB of RAM, or MSX2) with a disk drive and MSX-DOS 1 or 2 (or Nextor). Copy the following files to the disk:"),
+    ('table', [['File', 'Purpose'],
+               ['SAMPRBAS.COM', "The editor: start it with <font face='Courier'>SAMPRBAS NAME.SPB</font>"],
+               ['QBC.COM', 'The compiler (launched by F5)'],
+               ['RT.BIN', 'The runtime of the compiled program'],
+               ['RTD.BIN', 'Runtime with debugger (for OPTION DEBUG)'],
+               ['QASM.OVL', 'The inline assembler (for __ASM)'],
+               ['QBCR.COM, RTROM.BIN, RTROMD.BIN', 'To produce ROM cartridges'],
+               ['QBCB.COM, RTBIN.BIN', 'To produce BIN programs for MSX-BASIC'],
+               ['HELP.TXT, HELP.IDX', 'The online help (optional)']], [150, 330]),
+    ('p', "Start the editor with <font face='Courier'>SAMPRBAS</font> (new program) or <font face='Courier'>SAMPRBAS TEST.SPB</font>. On MSX1 DOS asks for the date at startup: "
+          "press Enter. On a PC you can try everything with the openMSX emulator: the project folder contains "
+          "<font face='Courier'>avvia_nms8250.bat</font> (MSX2, 80 columns) and <font face='Courier'>avvia_hb75p.bat</font> (Sony HB-75P MSX1, 40 columns), which mount the test disk."),
+    ('h', 'Program files: the .SPB extension'),
+    ('p', "Source files have the extension <b>.SPB</b> (SamPr Basic). When you start <font face='Courier'>SAMPRBAS TEST</font> the editor opens TEST.SPB if it exists; "
+          "otherwise it starts with a new file that already has that name (the .SPB extension is added automatically if missing). In <b>Save As</b> you type at most "
+          "8 characters and the editor adds .SPB. The compiled program gets the same name with extension .COM (or .ROM for cartridges)."),
+    ('h', 'First program'),
+    ('code', 'PRINT "Hello MSX!"\nFOR i = 1 TO 5\n  PRINT i; " x 2 ="; i * 2\nNEXT i'),
+    ('p', "Type the program in the editor and press <b>F5</b>. At the end the run waits for a key and returns to the editor. If there is an error, the editor "
+          "reopens with the cursor on the wrong line and the message in the title bar."),
 ])
 
-CH("L'editor", [
-    ('p', "L'editor ha una barra dei menu in alto (<b>File Edit Find Help Run</b>), l'area di testo con i numeri di riga, la barra di scorrimento e una riga di stato "
-          "con posizione del cursore e nome del file. Funziona con tastiera e con mouse (se presente)."),
-    ('img', 'editor.png', "L'editor su MSX2 (80 colonne): le parole chiave sono evidenziate."),
-    ('h', 'Menu da tastiera'),
-    ('table', [['Tasto', 'Azione'],
-               ['Esc', 'Apre il menu File; chiude un menu aperto'],
-               ['F1 F2 F3 F4', 'Aprono File, Edit, Find, Help'],
-               ['Sinistra / Destra', 'Con un menu aperto: passa al menu vicino'],
-               ['Su / Giù, Invio', 'Scelgono la voce'],
-               ['Lettera evidenziata', 'Attiva la voce (es. N = New, O = Open)'],
-               ['F5', 'Compila ed esegue il programma'],
-               ['F6', "Aiuto sulla parola sotto il cursore"],
-               ['F7', "Indice dell'aiuto"]], [150, 330]),
-    ('h', 'Modifica del testo'),
-    ('table', [['Tasto', 'Azione'],
-               ['Frecce, Home, End, PgUp, PgDn', 'Spostamento del cursore'],
-               ['Shift + frecce', 'Selezione'],
-               ['Ctrl+C / Ctrl+X / Ctrl+V', 'Copia, taglia, incolla'],
-               ['Ctrl+Z / Ctrl+Y', 'Annulla / ripeti'],
-               ['Ctrl+F / Ctrl+G / Ctrl+T', 'Cerca / cerca ancora / sostituisci'],
-               ['Ctrl+S / Ctrl+W', 'Salva / salva con nome'],
-               ['Ctrl+O / Ctrl+Q', 'Apri / esci']], [200, 280]),
-    ('p', "Le parole chiave del BASIC sono evidenziate in giallo (solo su MSX2). Le righe lunghe scorrono orizzontalmente. Salvando, l'editor sovrascrive il file in "
-          "posizione e non salva se il testo non è cambiato; F5 senza modifiche rilancia il programma senza ricompilare."),
-    ('h', 'Aprire un file: la finestra dei file'),
-    ('p', "File &gt; Open (Ctrl+O) mostra una finestra con tutti i file <b>.SPB</b> della directory corrente, in ordine alfabetico. Con MSX-DOS 2 compaiono anche le "
-          "<b>cartelle</b> (fra parentesi quadre, <font face='Courier'>[GIOCHI]</font>, e <font face='Courier'>[..]</font> per salire) e si naviga fra di esse; il percorso corrente è "
-          "nel titolo. Con MSX-DOS 1 non esistono cartelle e si vedono solo i file."),
-    ('table', [['Tasto', 'Azione'],
-               ['Frecce', 'Spostano la selezione (due colonne su MSX1, quattro su MSX2)'],
-               ['PgUp / PgDn, Home', 'Pagina precedente / successiva, prima voce'],
-               ['Una lettera', "Salta alla prima voce che inizia con quella lettera"],
-               ['Invio', 'Apre il file o entra nella cartella'],
-               ['Esc', 'Chiude la finestra senza aprire nulla']], [150, 330]),
-    ('img', 'browser.png', "La finestra di apertura: tutti i file .SPB della directory, in ordine alfabetico."),
-    ('h', 'Salvare con nome'),
-    ('p', "File &gt; Save As (Ctrl+W) chiede il nome: <b>al massimo 8 caratteri</b>; l'estensione .SPB è aggiunta dall'editor (se si digita un'estensione viene sostituita). "
-          "Anche F5 su un programma senza nome chiede il nome nello stesso modo."),
-    ('img', 'menu_file.png', "Il menu File, con la voce Segment... (F8)."),
-    ('h', 'Progetti a segmenti: File > Segment (F8)'),
-    ('p', "Per le cartucce a segmenti (vedi il capitolo sulle cartucce) ogni segmento è un file <b>NOME000.SPB</b>, <b>NOME001.SPB</b>, ... "
-          "(5 caratteri più 3 cifre). File &gt; Segment... (tasto <b>F8</b>) chiede il numero del segmento, anche senza zeri davanti (<font face='Courier'>7</font> equivale a 007): "
-          "l'editor <b>salva il file corrente</b>, poi cerca e apre nella stessa directory il file con quel numero. Se il file non esiste, oppure è un segmento <b>.BIN</b> (che non si può aprire), l'editor lo dice con un messaggio e il file attivo resta quello di prima. La voce non è utilizzabile se il file corrente non ha ancora un nome o se il nome non è di 5 caratteri più 3 cifre: in quel caso non si sta lavorando a segmenti. Un segmento nuovo si crea con File &gt; New e Save As (NOME005, ...)."),
-    ('h', 'Il menu Help'),
-    ('ul', ["<b>Index (F7)</b>: l'elenco di tutti gli argomenti.",
-            "<b>Topic...</b>: chiede il nome di un argomento (PRINT, ASM, DEBUG, OPTION...).",
-            "<b>On word (F6)</b>: documenta la parola sotto il cursore.",
-            "<b>Shortcuts</b>: riepilogo dei tasti.",
-            "<b>About</b>: finestra centrata con la cornice dei menu, <i>SamPr Basic 1.0 — 2026 Fausto Pracek</i> e il tasto OK; si chiude con Invio, Esc o un clic su OK."]),
-    ('img', 'menu_help.png', "Il menu Help."),
-    ('img', 'help_topic.png', "L'aiuto sull'istruzione PRINT."),
-    ('img', 'about.png', "La finestra About, con la cornice dei menu e il tasto OK."),
-    ('p', "Nel visore dell'aiuto: frecce e PgUp/PgDn scorrono, Esc chiude. Il testo viene dai file HELP.TXT e HELP.IDX nella directory corrente: HELP.TXT è un normale "
-          "file di testo ed è modificabile; HELP.IDX è l'indice (nome, posizione, lunghezza) rigenerato dallo strumento <font face='Courier'>doc/gen_help.py</font>."),
+CH("The editor", [
+    ('p', "The editor has a menu bar at the top (<b>File Edit Find Help Run</b>), the text area with line numbers, the scroll bar and a status line "
+          "with cursor position and file name. It works with the keyboard and with the mouse (if present)."),
+    ('img', 'editor.png', "The editor on MSX2 (80 columns): keywords are highlighted."),
+    ('h', 'Keyboard menus'),
+    ('table', [['Key', 'Action'],
+               ['Esc', 'Opens the File menu; closes an open menu'],
+               ['F1 F2 F3 F4', 'Open File, Edit, Find, Help'],
+               ['Left / Right', 'With a menu open: switches to the adjacent menu'],
+               ['Up / Down, Enter', 'Choose the item'],
+               ['Highlighted letter', 'Activates the item (e.g. N = New, O = Open)'],
+               ['F5', 'Compiles and runs the program'],
+               ['F6', "Help on the word under the cursor"],
+               ['F7', "Help index"]], [150, 330]),
+    ('h', 'Editing text'),
+    ('table', [['Key', 'Action'],
+               ['Arrows, Home, End, PgUp, PgDn', 'Cursor movement'],
+               ['Shift + arrows', 'Selection'],
+               ['Ctrl+C / Ctrl+X / Ctrl+V', 'Copy, cut, paste'],
+               ['Ctrl+Z / Ctrl+Y', 'Undo / redo'],
+               ['Ctrl+F / Ctrl+G / Ctrl+T', 'Find / find again / replace'],
+               ['Ctrl+S / Ctrl+W', 'Save / save as'],
+               ['Ctrl+O / Ctrl+Q', 'Open / quit']], [200, 280]),
+    ('p', "BASIC keywords are highlighted in yellow (MSX2 only). Long lines scroll horizontally. When saving, the editor overwrites the file in "
+          "place and does not save if the text has not changed; F5 without changes reruns the program without recompiling."),
+    ('h', 'Opening a file: the file window'),
+    ('p', "File &gt; Open... (Ctrl+O) shows a window with all the <b>.SPB</b> files of the current directory, in alphabetical order. With MSX-DOS 2 the "
+          "<b>folders</b> also appear (in square brackets, <font face='Courier'>[GAMES]</font>, and <font face='Courier'>[..]</font> to go up) and you can navigate among them; the current path is "
+          "in the title. With MSX-DOS 1 there are no folders and only files are shown."),
+    ('table', [['Key', 'Action'],
+               ['Arrows', 'Move the selection (two columns on MSX1, four on MSX2)'],
+               ['PgUp / PgDn, Home', 'Previous / next page, first entry'],
+               ['A letter', "Jumps to the first entry starting with that letter"],
+               ['Enter', 'Opens the file or enters the folder'],
+               ['Esc', 'Closes the window without opening anything']], [150, 330]),
+    ('img', 'browser.png', "The open window: all the .SPB files of the directory, in alphabetical order."),
+    ('h', 'Saving with a name'),
+    ('p', "File &gt; Save As... (Ctrl+W) asks for the name: <b>at most 8 characters</b>; the .SPB extension is added by the editor (if you type an extension it is replaced). "
+          "F5 on an unnamed program also asks for the name in the same way."),
+    ('img', 'menu_file.png', "The File menu, with the Segment... item (F8)."),
+    ('h', 'Segment projects: File > Segment (F8)'),
+    ('p', "For segmented cartridges (see the chapter on cartridges) each segment is a file <b>NAME000.SPB</b>, <b>NAME001.SPB</b>, ... "
+          "(5 characters plus 3 digits). File &gt; Segment... (key <b>F8</b>) asks for the segment number, even without leading zeros (<font face='Courier'>7</font> is the same as 007): "
+          "the editor <b>saves the current file</b>, then looks for and opens the file with that number in the same directory. If the file does not exist, or is a <b>.BIN</b> segment (which cannot be opened), the editor says so with a message and the active file stays the previous one. The item cannot be used if the current file has no name yet or if the name is not 5 characters plus 3 digits: in that case you are not working with segments. A new segment is created with File &gt; New and Save As... (NAME005, ...)."),
+    ('h', 'The Help menu'),
+    ('ul', ["<b>Index (F7)</b>: the list of all topics.",
+            "<b>Topic...</b>: asks for a topic name (PRINT, ASM, DEBUG, OPTION...).",
+            "<b>On word (F6)</b>: documents the word under the cursor.",
+            "<b>Shortcuts</b>: summary of the keys.",
+            "<b>About</b>: a centered window with the menu frame, <i>SamPr Basic 1.0 — 2026 Fausto Pracek</i> and the OK button; it closes with Enter, Esc or a click on OK."]),
+    ('img', 'menu_help.png', "The Help menu."),
+    ('img', 'help_topic.png', "Help on the PRINT statement."),
+    ('img', 'about.png', "The About window, with the menu frame and the OK button."),
+    ('p', "In the help viewer: arrows and PgUp/PgDn scroll, Esc closes. The text comes from the files HELP.TXT and HELP.IDX in the current directory: HELP.TXT is a plain "
+          "text file and can be edited; HELP.IDX is the index (name, position, length) regenerated by the <font face='Courier'>doc/gen_help.py</font> tool."),
 ])
 
-CH('Il linguaggio in breve', [
-    ('p', "Un programma è una sequenza di istruzioni, una per riga (o più, separate da <font face='Courier'>:</font>). I commenti iniziano con "
-          "<font face='Courier'>REM</font> o con l'apostrofo."),
-    ('h', 'Tipi e variabili'),
-    ('p', "Interi a 16 bit con segno e stringhe fino a 255 caratteri. Le variabili non vanno dichiarate: valgono 0 o stringa vuota. Gli array si dichiarano con DIM."),
-    ('code', 'n = 12 : m = &HFF : b = &B101\nnome$ = "Sam"\nDIM v(10), t$(5)\nv(3) = n * 2\nt$(1) = nome$ + "!"'),
-    ('h', 'Strutture di controllo'),
-    ('code', 'IF n > 10 THEN PRINT "grande" ELSE PRINT "piccolo"\n\nFOR i = 1 TO 10 STEP 2 : PRINT i; : NEXT i\n\nSELECT CASE n\n  CASE 1 TO 5 : PRINT "basso"\n  CASE ELSE : PRINT "alto"\nEND SELECT'),
-    ('h', 'Routine'),
-    ('code', 'FUNCTION fatt(n)\n  IF n <= 1 THEN\n    fatt = 1\n  ELSE\n    fatt = n * fatt(n - 1)\n  END IF\nEND FUNCTION\n\nPRINT fatt(7)'),
-    ('h', 'Etichette o numeri'),
-    ('p', "Il programma può usare etichette (<font face='Courier'>inizio:</font>) o numeri di riga; la direttiva OPTION sceglie il modo: NUMBERED, LABELS o MIXED (predefinita)."),
+CH('The language at a glance', [
+    ('p', "A program is a sequence of statements, one per line (or several, separated by <font face='Courier'>:</font>). Comments start with "
+          "<font face='Courier'>REM</font> or with an apostrophe."),
+    ('h', 'Types and variables'),
+    ('p', "Signed 16-bit integers and strings up to 255 characters. Variables do not need to be declared: they are 0 or the empty string. Arrays are declared with DIM."),
+    ('code', 'n = 12 : m = &HFF : b = &B101\nname$ = "Sam"\nDIM v(10), t$(5)\nv(3) = n * 2\nt$(1) = name$ + "!"'),
+    ('h', 'Control structures'),
+    ('code', 'IF n > 10 THEN PRINT "big" ELSE PRINT "small"\n\nFOR i = 1 TO 10 STEP 2 : PRINT i; : NEXT i\n\nSELECT CASE n\n  CASE 1 TO 5 : PRINT "low"\n  CASE ELSE : PRINT "high"\nEND SELECT'),
+    ('h', 'Routines'),
+    ('code', 'FUNCTION fact(n)\n  IF n <= 1 THEN\n    fact = 1\n  ELSE\n    fact = n * fact(n - 1)\n  END IF\nEND FUNCTION\n\nPRINT fact(7)'),
+    ('h', 'Labels or numbers'),
+    ('p', "The program can use labels (<font face='Courier'>start:</font>) or line numbers; the OPTION directive chooses the mode: NUMBERED, LABELS or MIXED (default)."),
 ])
 
-CH('Assembler in linea', [
-    ('p', "Per le parti che devono essere velocissime si può scrivere direttamente in assembler Z80, fra le righe <b>__ASM</b> e <b>__ENDASM</b>. "
-          "Il compilatore carica un piccolo assemblatore (QASM.OVL) che traduce il blocco in codice macchina inserito nel programma."),
-    ('code', '__ASM\n  ld hl,(conta)    ; la variabile BASIC "conta"\n  inc hl\n  ld (conta),hl\n  jp fine          ; salta all\'etichetta BASIC "fine"\n__ENDASM'),
-    ('h', 'Regole'),
-    ('ul', ["Tutte le istruzioni Z80 documentate; commenti con <font face='Courier'>;</font>.",
-            "Numeri: <font face='Courier'>123, $7F, 0x7F, 7FH, %101, 101B, 'a'</font>; <font face='Courier'>$</font> è l'indirizzo corrente.",
-            "Direttive: DB/DEFB, DW/DEFW, DS/DEFS, EQU.",
-            "Un nome non definito nel blocco è una <b>variabile BASIC globale</b> (anche stringa) o, nei salti, un'<b>etichetta BASIC</b>.",
-            "JR e DJNZ solo verso etichette locali.",
-            "Si possono modificare tutti i registri tranne <b>IX</b> (frame delle routine); lo stack va lasciato in pari.",
-            "Il debugger non si ferma dentro i blocchi. Funziona anche nelle cartucce.",
-            "Errori 17-20: sintassi, valore fuori campo, simbolo doppio / __ENDASM mancante, QASM.OVL non trovato."]),
+CH('Inline assembler', [
+    ('p', "For the parts that must be very fast you can write Z80 assembler directly, between the lines <b>__ASM</b> and <b>__ENDASM</b>. "
+          "The compiler loads a small assembler (QASM.OVL) that translates the block into machine code inserted into the program."),
+    ('code', '__ASM\n  ld hl,(count)    ; the BASIC variable "count"\n  inc hl\n  ld (count),hl\n  jp done          ; jump to the BASIC label "done"\n__ENDASM'),
+    ('h', 'Rules'),
+    ('ul', ["All documented Z80 instructions; comments with <font face='Courier'>;</font>.",
+            "Numbers: <font face='Courier'>123, $7F, 0x7F, 7FH, %101, 101B, 'a'</font>; <font face='Courier'>$</font> is the current address.",
+            "Directives: DB/DEFB, DW/DEFW, DS/DEFS, EQU.",
+            "A name not defined in the block is a <b>global BASIC variable</b> (also a string) or, in jumps, a <b>BASIC label</b>.",
+            "JR and DJNZ only to local labels.",
+            "All registers may be modified except <b>IX</b> (routine frame); the stack must be left balanced.",
+            "The debugger does not stop inside the blocks. It also works in cartridges.",
+            "Errors 17-20: syntax, value out of range, duplicate symbol / missing __ENDASM, QASM.OVL not found."]),
 ])
 
-CH('Il debugger', [
-    ('p', "Aggiungere <font face='Courier'>OPTION DEBUG</font> in testa al programma e premere F5. Il compilatore usa il runtime con debugger: il programma parte "
-          "<b>fermo sulla prima istruzione</b> e si controlla con la tastiera. Un programma senza OPTION DEBUG non paga nulla."),
-    ('img', 'debugger.png', "Il debugger fermo dentro una SUB: parametri e locali (con >), poi le globali."),
-    ('table', [['Tasto', 'Azione'],
-               ['Spazio, S, Invio', 'Esegue una istruzione'],
-               ['R', 'Esegue fino al prossimo breakpoint'],
-               ['B numero Invio', 'Mette o toglie un breakpoint (solo Invio = riga corrente; 0 = li toglie tutti)'],
-               ['C', 'Toglie tutti i breakpoint'],
-               ['E', 'Chiede il nome di una variabile (anche locale, parametro, elemento di array come V(3), stringa come N$) e ne mostra il valore'],
-               ['V', 'Pagina successiva delle variabili'],
-               ['Q', 'Termina il programma'],
-               ['Ctrl-Stop', 'Durante l\'esecuzione, rientra nel debugger']], [130, 350]),
-    ('p', "La schermata mostra la riga corrente, le variabili con il loro valore e l'elenco dei breakpoint. Dentro una SUB o FUNCTION compaiono per prime le <b>variabili locali e i parametri</b>, contrassegnati da <font face='Courier'>&gt;</font>, poi le variabili globali scalari. Per qualsiasi altra variabile si usa il comando <b>E</b>: si digita il nome (cerca prima fra le locali, poi fra le globali); per un array si scrive l'elemento, ad esempio <font face='Courier'>V(2)</font> o <font face='Courier'>N$(1)</font>, e senza indice si ottiene il numero di elementi. Si segnalano nome inesistente, indice fuori dai limiti e array nel mapper. Lo schermo del programma viene salvato e ripristinato: il debug funziona anche negli schermi grafici. Nelle cartucce il debugger gira ma non mostra le variabili."),
+CH('The debugger', [
+    ('p', "Add <font face='Courier'>OPTION DEBUG</font> at the top of the program and press F5. The compiler uses the runtime with debugger: the program starts "
+          "<b>stopped on the first statement</b> and is controlled from the keyboard. A program without OPTION DEBUG pays no cost."),
+    ('img', 'debugger.png', "The debugger stopped inside a SUB: parameters and locals (marked with >), then the globals."),
+    ('table', [['Key', 'Action'],
+               ['Space, S, Enter', 'Executes one statement'],
+               ['R', 'Runs to the next breakpoint'],
+               ['B number Enter', 'Sets or clears a breakpoint (Enter alone = current line; 0 = clears them all)'],
+               ['C', 'Clears all breakpoints'],
+               ['E', 'Asks for a variable name (also a local, a parameter, an array element such as V(3), a string such as N$) and shows its value'],
+               ['V', 'Next page of variables'],
+               ['Q', 'Ends the program'],
+               ['Ctrl-Stop', 'While running, re-enters the debugger']], [130, 350]),
+    ('p', "The screen shows the current line, the variables with their values and the list of breakpoints. Inside a SUB or FUNCTION the <b>local variables and parameters</b> come first, marked with <font face='Courier'>&gt;</font>, then the scalar global variables. For any other variable use the <b>E</b> command: type the name (it looks first among the locals, then among the globals); for an array type the element, for example <font face='Courier'>V(2)</font> or <font face='Courier'>N$(1)</font>, and without an index you get the number of elements. Nonexistent names, out-of-range indexes and arrays in the mapper are reported. The program's screen is saved and restored: debugging also works in the graphics screens. In cartridges the debugger runs but does not show the variables."),
 ])
 
-CH('Cartucce ROM, segmenti e mapper', [
-    ('p', "Con <font face='Courier'>OPTION TARGET</font> come prima riga si sceglie che cosa produce il compilatore. Un'unica opzione, per non avere impostazioni in conflitto:"),
-    ('table', [['Valore', 'Risultato'],
-               ['DOS (predefinito)', 'NOME.COM per MSX-DOS, con i file su disco'],
-               ['BIN', 'NOME.BIN per MSX-BASIC (BLOAD), senza DOS'],
-               ['ROM_16, ROM_32', 'cartuccia semplice di 16 o 32 KB'],
-               ['ROM_ASCII8, ROM_ASCII16', 'cartuccia a banchi ASCII da 8 o 16 KB'],
-               ['ROM_KONAMI, ROM_KONAMISCC', 'cartuccia a banchi Konami (senza o con SCC)']], [150, 330]),
-    ('p', "Restano validi i vecchi nomi ROM16, ROM32, ASCII8, ASCII16, KONAMI e SCC. Le cartucce, a fine programma, attendono un tasto e riavviano la macchina; non hanno file né BLOAD/BSAVE."),
-    ('p', "Con i mapper a banchi il codice può occupare più <b>segmenti</b>: <font face='Courier'>SEGMENT n</font> sposta il codice che segue nel segmento n. "
-          "Le routine di altri segmenti si chiamano normalmente (il compilatore cambia banco e lo ripristina). I dati si includono con "
-          "<font face='Courier'>INCBIN \"file\"</font> e si leggono con <font face='Courier'>SETBANK</font> e <font face='Courier'>DATAWIN</font>."),
-    ('h', 'Una cartuccia su più file'),
-    ('p', "Un programma grande si scrive in <b>un file per segmento</b>. Con una OPTION TARGET a segmenti (ASCII8, ASCII16, KONAMI, SCC) i file si chiamano "
-          "<font face='Courier'>NOME000.SPB</font> (segmento 0, quello fisso con il runtime) e <font face='Courier'>NOME001.SPB</font>, "
-          "<font face='Courier'>NOME002.SPB</font>, ... (5 caratteri di nome più tre cifre). Il numero parte da <b>0</b>: il segmento 0 è il primo blocco della cartuccia (la "
-          "BIOS è un'altra ROM, non c'entra), gli altri sono i blocchi commutabili."),
-    ('ul', ["Le <b>OPTION</b> (TARGET, DEBUG, LABELS...) stanno <b>solo nel file 000</b>; in un altro file danno errore 13.",
-            "<b>SEGMENT</b> non si scrive: il segmento lo decide il nome del file (con i file separati l'istruzione dà errore 13).",
-            "Il compilatore legge tutti i file in sequenza finché trova i successivi (001, 002, ...), registra le routine di ogni segmento e le <b>collega in un'unica ROM</b> NOME.ROM (senza le tre cifre).",
-            "Si può premere F5 da <b>qualunque</b> file del progetto: il compilatore parte sempre dal 000. Gli errori riportano il file e la riga giusti e l'editor apre quel file.",
-            "Una SUB o FUNCTION di un altro segmento si chiama come al solito; GOTO e GOSUB non attraversano i segmenti; ogni file arriva a circa 15 KB di sorgente.",
-            "Si passa da un file all'altro con File &gt; Segment (F8)."]),
-    ('h', 'File .BIN: segmenti già compilati'),
-    ('p', "Nella stessa cartella e con la stessa radice possono esserci file <font face='Courier'>NOMEnnn.BIN</font>: sono segmenti <b>già compilati</b> e il compilatore li inserisce nella ROM così come sono, senza leggerli come sorgente (solo il segmento 0 deve essere un sorgente). Servono per funzioni in assembler, sprite, font, musica e altri dati. Il segmento .BIN riempie la propria finestra (8 o 16 KB, il resto è azzerato). I dati si leggono dal programma con <font face='Courier'>SETBANK n</font> e <font face='Courier'>DATAWIN</font>; il codice si chiama da un blocco <font face='Courier'>__ASM</font> dopo aver selezionato il banco. Se per lo stesso numero esistono sia .SPB sia .BIN vale il sorgente. Lo schema è lo stesso dei \"raw files\" dei progetti MSXgl: il segmento 0 è il primo blocco della cartuccia e i blocchi seguenti sono numerati di seguito."),
-    ('p', "Un programma piccolo resta in un solo file e può ancora usare l'istruzione <font face='Courier'>SEGMENT n</font>. I file senza le tre cifre finali non sono segmenti."),
-    ('p', "Il <b>mapper RAM</b> (se presente) offre segmenti da 16 KB: MAPPERSEGS, MALLOC, MFREE, MGET, MPUT, MREAD, MWRITE, VARPTR e gli array "
-          "<font face='Courier'>DIM x(n) MAPPER</font> fino a 32768 interi."),
+CH('ROM cartridges, segments and mappers', [
+    ('p', "With <font face='Courier'>OPTION TARGET</font> as the first line you choose what the compiler produces. A single option, to avoid conflicting settings:"),
+    ('table', [['Value', 'Result'],
+               ['DOS (default)', 'NAME.COM for MSX-DOS, with disk files'],
+               ['BIN', 'NAME.BIN for MSX-BASIC (BLOAD), without DOS'],
+               ['ROM_16, ROM_32', 'plain 16 or 32 KB cartridge'],
+               ['ROM_ASCII8, ROM_ASCII16', 'ASCII banked cartridge with 8 or 16 KB banks'],
+               ['ROM_KONAMI, ROM_KONAMISCC', 'Konami banked cartridge (without or with SCC)']], [150, 330]),
+    ('p', "The old names ROM16, ROM32, ASCII8, ASCII16, KONAMI and SCC remain valid. At the end of the program, cartridges wait for a key and reboot the machine; they have no files or BLOAD/BSAVE."),
+    ('p', "With banked mappers the code can occupy several <b>segments</b>: <font face='Courier'>SEGMENT n</font> moves the code that follows into segment n. "
+          "Routines in other segments are called normally (the compiler switches bank and restores it). Data is included with "
+          "<font face='Courier'>INCBIN \"file\"</font> and read with <font face='Courier'>SETBANK</font> and <font face='Courier'>DATAWIN</font>."),
+    ('h', 'A cartridge in several files'),
+    ('p', "A large program is written in <b>one file per segment</b>. With a segmented OPTION TARGET (ASCII8, ASCII16, KONAMI, SCC) the files are named "
+          "<font face='Courier'>NAME000.SPB</font> (segment 0, the fixed one with the runtime) and <font face='Courier'>NAME001.SPB</font>, "
+          "<font face='Courier'>NAME002.SPB</font>, ... (5 characters of name plus three digits). Numbering starts from <b>0</b>: segment 0 is the first block of the cartridge (the "
+          "BIOS is another ROM, unrelated), the others are the switchable blocks."),
+    ('ul', ["The <b>OPTION</b>s (TARGET, DEBUG, LABELS...) go <b>only in file 000</b>; in any other file they give error 13.",
+            "<b>SEGMENT</b> is not written: the segment is decided by the file name (with separate files the statement gives error 13).",
+            "The compiler reads all the files in sequence as long as it finds the next ones (001, 002, ...), records the routines of each segment and <b>links them into a single ROM</b> NAME.ROM (without the three digits).",
+            "You can press F5 from <b>any</b> file of the project: the compiler always starts from 000. Errors report the right file and line and the editor opens that file.",
+            "A SUB or FUNCTION in another segment is called as usual; GOTO and GOSUB do not cross segments; each file holds about 15 KB of source.",
+            "You switch from one file to another with File &gt; Segment... (F8)."]),
+    ('h', '.BIN files: precompiled segments'),
+    ('p', "In the same folder and with the same root there can be <font face='Courier'>NAMEnnn.BIN</font> files: they are <b>already compiled</b> segments and the compiler inserts them into the ROM as they are, without reading them as source (only segment 0 must be source). They are used for assembler functions, sprites, fonts, music and other data. The .BIN segment fills its own window (8 or 16 KB, the rest is zeroed). Data is read from the program with <font face='Courier'>SETBANK n</font> and <font face='Courier'>DATAWIN</font>; code is called from an <font face='Courier'>__ASM</font> block after selecting the bank. If both .SPB and .BIN exist for the same number, the source wins. The scheme is the same as the \"raw files\" of MSXgl projects: segment 0 is the first block of the cartridge and the following blocks are numbered consecutively."),
+    ('p', "A small program stays in a single file and can still use the <font face='Courier'>SEGMENT n</font> statement. Files without the final three digits are not segments."),
+    ('p', "The <b>RAM mapper</b> (if present) offers 16 KB segments: MAPPERSEGS, MALLOC, MFREE, MGET, MPUT, MREAD, MWRITE, VARPTR and the "
+          "<font face='Courier'>DIM x(n) MAPPER</font> arrays of up to 32768 integers."),
 ])
 
-CH('Programmi per MSX-BASIC (BIN)', [
-    ('p', "Con <font face='Courier'>OPTION TARGET BIN</font> il compilatore (QBCB.COM, scelto da solo) produce <b>NOME.BIN</b>: un file nel formato di BLOAD, senza MSX-DOS, pensato per essere caricato dalla finestra di MSX-BASIC. A differenza dei programmi DOS (che partono a 0100h e possono chiamare il DOS) il BIN si carica a <b>8400h</b> e non usa mai il DOS."),
-    ('code', 'CLEAR 200,&H83FF\nBLOAD "NOME.BIN",R'),
-    ('p', "<font face='Courier'>CLEAR</font> riserva la RAM da 8400h in su. A fine programma, dopo un tasto, si torna al prompt del BASIC. Disponibili: grafica, sprite, suono, testo, stringhe, array, SUB e FUNCTION, assembler in linea, PEEK/POKE, VDP. Non disponibili: file su disco, BLOAD/BSAVE, mapper RAM e debugger (le istruzioni che richiedono il DOS danno l'errore \"Files need MSX-DOS\" a runtime). Il runtime e il codice occupano l'immagine da 8400h; la RAM dei dati e lo heap stanno da D000h; la pila parte da F000h e al termine si ripristina quella del BASIC."),
+CH('Programs for MSX-BASIC (BIN)', [
+    ('p', "With <font face='Courier'>OPTION TARGET BIN</font> the compiler (QBCB.COM, chosen automatically) produces <b>NAME.BIN</b>: a file in BLOAD format, without MSX-DOS, meant to be loaded from the MSX-BASIC window. Unlike DOS programs (which start at 0100h and can call DOS) the BIN is loaded at <b>8400h</b> and never uses DOS."),
+    ('code', 'CLEAR 200,&H83FF\nBLOAD "NAME.BIN",R'),
+    ('p', "<font face='Courier'>CLEAR</font> reserves the RAM from 8400h upwards. At the end of the program, after a key, you return to the BASIC prompt. Available: graphics, sprites, sound, text, strings, arrays, SUB and FUNCTION, inline assembler, PEEK/POKE, VDP. Not available: disk files, BLOAD/BSAVE, RAM mapper and debugger (statements that require DOS give the error \"Files need MSX-DOS\" at runtime). The runtime and code occupy the image from 8400h; the data RAM and heap are at D000h; the stack starts at F000h and at exit the BASIC one is restored."),
 ])
 
-CH('Directory di lavoro (MSX-DOS 2)', [
-    ('p', "Con MSX-DOS 2 (e Nextor) i programmi stanno in cartelle. La regola è semplice: <b>la directory di lavoro è sempre quella del file aperto</b>, per i programmi "
-          "normali e per le cartucce. Il sorgente, il programma compilato (.COM, .ROM) e i file letti o scritti dal programma vivono nella cartella del progetto; gli strumenti "
-          "(SAMPRBAS.COM, QBC.COM, RT.BIN, QASM.OVL...) restano nella loro cartella e vengono trovati da soli."),
-    ('ul', ["Dalla riga di comando si può dare un percorso: <font face='Courier'>SAMPRBAS \\GIOCHI\\PROVA</font> entra in GIOCHI e apre PROVA.SPB (o lo crea).",
-            "File &gt; Open mostra le cartelle e vi si naviga; aprendo un file la directory di lavoro è quella del file.",
-            "F5 compila e fa girare il programma nella cartella del progetto, e al ritorno l'editor è ancora lì.",
-            "Le due directory sono memorizzate nelle variabili d'ambiente <b>SPBHOME</b> (strumenti) e <b>SPBPROJ</b> (progetto). SPBHOME vale la directory da cui si "
-            "avvia l'editor la prima volta: conviene avviarlo dalla cartella degli strumenti, oppure impostarla prima con <font face='Courier'>SET SPBHOME=\\STRUMENTI</font>.",
-            "Con MSX-DOS 1 non esistono cartelle e nulla di tutto questo si applica."]),
+CH('Working directory (MSX-DOS 2)', [
+    ('p', "With MSX-DOS 2 (and Nextor) programs live in folders. The rule is simple: <b>the working directory is always that of the open file</b>, for normal programs "
+          "and for cartridges. The source, the compiled program (.COM, .ROM) and the files read or written by the program live in the project folder; the tools "
+          "(SAMPRBAS.COM, QBC.COM, RT.BIN, QASM.OVL...) stay in their own folder and are found automatically."),
+    ('ul', ["From the command line you can give a path: <font face='Courier'>SAMPRBAS \\GAMES\\TEST</font> enters GAMES and opens TEST.SPB (or creates it).",
+            "File &gt; Open... shows the folders and you navigate through them; when you open a file the working directory is that of the file.",
+            "F5 compiles and runs the program in the project folder, and on return the editor is still there.",
+            "The two directories are stored in the environment variables <b>SPBHOME</b> (tools) and <b>SPBPROJ</b> (project). SPBHOME is the directory from which the editor "
+            "is first started: it is best to start it from the tools folder, or to set it beforehand with <font face='Courier'>SET SPBHOME=\\TOOLS</font>.",
+            "With MSX-DOS 1 there are no folders and none of this applies."]),
 ])
 
-CH('MSX1 e MSX2', [
-    ('table', [['Funzione', 'MSX1', 'MSX2'],
-               ['Editor', '40 colonne, senza colori', '80 colonne, parole chiave colorate'],
-               ['SCREEN', '0-3', '0-8 (10-12 su MSX2+)'],
-               ['Grafica bitmap (PSET, LINE, CIRCLE, PAINT, GET/PUT)', 'SCREEN 2-3', 'SCREEN 3, 5-8'],
-               ['PALETTE, COPY, SET PAGE, SET SCROLL, VBANK', 'no', 'sì'],
-               ['Sprite', 'sì', 'sì'],
-               ['Suono (PLAY, SOUND, BEEP)', 'sì', 'sì'],
-               ['Mapper RAM', 'no', 'se presente']], [220, 120, 140]),
-    ('p', "Il sistema riconosce la macchina da solo. Provato con Sony HB-75P (MSX1) e MSX2 con MSX-DOS 1 e 2."),
+CH('MSX1 and MSX2', [
+    ('table', [['Feature', 'MSX1', 'MSX2'],
+               ['Editor', '40 columns, no colors', '80 columns, colored keywords'],
+               ['SCREEN', '0-3', '0-8 (10-12 on MSX2+)'],
+               ['Bitmap graphics (PSET, LINE, CIRCLE, PAINT, GET/PUT)', 'SCREEN 2-3', 'SCREEN 3, 5-8'],
+               ['PALETTE, COPY, SET PAGE, SET SCROLL, VBANK', 'no', 'yes'],
+               ['Sprites', 'yes', 'yes'],
+               ['Sound (PLAY, SOUND, BEEP)', 'yes', 'yes'],
+               ['RAM mapper', 'no', 'if present']], [220, 120, 140]),
+    ('p', "The system recognizes the machine automatically. Tested with a Sony HB-75P (MSX1) and an MSX2 with MSX-DOS 1 and 2."),
 ])
 
-CH('Errori e limiti', [
-    ('table', [['N.', 'Significato'],
-               ['1', 'Errore di sintassi'], ['2', 'Etichetta o numero di riga inesistente'], ['3', 'Non ancora supportato'],
-               ['4', 'Carattere illegale'], ['5', 'Blocco non chiuso'], ['6', 'ELSE / END IF / NEXT / WEND senza blocco'],
-               ['7', 'Nome duplicato'], ['8', 'Troppe variabili, etichette o blocchi'], ['9', 'Programma troppo grande'],
-               ['10', 'Sorgente troppo grande'], ['11', 'Errore di lettura'], ['12', 'Errore di scrittura'],
-               ['13', "Non ammesso con l'OPTION scelta"], ['14', 'Tipi incompatibili o array non dichiarato'],
-               ['15', 'Dati del programma troppo grandi'], ['16', 'RT.BIN non trovato'],
-               ['17', 'Assembler: sintassi o operando'], ['18', 'Assembler: valore o salto fuori campo'],
-               ['19', 'Assembler: simbolo doppio o __ENDASM mancante'], ['20', 'QASM.OVL non trovato']], [40, 440]),
-    ('h', 'Limiti'),
-    ('ul', ["Sorgente: circa 12,5 KB per file (15 KB per le cartucce). Programma compilato: 16 KB; per le cartucce più segmenti, ciascuno con il suo file.",
-            "96 etichette; 100 variabili e array; 20 SUB/FUNCTION (8 parametri ciascuna); 24 blocchi annidati.",
-            "Nomi significativi su 11 caratteri; stringhe di 255 caratteri; interi da -32768 a 32767.",
-            "In OPTION NUMBERED circa 590 righe; tre file aperti contemporaneamente."]),
+CH('Errors and limits', [
+    ('table', [['No.', 'Meaning'],
+               ['1', 'Syntax error'], ['2', 'Nonexistent label or line number'], ['3', 'Not yet supported'],
+               ['4', 'Illegal character'], ['5', 'Unclosed block'], ['6', 'ELSE / END IF / NEXT / WEND without a block'],
+               ['7', 'Duplicate name'], ['8', 'Too many variables, labels or blocks'], ['9', 'Program too large'],
+               ['10', 'Source too large'], ['11', 'Read error'], ['12', 'Write error'],
+               ['13', "Not allowed with the chosen OPTION"], ['14', 'Incompatible types or undeclared array'],
+               ['15', 'Program data too large'], ['16', 'RT.BIN not found'],
+               ['17', 'Assembler: syntax or operand'], ['18', 'Assembler: value or jump out of range'],
+               ['19', 'Assembler: duplicate symbol or missing __ENDASM'], ['20', 'QASM.OVL not found']], [40, 440]),
+    ('h', 'Limits'),
+    ('ul', ["Source: about 12.5 KB per file (15 KB for cartridges). Compiled program: 16 KB; for cartridges, several segments, each with its own file.",
+            "96 labels; 100 variables and arrays; 20 SUB/FUNCTION (8 parameters each); 24 nested blocks.",
+            "Names significant to 11 characters; strings of 255 characters; integers from -32768 to 32767.",
+            "In OPTION NUMBERED about 590 lines; three files open at the same time."]),
 ])

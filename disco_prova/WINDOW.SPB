@@ -1,4 +1,4 @@
-' SamPr Basic - WINDOW: coordinate con origine al centro
+' SamPr Basic - WINDOW: coordinates with the origin at the center
 COLOR 15, 1
 SCREEN 5
 CLS

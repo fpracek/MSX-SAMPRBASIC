@@ -1,201 +1,201 @@
-# Editor di testo SamPr Basic (prototipo, Z80)
+# SamPr Basic text editor (prototype, Z80)
 
-`editor.asm` — ROM 16K per MSX2, SCREEN 0 a 80 colonne. Prova: `python etest.py [--shots]`
-(assembla con un testo demo di 71 righe, esegue in openMSX NMS-8250, 41 controlli; `--shots`
-ricostruisce PNG dalla VRAM salvata in `build\*.png`).
+`editor.asm` — 16K ROM for MSX2, SCREEN 0 at 80 columns. Test: `python etest.py [--shots]`
+(assembles with a 71-line demo text, runs in openMSX NMS-8250, 41 checks; `--shots`
+rebuilds PNGs from the saved VRAM into `build\*.png`).
 
-## Schermo
-Riga 0 titolo (inverso, `Ln riga/totale  Col n`) · righe 1-22 testo (colonne 0-78) ·
-colonna 79 barra verticale (▲ binario ▼) · riga 23 barra orizzontale (◄ binario ►).
-Video inverso = caratteri 128-255 (copie negate del font BIOS), glifi 1-5 ridefiniti,
-cursore = glifo inverso (bit 7) della cella con lampeggio a software (32 quadri), puntatore del mouse = XOR 80h sulla cella;
-la tabella di blink del VDP (R#12/R#13, 10 byte per riga) serve ai colori delle parole chiave (vedi sotto).
+## Screen
+Row 0 title (inverse, `Ln row/total  Col n`) · rows 1-22 text (columns 0-78) ·
+column 79 vertical bar (▲ track ▼) · row 23 horizontal bar (◄ track ►).
+Inverse video = characters 128-255 (negated copies of the BIOS font), glyphs 1-5 redefined,
+cursor = inverse glyph (bit 7) of the cell with software blinking (32 frames), mouse pointer = XOR 80h on the cell;
+the VDP blink table (R#12/R#13, 10 bytes per row) is used for the keyword colors (see below).
 
-## Tastiera
-Frecce, Home, SELECT (= Fine), Ctrl+P / Ctrl+N (pagina su/giù), Invio, BS, DEL, TAB (a 4),
-caratteri ASCII 32-126. Righe fino a 254 colonne. La vista segue il cursore solo dopo un tasto:
-lo scorrimento con il mouse lascia il cursore dov'è, e al primo tasto la vista torna a lui.
+## Keyboard
+Arrows, Home, SELECT (= End), Ctrl+P / Ctrl+N (page up/down), Enter, BS, DEL, TAB (to 4),
+ASCII characters 32-126. Lines up to 254 columns. The view follows the cursor only after a key press:
+scrolling with the mouse leaves the cursor where it is, and on the first key press the view returns to it.
 
 ## Mouse
-Clic sul testo = sposta il cursore · frecce delle barre = 1 riga/colonna (con ripetizione) ·
-clic sul binario = pagina (si ferma sotto il puntatore) · trascinamento del pollice = scorre in
-proporzione (`scale`: x*y/z a 16 bit, con correzione di arrotondamento perché il pollice stia sotto il puntatore).
-Hardware: BIOS `GTTRIG(1)` per il pulsante, `GTPAD(12..14)` per i movimenti (porta 1; `MPAD`=16 per la porta 2).
-Test: con `mmode`=1 movimento/pulsanti arrivano da `tm_dx/tm_dy/tm_btn` (openMSX non permette di iniettare eventi mouse).
+Click on the text = move the cursor · bar arrows = 1 row/column (with repeat) ·
+click on the track = page (stops under the pointer) · dragging the thumb = scrolls
+proportionally (`scale`: 16-bit x*y/z, with a rounding correction so the thumb stays under the pointer).
+Hardware: BIOS `GTTRIG(1)` for the button, `GTPAD(12..14)` for movements (port 1; `MPAD`=16 for port 2).
+Test: with `mmode`=1 movement/buttons come from `tm_dx/tm_dy/tm_btn` (openMSX does not allow injecting mouse events).
 
-## Dati
-Gap buffer in RAM C100h-EFFFh (≈12 KB), offset logici, LF = fine riga. Un byte 0 all'inizio del gap
-e in fondo al buffer fa da sentinella: il ridisegno legge la memoria senza controllare il gap carattere
-per carattere (22 righe in pochi ms). `nlines`, `curline`, `topline` sono mantenute in modo incrementale.
+## Data
+Gap buffer in RAM C100h-EFFFh (≈12 KB), logical offsets, LF = end of line. A 0 byte at the start of the gap
+and at the end of the buffer acts as a sentinel: redraw reads memory without checking the gap character
+by character (22 rows in a few ms). `nlines`, `curline`, `topline` are maintained incrementally.
 
-## Non ancora fatto / non verificato
-- Mouse reale: non verificato su hardware (segno e scala di `GTPAD` da controllare; se gli assi sono invertiti basta negare in `mouse_read`).
-- Caricamento/salvataggio file (serve MSX-DOS/Nextor), selezione/copia/incolla, cerca, undo, tasto destro.
-- Buffer ≈12 KB; con il mapper si può estendere. Una riga più lunga di 254 colonne non si può inserire.
-- Il ridisegno è sempre completo (testo intero) quando la vista scorre o il testo cambia.
+## Not done yet / not verified
+- Real mouse: not verified on hardware (sign and scale of `GTPAD` to be checked; if the axes are inverted, just negate in `mouse_read`).
+- File load/save (requires MSX-DOS/Nextor), selection/copy/paste, search, undo, right button.
+- Buffer ≈12 KB; it can be extended with the mapper. A line longer than 254 columns cannot be entered.
+- Redraw is always complete (whole text) when the view scrolls or the text changes.
 
-## Carica / salva (build `.COM`, MSX-DOS)
-`sjasmplus -DCOM editor.asm` produce `ed.com` (≈4,5 KB); `python ecom.py` lo prova su MSX-DOS 1.03
-(NMS-8250, cartella host come disco A:, 20 controlli, verifica i byte dei file salvati sul PC).
-La build ROM (`etest.py`, 41 controlli) resta per i test senza DOS: stesso sorgente, `IFDEF COM`.
+## Load / save (`.COM` build, MSX-DOS)
+`sjasmplus -DCOM editor.asm` produces `ed.com` (≈4.5 KB); `python ecom.py` tests it on MSX-DOS 1.03
+(NMS-8250, host folder as drive A:, 20 checks, verifies the bytes of the files saved on the PC).
+The ROM build (`etest.py`, 41 checks) remains for tests without DOS: same source, `IFDEF COM`.
 
-Uso: `ED [file]`. Tasti: **Ctrl+S** salva (chiede il nome se manca) · **Ctrl+W** salva con nome ·
-**Ctrl+O** apre · **Ctrl+Q** esce al DOS. Il nome si digita sulla barra del titolo (Invio, Esc, BS).
-Con modifiche non salvate Ctrl+O / Ctrl+Q avvisano: si ripete lo stesso tasto per scartarle.
-Il titolo mostra `MSXQB Editor NOME*` (`*` = modificato) oppure l'ultimo messaggio (fino al tasto successivo).
+Usage: `ED [file]`. Keys: **Ctrl+S** saves (asks for the name if missing) · **Ctrl+W** saves as ·
+**Ctrl+O** opens · **Ctrl+Q** exits to DOS. The name is typed on the title bar (Enter, Esc, BS).
+With unsaved changes Ctrl+O / Ctrl+Q warn: press the same key again to discard them.
+The title shows `MSXQB Editor NAME*` (`*` = modified) or the last message (until the next key press).
 
-- API a FCB (open/make/close/delete + lettura/scrittura a blocchi casuali con record da 1 byte):
-  compatibile con MSX-DOS 1 e, per retrocompatibilità, con Nextor/MSX-DOS 2. Su Nextor non ancora provato.
-- Su disco CR LF, in memoria LF. Al caricamento: CR scartati, TAB espansi a multipli di 4, byte non stampabili → `?`,
-  ferma a 1Ah. Il salvataggio non scrive il 1Ah finale.
-- Buffer 2000h-BFFFh (≈40 KB). File più grandi: caricati troncati, con avviso «File too large - truncated».
-- Variabili in C000h (pagina 3): in pagina 0 il debugger legge la ROM del BIOS durante le interruzioni.
-- Nome file 8.3 (con `A:` opzionale), niente percorsi né caratteri jolly.
+- FCB API (open/make/close/delete + random block read/write with 1-byte records):
+  compatible with MSX-DOS 1 and, for backward compatibility, with Nextor/MSX-DOS 2. Not yet tried on Nextor.
+- On disk CR LF, in memory LF. On load: CRs discarded, TABs expanded to multiples of 4, non-printable bytes → `?`,
+  stops at 1Ah. Saving does not write the final 1Ah.
+- Buffer 2000h-BFFFh (≈40 KB). Larger files: loaded truncated, with the warning "File too large - truncated".
+- Variables at C000h (page 3): in page 0 the debugger reads the BIOS ROM during interrupts.
+- 8.3 file name (with optional `A:`), no paths or wildcards.
 
-## Selezione e clipboard
-Test: `python esel.py` (build ROM, 30 controlli con un modello Python del testo); `ecom.py` prova taglia/incolla/salva anche sotto DOS.
-- **Tastiera**: Shift + frecce / Home / SELECT(Fine) / Ctrl+P / Ctrl+N estendono la selezione; un movimento senza Shift la annulla.
-  Lo Shift si legge dalla matrice tastiera (BIOS `SNSMAT`): `CHGET` dà lo stesso codice con e senza Shift.
-- **Mouse**: il trascinamento seleziona; Shift+clic estende; col puntatore sul bordo alto/basso del testo la vista scorre da sola.
-- **Comandi**: Ctrl+C o Ctrl+Ins copia · Ctrl+X o Shift+Canc taglia · Ctrl+V o Shift+Ins incolla · Ctrl+A seleziona tutto.
-  Digitare, Invio, Tab, BS e Canc sostituiscono / eliminano la selezione. (Ctrl+X e SELECT danno entrambi il codice 18h: si distinguono dalla matrice.)
-- **Disegno**: i caratteri selezionati usano i glifi inversi (128-255); anche l'a-capo selezionato è un blocco inverso a fine riga.
-  Durante il disegno la selezione diventa un intervallo di indirizzi fisici, confrontato con un `selmark` per carattere.
-- **Clipboard**: in RAM sopra le variabili (C400h fino a 768 byte sotto il BDOS nel `.COM`; 2,5 KB in E600h nella build ROM).
-  Selezioni più grandi: «Selection too big for the clipboard». Con l'incolla senza spazio: «No room to paste».
-- Nessuna modifica in-place dell'ancora: dopo ogni modifica del testo l'ancora si azzera (gli offset logici cambierebbero).
-- Non fatto: undo, selezione a parole/righe (doppio/triplo clic), clipboard condivisa tra sessioni, tasto destro.
+## Selection and clipboard
+Test: `python esel.py` (ROM build, 30 checks with a Python model of the text); `ecom.py` also tests cut/paste/save under DOS.
+- **Keyboard**: Shift + arrows / Home / SELECT(End) / Ctrl+P / Ctrl+N extend the selection; a movement without Shift cancels it.
+  Shift is read from the keyboard matrix (BIOS `SNSMAT`): `CHGET` gives the same code with and without Shift.
+- **Mouse**: dragging selects; Shift+click extends; with the pointer on the top/bottom edge of the text the view scrolls by itself.
+- **Commands**: Ctrl+C or Ctrl+Ins copies · Ctrl+X or Shift+Del cuts · Ctrl+V or Shift+Ins pastes · Ctrl+A selects all.
+  Typing, Enter, Tab, BS and Del replace / delete the selection. (Ctrl+X and SELECT both give code 18h: they are told apart via the matrix.)
+- **Drawing**: selected characters use the inverse glyphs (128-255); a selected line break is also an inverse block at the end of the line.
+  During drawing the selection becomes a range of physical addresses, compared against a per-character `selmark`.
+- **Clipboard**: in RAM above the variables (C400h up to 768 bytes below the BDOS in the `.COM`; 2.5 KB at E600h in the ROM build).
+  Larger selections: "Selection too big for the clipboard". Pasting with no space: "No room to paste".
+- No in-place modification of the anchor: after every text change the anchor is reset (the logical offsets would change).
+- Not done: undo, word/line selection (double/triple click), clipboard shared between sessions, right button.
 
-## Barra dei menu
-Test: `python emenu.py` (build ROM, 34 controlli); `ecom.py` prova anche File > New e File > Open... dal menu sotto DOS.
-- **Riga 0**: ` File  Edit  Help ` (colonne 0-17, 6 per titolo) · nome file (o `(untitled)`) con `*` se modificato, a colonna 19 ·
-  `Ln riga/totale  Col n` a colonna 48. Un messaggio di stato sostituisce nome e stato fino al tasto successivo; i titoli restano.
-- **Apertura**: ESC (apre File) o clic su un titolo. Il titolo del menu aperto è in video normale (il resto della barra è inverso).
-- **Tastiera**: ←/→ cambiano menu (con avvolgimento) · ↑/↓ cambiano voce (con avvolgimento) · Invio esegue ·
-  lettera = tasto rapido della voce (N/O/S/A/X in File, T/C/P/D/A in Edit, S/A in Help) · ESC chiude.
-- **Mouse**: il passaggio del puntatore evidenzia la voce; clic su una voce la esegue; clic su un altro titolo cambia menu,
-  sullo stesso titolo o fuori dal riquadro chiude (senza passare il clic al testo).
-- **Voci**: File: New, Open..., Save, Save As..., Exit · Edit: Cut, Copy, Paste, Delete, Select all · Help: Shortcuts, About.
-  Nella build ROM (senza DOS) le voci di File mostrano «No disk access in this build».
-- **Disegno**: riquadro in video inverso con cornice di glifi propri (codici 6-12: linee e angoli, con le copie inverse a 134-140);
-  con il menu aperto il cursore è nascosto; alla chiusura o al cambio di menu il testo sotto viene ridisegnato.
-- **File > New** chiede conferma se ci sono modifiche (stesso meccanismo di Open/Exit: si ripete il comando).
-- Non fatto: separatori e voci disattivate (grigie), sottomenu, menu View/Search, Alt/GRAPH per aprire i menu.
+## Menu bar
+Test: `python emenu.py` (ROM build, 34 checks); `ecom.py` also tests File > New and File > Open... from the menu under DOS.
+- **Row 0**: ` File  Edit  Help ` (columns 0-17, 6 per title) · file name (or `(untitled)`) with `*` if modified, at column 19 ·
+  `Ln row/total  Col n` at column 48. A status message replaces name and state until the next key press; the titles stay.
+- **Opening**: ESC (opens File) or click on a title. The title of the open menu is in normal video (the rest of the bar is inverse).
+- **Keyboard**: ←/→ change menu (wrapping) · ↑/↓ change item (wrapping) · Enter executes ·
+  letter = item hotkey (N/O/S/A/X in File, T/C/P/D/A in Edit, S/A in Help) · ESC closes.
+- **Mouse**: moving the pointer highlights the item; clicking an item executes it; clicking another title changes menu,
+  clicking the same title or outside the box closes (without passing the click to the text).
+- **Items**: File: New, Open..., Save, Save As..., Exit · Edit: Cut, Copy, Paste, Delete, Select all · Help: Shortcuts, About.
+  In the ROM build (without DOS) the File items show "No disk access in this build".
+- **Drawing**: box in inverse video with a frame of custom glyphs (codes 6-12: lines and corners, with the inverse copies at 134-140);
+  with the menu open the cursor is hidden; on closing or changing menu the text underneath is redrawn.
+- **File > New** asks for confirmation if there are changes (same mechanism as Open/Exit: the command is repeated).
+- Not done: separators and disabled (grayed) items, submenus, View/Search menus, Alt/GRAPH to open the menus.
 
-## Cerca / sostituisci
-Test: `python esrch.py` (build ROM, 34 controlli con un modello Python); tutte le suite: `etest` 41 · `esel` 30 · `emenu` 34 · `esrch` 34 · `ecom` 22.
-- **Comandi**: Ctrl+F cerca · Ctrl+G cerca ancora · Ctrl+T sostituisci · menu **Find** (Find..., Find next, Replace..., Match case: off/on).
-  Il menu ora ha 4 titoli (` File  Edit  Find  Help `); nome file e messaggi partono da colonna 25.
-- **Prompt di riga** (`prompt_line`, usato anche per i nomi file): sulla barra del titolo, spazi ammessi, fino a 30 caratteri,
-  parte dal termine precedente (lo si edita con BS o lo si accetta con Invio), Esc annulla.
-- **Ricerca**: dal cursore verso la fine, poi dall'inizio fino al cursore (messaggio «Search wrapped around»);
-  «Text not found» se non c'è. La corrispondenza trovata diventa la selezione (stessa evidenziazione in video inverso),
-  il cursore va in fondo alla corrispondenza e la riga viene centrata se non era visibile.
-  Di default non distingue maiuscole/minuscole; «Match case» nel menu Find le distingue.
-- **Sostituzione**: chiede termine e testo sostitutivo (può essere vuoto) e poi, per ogni corrispondenza dal cursore alla fine,
-  `Y` sostituisce · `N` salta · `A` sostituisce tutte le restanti senza chiedere · `Esc` si ferma.
-  Alla fine «Replaced N occurrence(s)». Il testo inserito non viene cercato di nuovo (nessun ciclo infinito).
-- **Implementazione**: il gap resta sul cursore, quindi il testo dopo il cursore è contiguo in memoria (e quello prima pure):
-  la scansione è un ciclo con filtro sul primo carattere (`or maschera`) e confronto completo solo sui candidati;
-  per questo le corrispondenze a cavallo del cursore nel giro intorno non vengono trovate. Le sostituzioni riusano `ins_block`
-  (lo stesso codice dell'incolla) e `sel_delete`, con costo proporzionale alla distanza tra le corrispondenze.
-- Il `.COM` ora ha il buffer testo a 2800h-BFFFh (circa 38 KB); `ed.com` è 7,9 KB.
-- Non fatto: ricerca all'indietro, parola intera, evidenziazione di tutte le occorrenze, testo selezionato come termine predefinito.
+## Find / replace
+Test: `python esrch.py` (ROM build, 34 checks with a Python model); all suites: `etest` 41 · `esel` 30 · `emenu` 34 · `esrch` 34 · `ecom` 22.
+- **Commands**: Ctrl+F find · Ctrl+G find again · Ctrl+T replace · **Find** menu (Find..., Find next, Replace..., Match case: off/on).
+  The menu now has 4 titles (` File  Edit  Find  Help `); file name and messages start at column 25.
+- **Line prompt** (`prompt_line`, also used for file names): on the title bar, spaces allowed, up to 30 characters,
+  starts from the previous term (edit it with BS or accept it with Enter), Esc cancels.
+- **Search**: from the cursor to the end, then from the beginning to the cursor ("Search wrapped around" message);
+  "Text not found" if there is none. The match found becomes the selection (same inverse-video highlighting),
+  the cursor goes to the end of the match and the line is centered if it was not visible.
+  By default it is case-insensitive; "Match case" in the Find menu makes it case-sensitive.
+- **Replace**: asks for the term and the replacement text (can be empty) and then, for each match from the cursor to the end,
+  `Y` replaces · `N` skips · `A` replaces all the remaining ones without asking · `Esc` stops.
+  At the end "Replaced N occurrence(s)". The inserted text is not searched again (no infinite loop).
+- **Implementation**: the gap stays on the cursor, so the text after the cursor is contiguous in memory (and so is the text before it):
+  the scan is a loop with a first-character filter (`or mask`) and a full comparison only on candidates;
+  for this reason matches straddling the cursor in the wrap-around pass are not found. Replacements reuse `ins_block`
+  (the same code as paste) and `sel_delete`, with a cost proportional to the distance between matches.
+- The `.COM` now has the text buffer at 2800h-BFFFh (about 38 KB); `ed.com` is 7.9 KB.
+- Not done: backward search, whole word, highlighting all occurrences, selected text as default term.
 
-## Annulla / ripeti (undo / redo)
-Test: `python eundo.py` (build ROM, 42 controlli con modello Python); `ecom.py` prova undo/redo anche sotto DOS e l'azzeramento della cronologia dopo Open.
-Tutte le suite: `etest` 41 · `esel` 30 · `emenu` 34 · `esrch` 34 · `eundo` 42 · `ecom` 25.
-- **Comandi**: Ctrl+Z annulla · Ctrl+Y ripete · voci Undo / Redo in cima al menu Edit (tasti rapidi U / R). Messaggi: «Nothing to undo» / «Nothing to redo».
-- **Un passo di undo = un gruppo**: una serie di battute dello stesso tipo (caratteri, Invio e Tab; Backspace; Canc) è un solo gruppo;
-  qualunque altro tasto, clic o comando di menu lo chiude. Taglia, incolla (che sostituisce una selezione) e la sostituzione globale
-  (anche con conferma Y/N/A) sono un solo passo ciascuno.
-- **Dopo l'annullamento** il cursore va dove la modifica è stata annullata (dopo il testo ripristinato per una cancellazione,
-  all'inizio per un inserimento); una nuova modifica scarta la coda di redo; Open e New azzerano la cronologia.
-- **Registro** (`UNDO`): record = tipo (1 inserimento, 2 cancellazione; bit 7 = unito al gruppo precedente), offset, lunghezza, dati,
-  e in coda la dimensione del record (per leggere all'indietro). Le battute di testo contigue si fondono in un solo record (fino a 200 byte).
-  Capienza: 3 KB nel `.COM` (C400h-CFFFh, la clipboard parte da D000h), 2 KB nella build ROM. A registro pieno si scartano i gruppi
-  più vecchi (e il registro si compatta); se una sola modifica è più grande di tutto il registro, la cronologia si azzera con
-  «Edit too large to undo - history cleared».
-- **Limite noto**: una serie lunghissima di Backspace (record da 8 byte) riempie il registro e, essendo un unico gruppo, perde i record più vecchi
-  (si possono annullare gli ultimi ~256 caratteri cancellati). Non si ricorda quale versione corrisponde al file salvato: dopo un undo il testo risulta «modificato».
+## Undo / redo
+Test: `python eundo.py` (ROM build, 42 checks with a Python model); `ecom.py` also tests undo/redo under DOS and the history reset after Open.
+All suites: `etest` 41 · `esel` 30 · `emenu` 34 · `esrch` 34 · `eundo` 42 · `ecom` 25.
+- **Commands**: Ctrl+Z undo · Ctrl+Y redo · Undo / Redo items at the top of the Edit menu (hotkeys U / R). Messages: "Nothing to undo" / "Nothing to redo".
+- **One undo step = one group**: a series of key presses of the same kind (characters, Enter and Tab; Backspace; Del) is a single group;
+  any other key, click or menu command closes it. Cut, paste (which replaces a selection) and global replace
+  (also with Y/N/A confirmation) are one step each.
+- **After an undo** the cursor goes where the change was undone (after the restored text for a deletion,
+  at the start for an insertion); a new change discards the redo tail; Open and New reset the history.
+- **Log** (`UNDO`): record = type (1 insertion, 2 deletion; bit 7 = merged with the previous group), offset, length, data,
+  and at the end the record size (to read backwards). Contiguous text key presses merge into a single record (up to 200 bytes).
+  Capacity: 3 KB in the `.COM` (C400h-CFFFh, the clipboard starts at D000h), 2 KB in the ROM build. When the log is full the oldest
+  groups are discarded (and the log is compacted); if a single change is larger than the whole log, the history is reset with
+  "Edit too large to undo - history cleared".
+- **Known limit**: a very long series of Backspaces (8-byte records) fills the log and, being a single group, loses the oldest records
+  (the last ~256 deleted characters can be undone). It is not remembered which version corresponds to the saved file: after an undo the text counts as "modified".
 
-## Note sui test
-- I test girano ora con `set renderer none` (nessuna finestra di openMSX): prima la finestra si apriva in primo piano ad ogni prova
-  e sembrava ricevere tasti veri della tastiera del PC (comparivano ripetizioni di una sola lettera nei prompt o nel testo,
-  circa 2 volte su 40). Senza finestra: 0 fallimenti in 60 + 140 esecuzioni.
-- Il `.COM` ora ha il buffer testo a 3300h-BFFFh (~35 KB); `ed.com` è 12,4 KB.
+## Notes on the tests
+- The tests now run with `set renderer none` (no openMSX window): previously the window opened in the foreground on every run
+  and seemed to receive real keystrokes from the PC keyboard (repeats of a single letter appeared in the prompts or in the text,
+  about 2 times out of 40). Without the window: 0 failures in 60 + 140 runs.
+- The `.COM` now has the text buffer at 3300h-BFFFh (~35 KB); `ed.com` is 12.4 KB.
 
 
-## Run (F5) — collegamento al compilatore
-Menu **Run** (ultimo della barra) o **F5**: salva il sorgente (chiede il nome se manca, aggiunge `.BAS` se non c'e'
-estensione), carica `QBC.COM` a catena, compila ed esegue; alla fine il programma ricarica l'editor (`SAMPRBAS.COM`).
-In caso di errore l'editor riparte con il cursore sulla riga e il messaggio `Line N: ...` nel titolo.
-F5 e' un tasto funzione MSX: all'avvio l'editor imposta la stringa di F5 a un solo byte (15h) e lo gestisce come comando.
-Il file deve chiamarsi `SAMPRBAS.COM` sul disco (il compilatore lo ricarica per nome). Vedi `../onmsx/README.md`.
-Test: `python erun.py` (usa `../onmsx/qbc.asm`).
+## Run (F5) — link to the compiler
+**Run** menu (last on the bar) or **F5**: saves the source (asks for the name if missing, appends `.BAS` if there is no
+extension), chain-loads `QBC.COM`, compiles and runs; at the end the program reloads the editor (`SAMPRBAS.COM`).
+On error the editor restarts with the cursor on the line and the message `Line N: ...` in the title.
+F5 is an MSX function key: at startup the editor sets the F5 string to a single byte (15h) and handles it as a command.
+The file must be named `SAMPRBAS.COM` on the disk (the compiler reloads it by name). See `../onmsx/README.md`.
+Test: `python erun.py` (uses `../onmsx/qbc.asm`).
 
-## Colori delle parole chiave (stadio 24)
-Le parole chiave del BASIC (istruzioni, funzioni, `REM`, `__ASM`/`__ENDASM`, `TARGET`...: 143 parole, tabella generata da `gen_kw.py`
-a partire da `../onmsx/qbc.asm`) appaiono in giallo chiaro su blu, il resto in bianco. Nello SCREEN 0 a 80 colonne i colori sono solo due
-(R#7 e R#12), ma la tabella di blink assegna a ogni cella uno dei due: con R#13 = 10h le celle col bit acceso restano sempre nel colore di R#12
-(KWCOL = 0B4h). Regole (stesse del modello Python di `ekw.py`): parole di 2-10 caratteri fatte di lettere, cifre, `_` e `$`, non fra virgolette
-e non iniziate da una cifra; un apostrofo o `REM` fanno finire la colorazione sulla riga; maiuscole e minuscole sono equivalenti.
-Il calcolo non rallenta la digitazione: dopo ogni ridisegno i colori si azzerano e si ricalcolano nei tempi morti (due righe per quadro,
-leggendo il testo dalla VRAM), quindi appaiono una frazione di secondo dopo il testo; con un tasto in attesa non si calcola nulla.
-Il cursore, che prima usava il blink hardware, ora e' il glifo inverso della cella (stesso lampeggio: 32 quadri).
-Test: `python ekw.py` (il modello Python confronta i flag di tutte le 22 righe, anche dopo lo scorrimento); gli altri test leggono la cella del cursore
-da `blx`/`bly`/`curch`. Attenzione: la build ROM dei test (con il testo demo) ha ora solo ~90 byte liberi nei 16 KB.
+## Keyword colors (stage 24)
+The BASIC keywords (statements, functions, `REM`, `__ASM`/`__ENDASM`, `TARGET`...: 143 words, table generated by `gen_kw.py`
+from `../onmsx/qbc.asm`) appear in light yellow on blue, the rest in white. In SCREEN 0 at 80 columns there are only two colors
+(R#7 and R#12), but the blink table assigns one of the two to each cell: with R#13 = 10h the cells with the bit set always stay in the color of R#12
+(KWCOL = 0B4h). Rules (same as the Python model in `ekw.py`): words of 2-10 characters made of letters, digits, `_` and `$`, not within quotes
+and not starting with a digit; an apostrophe or `REM` ends the coloring on the line; upper and lower case are equivalent.
+The computation does not slow down typing: after every redraw the colors are cleared and recomputed in idle time (two rows per frame,
+reading the text from VRAM), so they appear a fraction of a second after the text; with a key waiting nothing is computed.
+The cursor, which previously used the hardware blink, is now the inverse glyph of the cell (same blinking: 32 frames).
+Test: `python ekw.py` (the Python model compares the flags of all 22 rows, also after scrolling); the other tests read the cursor cell
+from `blx`/`bly`/`curch`. Note: the ROM test build (with the demo text) now has only ~90 free bytes in the 16 KB.
 
-## F5 piu' rapido
-- Se il testo non e' cambiato dall'ultimo caricamento/salvataggio (`modified` = 0 e `onfile` = 1) F5 non salva il sorgente (risparmia ~3 s di disco).
-- Se in piu' il programma e' appena stato eseguito da questa compilazione (`compiled` = 1: l'editor e' stato riaperto da NOME.COM con la riga di comando `NOME.BAS +`)
-  F5 non ricompila: carica direttamente NOME.COM col caricatore (`run_only`; se il file manca, ricompila). `compiled` si azzera quando il testo cambia
-  (all'atto del salvataggio con `modified` = 1), con Open e con New. Test: `erun.py` (F5 senza modifiche entro 12 s).
-- **Salvataggio in posto**: se il file esiste e non e' molto piu' lungo del testo, `save_file` lo apre e lo sovrascrive (senza cancellarlo e ricrearlo: 1,3 s invece di 3,1 s su DOS 1);
-  se il testo nuovo e' piu' corto scrive ^Z dopo il testo e il resto resta come residuo (il caricamento si ferma al ^Z; il compilatore tronca il sorgente al ^Z).
-  Se il file e' piu' lungo del testo di oltre 1 KB (o supera 64 KB) si cancella e ricrea come prima. Test: `python esave.py`.
+## Faster F5
+- If the text has not changed since the last load/save (`modified` = 0 and `onfile` = 1) F5 does not save the source (saves ~3 s of disk time).
+- If in addition the program has just been run from this compilation (`compiled` = 1: the editor was reopened from NAME.COM with the command line `NAME.BAS +`)
+  F5 does not recompile: it directly loads NAME.COM with the loader (`run_only`; if the file is missing, it recompiles). `compiled` is cleared when the text changes
+  (at save time with `modified` = 1), with Open and with New. Test: `erun.py` (F5 without changes within 12 s).
+- **In-place save**: if the file exists and is not much longer than the text, `save_file` opens it and overwrites it (without deleting and recreating it: 1.3 s instead of 3.1 s on DOS 1);
+  if the new text is shorter it writes ^Z after the text and the rest stays as residue (loading stops at ^Z; the compiler truncates the source at ^Z).
+  If the file is longer than the text by more than 1 KB (or exceeds 64 KB) it is deleted and recreated as before. Test: `python esave.py`.
 
-## MSX1: 40 colonne (stadio 25)
-All'avvio l'editor legge la versione MSX (byte 002Dh): su MSX1 usa il testo a 40 colonne (TEXT 1, tabella dei pattern a 0800h), su MSX2 e superiori
-l'80 colonne di prima (TEXT 2, pattern a 1000h). Tutta la geometria e' in variabili calcolate da `width_init` (`sw` = 80/40, `swm1` = colonna della barra
-verticale, `thv` = celle del binario orizzontale, `hmaxw` = massimo scroll orizzontale = 256 - sw, `pattb`, `mxmax` = sw*8 per il mouse, ...);
-`cell_addr` moltiplica la riga per `sw`. A 40 colonne: la barra dei menu occupa le colonne 0-29, a destra c'e' lo stato compatto `riga:colonna`
-(con `*` se il testo e' modificato) e un messaggio occupa tutta la barra; i riquadri dei menu si spostano a sinistra per non uscire dallo schermo
-(`menu_info`). Non esistono su MSX1 (TMS9918): la tabella di blink e quindi i colori delle parole chiave, R#12, R#13 e R#14 (non si scrivono mai: il
-numero di registro 12-14 si sovrapporrebbe a R#4-R#6 e romperebbe lo schermo); il cursore e' comunque il glifo inverso.
-Test: `python e40.py` (build ROM su MSX1, openMSX `Sony_HB-75P`: layout, cursore, scroll verticale e orizzontale, barre, mouse, menu Run); gli altri test
-restano su MSX2. Il `.COM` (con il DOS) non e' ancora stato provato su MSX1: in openMSX l'MSX1 con interfaccia disco AVT parte in Disk BASIC.
+## MSX1: 40 columns (stage 25)
+At startup the editor reads the MSX version (byte 002Dh): on MSX1 it uses 40-column text (TEXT 1, pattern table at 0800h), on MSX2 and later
+the 80 columns as before (TEXT 2, patterns at 1000h). All the geometry is in variables computed by `width_init` (`sw` = 80/40, `swm1` = column of the vertical
+bar, `thv` = cells of the horizontal track, `hmaxw` = maximum horizontal scroll = 256 - sw, `pattb`, `mxmax` = sw*8 for the mouse, ...);
+`cell_addr` multiplies the row by `sw`. At 40 columns: the menu bar occupies columns 0-29, on the right there is the compact `row:column` status
+(with `*` if the text is modified) and a message takes up the whole bar; the menu boxes shift left so as not to go off screen
+(`menu_info`). The following do not exist on MSX1 (TMS9918): the blink table and therefore the keyword colors, R#12, R#13 and R#14 (never written: register
+number 12-14 would overlap R#4-R#6 and break the screen); the cursor is still the inverse glyph.
+Test: `python e40.py` (ROM build on MSX1, openMSX `Sony_HB-75P`: layout, cursor, vertical and horizontal scrolling, bars, mouse, Run menu); the other tests
+remain on MSX2. The `.COM` (with DOS) has not yet been tried on MSX1: in openMSX the MSX1 with the AVT disk interface boots into Disk BASIC.
 
-## Menu da tastiera
-- **Esc** apre il menu File; **F1, F2, F3, F4** aprono direttamente File, Edit, Find, Help (all'avvio l'editor ridefinisce le stringhe dei tasti funzione F1-F4 a un solo
-  carattere di controllo: 02h, 04h, 05h, 0Ah); **F5** esegue (Run). Con un menu aperto: F1-F4 passano a quel menu, **←/→** al menu vicino, **↑/↓** scelgono la voce,
-  **Invio** la esegue, la lettera sottolineata di ogni voce la esegue direttamente, **Esc** chiude; F5 chiude il menu e lancia il programma.
-- All'avvio si scarta il buffer di tastiera (`KILBUF`), cosi' i tasti rimasti dal lancio precedente non fanno ripartire F5; lo stesso fa il runtime prima di attendere il
-  tasto a fine programma («Press any key..»). Test: `python efk.py`.
-- **Tasto ancora premuto al ritorno**: il tasto battuto per uscire da «Press any key..» puo' essere ancora giu' mentre l'editor si ricarica (con l'emulatore a velocita'
-  massima durante il disco passano molti secondi emulati) e la tastiera MSX lo ripete: l'editor riceveva decine di Invio e `cls` scendeva alla riga 17 con il testo «modificato».
-  Ora il runtime (`rt_keyup`, dopo il tasto di fine programma) e l'editor (`keys_up`, all'avvio) attendono che nessun tasto sia premuto (SNSMAT sulle righe 0-8, al massimo
-  ~10 s) prima di proseguire.
+## Keyboard menus
+- **Esc** opens the File menu; **F1, F2, F3, F4** directly open File, Edit, Find, Help (at startup the editor redefines the function key strings F1-F4 to a single
+  control character: 02h, 04h, 05h, 0Ah); **F5** runs (Run). With a menu open: F1-F4 switch to that menu, **←/→** to the adjacent menu, **↑/↓** choose the item,
+  **Enter** executes it, the underlined letter of each item executes it directly, **Esc** closes; F5 closes the menu and launches the program.
+- At startup the keyboard buffer is discarded (`KILBUF`), so keys left over from the previous launch do not restart F5; the runtime does the same before waiting for the
+  key at the end of the program ("Press any key.."). Test: `python efk.py`.
+- **Key still held on return**: the key pressed to exit from "Press any key.." may still be down while the editor reloads (with the emulator at full speed
+  many emulated seconds pass during disk access) and the MSX keyboard repeats it: the editor received dozens of Enters and `cls` dropped to row 17 with the text "modified".
+  Now the runtime (`rt_keyup`, after the end-of-program key) and the editor (`keys_up`, at startup) wait until no key is pressed (SNSMAT on rows 0-8, at most
+  ~10 s) before proceeding.
 
-## File .SPB, finestra di apertura, Help e About (versione 1.0)
-- L'eseguibile dell'editor si chiama `SAMPRBAS.COM` (il caricatore a catena lo ricarica per nome, `ldr_fn` in `onmsx/ldr.asm`).
-- I sorgenti hanno estensione `.SPB` (SamPr Basic). `SAMPRBAS nome` apre `NOME.SPB` se esiste, altrimenti parte con un file nuovo
-  già chiamato `NOME.SPB`; l'estensione si aggiunge solo se manca (`ensure_spb`). Il compilatore (`QBC.COM`) usa lo stesso default.
-- Save As (Ctrl+W, e F5 su un testo senza nome) chiede al massimo 8 caratteri e aggiunge sempre `.SPB` (`prompt_spb`, `spb_force`).
-- File > Open è una finestra a tutto schermo (`k_open`, `bw_*` in `fileio.asm`, sorgente in `browser.inc`): file `.SPB` ordinati, due colonne a 40
-  colonne / quattro a 80; con MSX-DOS 2 anche le cartelle (`[NOME]`, `[..]`, funzioni 40h/41h/5Ah/59h; il DOS 2 si riconosce con `_DOSVER`
-  B>=2), con il DOS 1 solo i file (ricerca FCB 11h/12h). Tasti: frecce, PgUp/PgDn, Home, una lettera per saltare, Invio, Esc. Lo stato sta
-  nel gap (2 KB, serve `gsz` >= 2048). Il buffer di testo parte ora da `BUF equ 3E00h` (circa 24 KB).
-- Menu Help: Index (F7), Topic..., On word (F6), Shortcuts, About ("SamPr Basic 1.0 / 2026 Fausto Pracek"). L'aiuto legge `HELP.TXT`/`HELP.IDX`
-  (generati da `../doc/gen_help.py`) con letture BDOS a blocchi nell'area del gap.
-- Collaudo: `ebrowse.py` (DOS 1; con `DOS2=1 GMACHINE=Panasonic_FS-A1ST` anche cartelle e `..`), `ehelp.py` (aiuto e About), `emenu.py`.
+## .SPB files, open window, Help and About (version 1.0)
+- The editor executable is called `SAMPRBAS.COM` (the chain loader reloads it by name, `ldr_fn` in `onmsx/ldr.asm`).
+- Sources have the extension `.SPB` (SamPr Basic). `SAMPRBAS name` opens `NAME.SPB` if it exists, otherwise starts with a new file
+  already named `NAME.SPB`; the extension is added only if missing (`ensure_spb`). The compiler (`QBC.COM`) uses the same default.
+- Save As (Ctrl+W, and F5 on an unnamed text) asks for at most 8 characters and always appends `.SPB` (`prompt_spb`, `spb_force`).
+- File > Open is a full-screen window (`k_open`, `bw_*` in `fileio.asm`, source in `browser.inc`): sorted `.SPB` files, two columns at 40
+  columns / four at 80; with MSX-DOS 2 also folders (`[NAME]`, `[..]`, functions 40h/41h/5Ah/59h; DOS 2 is recognized by `_DOSVER`
+  B>=2), with DOS 1 only files (FCB search 11h/12h). Keys: arrows, PgUp/PgDn, Home, a letter to jump, Enter, Esc. The state lives
+  in the gap (2 KB, requires `gsz` >= 2048). The text buffer now starts at `BUF equ 3E00h` (about 24 KB).
+- Help menu: Index (F7), Topic..., On word (F6), Shortcuts, About ("SamPr Basic 1.0 / 2026 Fausto Pracek"). Help reads `HELP.TXT`/`HELP.IDX`
+  (generated by `../doc/gen_help.py`) with block BDOS reads into the gap area.
+- Testing: `ebrowse.py` (DOS 1; with `DOS2=1 GMACHINE=Panasonic_FS-A1ST` also folders and `..`), `ehelp.py` (help and About), `emenu.py`.
 
-## About con cornice, Segment (F8), directory di lavoro su DOS 2
-- About (`k_about`): finestra centrata di 24 colonne con i bordi dei menu (`mrow_*`), tasto OK in video normale; si chiude con Invio, Esc o un clic sul
-  tasto. Il flag `modal` (RAMB+0447h) devirta i clic del mouse su `modal_click` (coordinate del tasto in `hlptop`/`hlpbeg`, risultato in `hlpbeg+1`).
-- File > Segment... (F8, `k_segment` in `fileio.asm`): il nome del file corrente deve essere 5 caratteri + 3 cifre; si digita il numero (anche senza zeri),
-  il file corrente si salva se modificato e si apre `NOMEnnn.SPB` nella stessa directory (nuovo, con il nome, se manca).
-- MSX-DOS 2: `isdos2` (RAMB+045Eh); `d2_detect` (`_DOSVER`), `d2_path` (percorso `A:\DIR\NOME` sulla riga di comando: CHDIR e nome), `d2_proj` (al ritorno dal
-  compilatore o dal programma, cioe' con il marcatore `+` o `E`, CHDIR in `SPBPROJ`), `set_proj` (F5: `SPBPROJ` = directory corrente), `cd_home` (prima di
-  caricare QBC.COM: CHDIR in `SPBHOME`, che vale la directory di avvio se non e' gia' impostata). `BUF equ 3F00h` (buffer di testo da circa 24 KB).
-- Collaudo: `eseg.py`, `edir.py` (DOS 2: percorso, compilazione dagli strumenti, ritorno nella cartella), `ebrowse.py`, `emenu.py`.
+## About with frame, Segment (F8), working directory on DOS 2
+- About (`k_about`): centered 24-column window with the menu borders (`mrow_*`), OK button in normal video; closes with Enter, Esc or a click on the
+  button. The `modal` flag (RAMB+0447h) diverts mouse clicks to `modal_click` (button coordinates in `hlptop`/`hlpbeg`, result in `hlpbeg+1`).
+- File > Segment... (F8, `k_segment` in `fileio.asm`): the current file name must be 5 characters + 3 digits; type the number (zeros optional),
+  the current file is saved if modified and `NAMEnnn.SPB` is opened in the same directory (new, with that name, if missing).
+- MSX-DOS 2: `isdos2` (RAMB+045Eh); `d2_detect` (`_DOSVER`), `d2_path` (path `A:\DIR\NAME` on the command line: CHDIR and name), `d2_proj` (on return from the
+  compiler or the program, i.e. with the `+` or `E` marker, CHDIR to `SPBPROJ`), `set_proj` (F5: `SPBPROJ` = current directory), `cd_home` (before
+  loading QBC.COM: CHDIR to `SPBHOME`, which is the startup directory if not already set). `BUF equ 3F00h` (text buffer of about 24 KB).
+- Testing: `eseg.py`, `edir.py` (DOS 2: path, compilation from the tools, return to the folder), `ebrowse.py`, `emenu.py`.

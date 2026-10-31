@@ -1,44 +1,44 @@
-# MSXQB — prototipo cross (Python → Z80) — storico, sostituito da SamPr Basic
+# MSXQB - cross prototype (Python -> Z80) - historical, superseded by SamPr Basic
 
-Ambiente stile QuickBASIC per MSX2: questo è il prototipo che fissa linguaggio, runtime
-e convenzioni di codegen. Il compilatore è one-pass con emissione diretta (niente AST),
-così da poter essere riscritto in Z80 per l'IDE vero.
+QuickBASIC-style environment for MSX2: this is the prototype that fixes the language, runtime
+and codegen conventions. The compiler is one-pass with direct emission (no AST),
+so that it can be rewritten in Z80 for the real IDE.
 
-    python build.py tests\t1.bas      # compila, assembla, esegue in openMSX (NMS-8250), confronta con t1.exp
+    python build.py tests\t1.bas      # compiles, assembles, runs in openMSX (NMS-8250), compares with t1.exp
 
-File: `qbc.py` (compilatore), `runtime.asm` (runtime ~1 KB, ROM 16K a 4000h), `build.py` (harness),
-`tests/t1..t5` (.bas + .exp, t5 usa `.keys` per digitare l'input).
+Files: `qbc.py` (compiler), `runtime.asm` (runtime ~1 KB, 16K ROM at 4000h), `build.py` (harness),
+`tests/t1..t5` (.bas + .exp, t5 uses `.keys` to type the input).
 
-## Linguaggio v0
-- Tipi: INTEGER 16 bit con segno (default), STRING (`$`, max 255). Niente float: `/` è divisione intera.
-- `PRINT` (`;` `,`, numeri con spazio/segno iniziale e spazio finale come QB), `INPUT ["p";] v`, `CLS`, `LOCATE r,c`, `COLOR f,b`
-- `IF/ELSEIF/ELSE/END IF` (a blocchi e su riga singola), `FOR/NEXT` (STEP costante), `WHILE/WEND`,
-  `DO [WHILE|UNTIL]/LOOP [WHILE|UNTIL]`, `SELECT CASE` (valori, `a TO b`, `IS op x`, `ELSE`), `EXIT FOR/DO/SUB/FUNCTION`
-- `GOTO/GOSUB/RETURN` con label o numeri di riga, `END`, `STOP`
-- `SUB/FUNCTION` con parametri per valore, locali, ricorsione, `SHARED`, `CALL`, `DECLARE` (ignorata: firme prescansionate)
-- `DIM a(n)` (array globali di interi, con controllo dei limiti), `CONST`
-- Operatori: `+ - * / \ MOD AND OR XOR NOT = <> < > <= >=` e concatenazione/confronto stringhe
-- Funzioni: `LEN ASC VAL ABS SGN RND(n) CHR$ STR$ LEFT$ RIGHT$ MID$ INKEY$ TIMER PEEK VPEEK INP`
-- Istruzioni MSX: `POKE VPOKE OUT SLEEP(frame) RANDOMIZE`
+## Language v0
+- Types: 16-bit signed INTEGER (default), STRING (`$`, max 255). No floats: `/` is integer division.
+- `PRINT` (`;` `,`, numbers with leading space/sign and trailing space as in QB), `INPUT ["p";] v`, `CLS`, `LOCATE r,c`, `COLOR f,b`
+- `IF/ELSEIF/ELSE/END IF` (block and single-line), `FOR/NEXT` (constant STEP), `WHILE/WEND`,
+  `DO [WHILE|UNTIL]/LOOP [WHILE|UNTIL]`, `SELECT CASE` (values, `a TO b`, `IS op x`, `ELSE`), `EXIT FOR/DO/SUB/FUNCTION`
+- `GOTO/GOSUB/RETURN` with labels or line numbers, `END`, `STOP`
+- `SUB/FUNCTION` with by-value parameters, locals, recursion, `SHARED`, `CALL`, `DECLARE` (ignored: signatures are prescanned)
+- `DIM a(n)` (global integer arrays, with bounds checking), `CONST`
+- Operators: `+ - * / \ MOD AND OR XOR NOT = <> < > <= >=` and string concatenation/comparison
+- Functions: `LEN ASC VAL ABS SGN RND(n) CHR$ STR$ LEFT$ RIGHT$ MID$ INKEY$ TIMER PEEK VPEEK INP`
+- MSX statements: `POKE VPOKE OUT SLEEP(frames) RANDOMIZE`
 
-## Modalità di indirizzamento (scelta dell'utente)
-Prima riga del sorgente (o impostazione dell'IDE, `qbc.py in out [mode]`):
-- `OPTION NUMBERED` — stile BASIC classico: ogni riga ha il numero, le righe vengono ordinate per numero
-  (duplicati = errore), `GOTO/GOSUB/THEN` solo con numeri, niente etichette.
-- `OPTION LABELS` — stile QuickBASIC: `nome:` e `GOTO nome`; i numeri di riga sono errore.
-- `OPTION MIXED` (default) — entrambi. In tutte le modalità un salto a una riga/etichetta inesistente è un errore di compilazione
-  con la riga sorgente. `IF x THEN etichetta` è ammesso come in QB.
-Test: `tests/t6` (numbered, righe fuori ordine), `tests/t7` (labels), `tests/negative.py` (9 errori attesi).
+## Addressing modes (user's choice)
+First line of the source (or IDE setting, `qbc.py in out [mode]`):
+- `OPTION NUMBERED` — classic BASIC style: every line has a number, lines are sorted by number
+  (duplicates = error), `GOTO/GOSUB/THEN` only with numbers, no labels.
+- `OPTION LABELS` — QuickBASIC style: `name:` and `GOTO name`; line numbers are an error.
+- `OPTION MIXED` (default) — both. In all modes a jump to a nonexistent line/label is a compile error
+  reported with the source line. `IF x THEN label` is allowed as in QB.
+Tests: `tests/t6` (numbered, out-of-order lines), `tests/t7` (labels), `tests/negative.py` (9 expected errors).
 
-## Convenzioni di codegen
-- Accumulatore HL; operando sinistro sullo stack, destro in HL, `pop de`. Booleani -1/0.
-- Stringa = puntatore a `[len][dati]`. Variabili stringa = buffer fisso da 256 byte (globali in RAM, locali nel frame).
-  Temporanei sullo heap a bump; ogni statement che ne crea salva/ripristina `heapp` (nessun GC necessario).
-  Una FUNCTION stringa copia il risultato sullo heap in uscita.
-- SUB/FUNCTION: argomenti sullo stack (primo più profondo), frame IX, 64 byte per i locali interi
-  (max 30) + 256 per ogni locale stringa; pulizia a carico del chiamante.
-- FOR: il limite resta sullo stack per tutto il ciclo; test in testa.
+## Codegen conventions
+- HL accumulator; left operand on the stack, right in HL, `pop de`. Booleans -1/0.
+- String = pointer to `[len][data]`. String variables = fixed 256-byte buffers (globals in RAM, locals in the frame).
+  Temporaries on a bump heap; every statement that creates any saves/restores `heapp` (no GC needed).
+  A string FUNCTION copies its result to the heap on exit.
+- SUB/FUNCTION: arguments on the stack (first one deepest), IX frame, 64 bytes for integer locals
+  (max 30) + 256 for each string local; cleanup is the caller's responsibility.
+- FOR: the limit stays on the stack for the whole loop; test at the top.
 
-## Limiti noti v0
-Niente float, array di stringhe, STEP variabile, parametri stringa modificabili, GOTO fuori da FOR/SELECT
-lascia roba sullo stack, locali interi non azzerati all'ingresso, programma ≤ 16 KB (ROM).
+## Known limits v0
+No floats, string arrays, variable STEP, modifiable string parameters; GOTO out of FOR/SELECT
+leaves stuff on the stack, integer locals are not zeroed on entry, program ≤ 16 KB (ROM).

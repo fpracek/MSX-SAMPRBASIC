@@ -1,4 +1,4 @@
-' SamPr Basic - SCREEN 2 (MSX1), sprite, archi e VIEW
+' SamPr Basic - SCREEN 2 (MSX1), sprites, arcs and VIEW
 COLOR 15, 1
 SCREEN 2, 0
 CLS

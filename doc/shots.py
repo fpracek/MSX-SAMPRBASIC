@@ -21,8 +21,8 @@ SHIFT = (6, 0x01)
 F6 = (SHIFT, (6, 0x20))
 F7 = (SHIFT, (6, 0x40))
 ESC = (7, 0x04)
-PROG = ('OPTION LABELS\r\nREM Tabellina del sette\r\nCLS\r\nFOR i = 1 TO 10\r\n  PRINT "7 x"; i; "="; 7 * i\r\nNEXT i\r\n'
-        'SUB saluta(n$)\r\n  PRINT "Ciao, "; n$\r\nEND SUB\r\nCALL saluta("MSX")\r\n')
+PROG = ('OPTION LABELS\r\nREM Seven times table\r\nCLS\r\nFOR i = 1 TO 10\r\n  PRINT "7 x"; i; "="; 7 * i\r\nNEXT i\r\n'
+        'SUB greet(n$)\r\n  PRINT "Hello, "; n$\r\nEND SUB\r\nCALL greet("MSX")\r\n')
 
 
 def shot(sc, name):

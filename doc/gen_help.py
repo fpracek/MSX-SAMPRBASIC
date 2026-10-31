@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Genera HELP.TXT e HELP.IDX per l'aiuto dell'editor. uso: python gen_help.py [cartella_uscita ...]"""
+"""Builds HELP.TXT and HELP.IDX for the editor help. usage: python gen_help.py [output_dir ...]"""
 import os
 import re
 import sys
@@ -34,13 +34,13 @@ def body(t):
     out.append('')
     out += textwrap.wrap(asc(t['desc']), W)
     if t['ex']:
-        out += ['', 'Esempio:']
+        out += ['', 'Example:']
         for l in t['ex'].split('\n'):
             out += textwrap.wrap(asc(l), W, initial_indent='  ', subsequent_indent='    ', drop_whitespace=False) or ['']
-    if t['avail'] != 'MSX1 e MSX2':
-        out += [''] + textwrap.wrap(asc('Disponibile: ' + t['avail']), W)
+    if t['avail'] != 'MSX1 and MSX2':
+        out += [''] + textwrap.wrap(asc('Available: ' + t['avail']), W)
     if t['see']:
-        out += textwrap.wrap('Vedi anche: ' + ', '.join(asc(x) for x in t['see']), W)
+        out += textwrap.wrap('See also: ' + ', '.join(asc(x) for x in t['see']), W)
     return out
 
 
@@ -51,7 +51,7 @@ def build():
         if t['cat'] not in cats:
             cats.append(t['cat'])
     # indice
-    idx_lines = ['INDICE DEGLI ARGOMENTI', '', 'Scrivi il nome in Help > Topic, oppure', 'F6 sulla parola sotto il cursore.', '']
+    idx_lines = ['TOPIC INDEX', '', 'Type a name in Help > Topic, or press', 'F6 on the word under the cursor.', '']
     for c in cats:
         idx_lines.append(asc(c.upper()))
         names = [asc(t['names'][0]) for t in TOPICS if t['cat'] == c and len(t['names'][0]) <= 12]

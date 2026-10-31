@@ -1,4 +1,4 @@
-' SamPr Basic - testo, palette e PAINT in grafica
+' SamPr Basic - text, palette and PAINT in graphics
 COLOR 15, 0
 SCREEN 5
 CLS
@@ -11,4 +11,4 @@ PAINT (190, 60), 6, 15
 LOCATE 2, 2
 PRINT "SamPr Basic"
 LOCATE 20, 2
-PRINT "Premi un tasto"
+PRINT "Press a key"

@@ -23,3 +23,5 @@ onmsx/fix_bin.py
 onmsx/fix_binseg.py
 editor/fix_segment2.py
 doc/fix_docs3.py
+doc/fix_gen_en.py
+doc/fix_samples_en.py

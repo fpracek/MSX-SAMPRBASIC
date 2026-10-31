@@ -1,15 +1,15 @@
-INDICE DEGLI ARGOMENTI
+TOPIC INDEX
 
-Scrivi il nome in Help > Topic, oppure
-F6 sulla parola sotto il cursore.
+Type a name in Help > Topic, or press
+F6 on the word under the cursor.
 
-STRUTTURA DEL PROGRAMMA
-REM          ETICHETTE
-TIPI         OPERATORI
+PROGRAM STRUCTURE
+REM          LABELS
+TYPES        OPERATORS
 CONST        LET
 END          DECLARE
 
-CONTROLLO DEL FLUSSO
+FLOW CONTROL
 IF           FOR
 WHILE        DO
 EXIT         SELECT CASE
@@ -17,17 +17,17 @@ GOTO         GOSUB
 SUB          FUNCTION
 CALL         SHARED
 
-DATI E ARRAY
+DATA AND ARRAYS
 DIM          UBOUND
 DATA         MKI$
 
-TESTO E TASTIERA
+TEXT AND KEYBOARD
 PRINT        INPUT
 LINE INPUT   CLS
 LOCATE       COLOR
 INKEY$
 
-FUNZIONI NUMERICHE E STRINGHE
+NUMERIC AND STRING FUNCTIONS
 LEN          ASC
 CHR$         VAL
 STR$         LEFT$
@@ -37,7 +37,7 @@ RND          TIMER
 PEEK         POKE
 SLEEP
 
-SCHERMO E GRAFICA
+SCREEN AND GRAPHICS
 SCREEN       PSET
 POINT        LINE
 CIRCLE       PAINT
@@ -50,252 +50,245 @@ VREAD$       BASE
 VDP          OUT
 INP
 
-SPRITE
+SPRITES
 SPRITE       PUT SPRITE
 COLLISION    STICK
 STRIG
 
-SUONO
+SOUND
 BEEP         SOUND
 PLAY
 
-FILE SU DISCO
+DISK FILES
 OPEN         CLOSE
 WRITE        EOF
 KILL         FIELD
 LOF          BLOAD
 
-CARTUCCE ROM, SEGMENTI E MAPPER
+ROM CARTRIDGES, SEGMENTS AND MAPPERS
 SEGMENT      INCBIN
 SETBANK      VCOPY
 MALLOC       MGET
 
-OPZIONI (OPTION)
+OPTIONS (OPTION)
 OPTION       BIN
 DOS          OPTION MIXED
 OPTION DEBUG
 
 GUIDE
 ASM          DEBUG
-EDITOR       SEGMENTI
+EDITOR       SEGMENTS
 DIRECTORY    SPB
-HELP         ERRORI
-LIMITI       MSX1
+HELP         ERRORS
+LIMITS       MSX1
 COM
 
 REM
 ---
 
-REM commento
-' commento
+REM comment
+' comment
 
-Commento: tutto il resto della riga
-viene ignorato. L'apostrofo si puo'
-mettere anche dopo un'istruzione,
-sulla stessa riga.
+Comment: the rest of the line is
+ignored. The apostrophe can also be
+placed after a statement, on the same
+line.
 
-Esempio:
-  REM questo e' un commento
-  PRINT "ciao"   ' anche questo
-Vedi anche: PRINT
-ETICHETTE
----------
+Example:
+  REM this is a comment
+  PRINT "hello"   ' so is this
+See also: PRINT
+LABELS
+------
 
-nome:
+name:
 10 PRINT "x"
 
-Un programma puo' usare etichette
-(nome: da solo su una riga o davanti a
-un'istruzione) e/o numeri di riga.
-GOTO, GOSUB e il ripristino con
-RESTORE accettano l'una o l'altro. Il
-modo si sceglie con OPTION: NUMBERED
-(solo numeri, ordinati per numero),
-LABELS (solo etichette) o MIXED
-(predefinito, entrambi). I nomi delle
-etichette seguono le regole dei nomi
-di variabile. Piu' istruzioni sulla
-stessa riga si separano con i due
-punti.
+A program can use labels (name: alone
+on a line or in front of a statement)
+and/or line numbers. GOTO, GOSUB and
+the RESTORE reset accept either. The
+mode is chosen with OPTION: NUMBERED
+(numbers only, sorted by number),
+LABELS (labels only) or MIXED
+(default, both). Label names follow
+the same rules as variable names.
+Several statements on the same line
+are separated by colons.
 
-Esempio:
-  inizio:
+Example:
+  start:
     PRINT "a" : PRINT "b"
-    GOTO fine
-    PRINT "mai"
-  fine:
-    PRINT "fine"
-Vedi anche: OPTION, GOTO, GOSUB
-TIPI
-----
+    GOTO done
+    PRINT "never"
+  done:
+    PRINT "end"
+See also: OPTION, GOTO, GOSUB
+TYPES
+-----
 
 a   a$   a(10)   a$(10)
 
-Esistono due tipi: interi a 16 bit con
-segno (da -32768 a 32767) e stringhe
-(fino a 255 caratteri). Il nome di una
-variabile stringa termina con $; A e
-A$ sono variabili distinte. Il
-suffisso % si accetta e si ignora (A%
-e' A). I nomi non distinguono
-maiuscole e minuscole; sono
-significativi i primi 11 caratteri
-piu' il suffisso. Le variabili non
-dichiarate valgono 0 o la stringa
-vuota. Valori numerici: decimali,
-esadecimali &H1F, binari &B101. Il
-valore "vero" di un confronto e' -1,
-il "falso" 0.
+There are two types: signed 16-bit
+integers (-32768 to 32767) and strings
+(up to 255 characters). The name of a
+string variable ends with $; A and A$
+are distinct variables. The % suffix
+is accepted and ignored (A% is A).
+Names are not case sensitive; the
+first 11 characters plus the suffix
+are significant. Undeclared variables
+are 0 or the empty string. Numeric
+values: decimal, hexadecimal &H1F,
+binary &B101. The "true" value of a
+comparison is -1, "false" is 0.
 
-Esempio:
+Example:
   n = &HFF
   b = &B1010
   PRINT n; b
   PRINT 3 > 2; 3 < 2
-Vedi anche: DIM, CONST, OPERATORI
-OPERATORI
+See also: DIM, CONST, OPERATORS
+OPERATORS
 ---------
 
 +  -  *  /  \  MOD
 =  <>  <  >  <=  >=
 NOT  AND  OR  XOR
 
-Aritmetici: + - * / e \ (divisione
-intera, anche / fra interi) e MOD
-(resto). Confronti: = <> < > <= >=
-(anche fra stringhe, in ordine
-alfabetico). Logici bit a bit sugli
-interi: NOT AND OR XOR. Il + concatena
-le stringhe. In caso di dubbio sulla
-precedenza usare le parentesi: prima
-gli operatori aritmetici, poi i
-confronti, poi quelli logici.
+Arithmetic: + - * / and \ (integer
+division, / between integers too) and
+MOD (remainder). Comparisons: = <> < >
+<= >= (also between strings, in
+alphabetical order). Bitwise logical
+operators on integers: NOT AND OR XOR.
++ concatenates strings. When in doubt
+about precedence use parentheses:
+arithmetic operators come first, then
+comparisons, then logical ones.
 
-Esempio:
+Example:
   PRINT 7 \ 2; 7 MOD 2
   PRINT 5 AND 3; 5 OR 3; 5 XOR 3
   PRINT "ab" + "cd"; "a" < "b"
-Vedi anche: TIPI
+See also: TYPES
 CONST
 -----
 
-CONST nome = [-]numero {, nome =
-    numero}
+CONST name = [-]number {, name =
+    number}
 
-Definisce costanti numeriche. Si usano
-nelle espressioni e come dimensione di
-DIM; assegnare un valore a una
-costante e' un errore.
+Defines numeric constants. They can be
+used in expressions and as the size in
+DIM; assigning a value to a constant
+is an error.
 
-Esempio:
+Example:
   CONST max = 5, base = 100
   DIM a(max)
   a(max) = base + 1
   PRINT a(5)
-Vedi anche: DIM
+See also: DIM
 LET
 ---
 
-[LET] variabile = espressione
-[LET] array(i) = espressione
+[LET] variable = expression
+[LET] array(i) = expression
 
-Assegna un valore a una variabile o a
-un elemento di array. La parola LET e'
-facoltativa. Il tipo dell'espressione
-deve coincidere con quello della
-variabile (altrimenti errore 14: tipi
-incompatibili).
+Assigns a value to a variable or to an
+array element. The word LET is
+optional. The type of the expression
+must match that of the variable
+(otherwise error 14: type mismatch).
 
-Esempio:
+Example:
   LET a = 5
-  b$ = "ciao"
+  b$ = "hello"
   c = a * 2
   PRINT b$; c
-Vedi anche: DIM
+See also: DIM
 END
 ---
 
 END
 STOP
 
-Termina il programma. In un programma
-.COM mostra "Press any key.." e
-attende un tasto (poi torna
-all'editor); in una cartuccia attende
-un tasto e riavvia la macchina. Alla
-fine del sorgente il programma termina
-da solo. In un programma STOP equivale
-a END (non c'e' il debugger
-interattivo: per questo vedi OPTION
-DEBUG). Con un secondo termine END
-chiude anche i blocchi: END IF, END
-SUB, END FUNCTION, END SELECT.
+Ends the program. In a .COM program it
+shows "Press any key.." and waits for
+a key (then returns to the editor); in
+a cartridge it waits for a key and
+restarts the machine. At the end of
+the source the program ends by itself.
+In a program STOP is the same as END
+(there is no interactive debugger: see
+OPTION DEBUG). With a second word, END
+also closes blocks: END IF, END SUB,
+END FUNCTION, END SELECT.
 
-Esempio:
-  PRINT "inizio"
+Example:
+  PRINT "start"
   END
-  PRINT "mai"
-Vedi anche: DEBUG
+  PRINT "never"
+See also: DEBUG
 DECLARE
 -------
 
-DECLARE SUB nome(...)
-DECLARE FUNCTION nome(...)
+DECLARE SUB name(...)
+DECLARE FUNCTION name(...)
 
-Accettata per compatibilita' e
-ignorata: le firme di SUB e FUNCTION
-si leggono con una pre-scansione del
-sorgente, quindi una routine si puo'
-chiamare prima di essere definita.
-Vedi anche: SUB, FUNCTION
+Accepted for compatibility and
+ignored: SUB and FUNCTION signatures
+are read by a pre-scan of the source,
+so a routine can be called before it
+is defined.
+See also: SUB, FUNCTION
 IF
 --
 
-IF condizione THEN istruzione [ELSE
-    istruzione]
-IF condizione THEN
+IF condition THEN statement [ELSE
+    statement]
+IF condition THEN
   ...
-[ELSEIF condizione THEN
+[ELSEIF condition THEN
   ...]
 [ELSE
   ...]
 END IF
 
-Esegue istruzioni in base a una
-condizione (vera se diversa da zero).
-Forma su una riga: IF a > 3 THEN PRINT
-"si" ELSE PRINT "no". Forma a blocchi:
-IF ... THEN a fine riga, un numero
-qualsiasi di ELSEIF, un ELSE
-facoltativo e END IF. I blocchi si
-possono annidare.
+Executes statements depending on a
+condition (true if nonzero). Single-
+line form: IF a > 3 THEN PRINT "yes"
+ELSE PRINT "no". Block form: IF ...
+THEN at the end of a line, any number
+of ELSEIF, an optional ELSE and END
+IF. Blocks can be nested.
 
-Esempio:
+Example:
   n = 5
   IF n > 9 THEN
-    PRINT "grande"
+    PRINT "big"
   ELSEIF n > 3 THEN
-    PRINT "medio"
+    PRINT "medium"
   ELSE
-    PRINT "piccolo"
+    PRINT "small"
   END IF
-Vedi anche: SELECT CASE, OPERATORI
+See also: SELECT CASE, OPERATORS
 FOR
 ---
 
-FOR variabile = inizio TO fine [STEP
-    passo]
+FOR variable = start TO end [STEP
+    step]
   ...
-NEXT [variabile]
+NEXT [variable]
 
-Ciclo con contatore. STEP e' una
-costante intera, anche negativa; se
-omesso vale 1. Il ciclo non viene
-eseguito se il valore iniziale supera
-gia' il finale. EXIT FOR esce dal
-ciclo. I cicli si possono annidare.
+Counting loop. STEP is an integer
+constant, possibly negative; if
+omitted it is 1. The loop is not
+executed if the initial value already
+exceeds the final one. EXIT FOR leaves
+the loop. Loops can be nested.
 
-Esempio:
+Example:
   FOR i = 1 TO 10 STEP 3
     PRINT i;
   NEXT i
@@ -303,1193 +296,1182 @@ Esempio:
   FOR j = 3 TO 1 STEP -1
     PRINT j;
   NEXT j
-Vedi anche: EXIT
+See also: EXIT
 WHILE
 -----
 
-WHILE condizione
+WHILE condition
   ...
 WEND
 
-Ripete il blocco finche' la condizione
-e' vera (controllo all'inizio). EXIT
-WHILE esce dal ciclo.
+Repeats the block as long as the
+condition is true (tested at the
+start). EXIT WHILE leaves the loop.
 
-Esempio:
+Example:
   n = 3
   WHILE n > 0
     PRINT n;
     n = n - 1
   WEND
-Vedi anche: DO, EXIT
+See also: DO, EXIT
 DO
 --
 
-DO [WHILE|UNTIL condizione]
+DO [WHILE|UNTIL condition]
   ...
-LOOP [WHILE|UNTIL condizione]
+LOOP [WHILE|UNTIL condition]
 
-Ciclo con controllo all'inizio
-(condizione dopo DO) o alla fine (dopo
-LOOP), oppure senza condizione (ciclo
-infinito, da interrompere con EXIT
-DO). UNTIL ripete fino a quando la
-condizione diventa vera.
+Loop with the test at the start
+(condition after DO) or at the end
+(after LOOP), or without a condition
+(infinite loop, to be left with EXIT
+DO). UNTIL repeats until the condition
+becomes true.
 
-Esempio:
+Example:
   n = 0
   DO
     n = n + 1
   LOOP UNTIL n >= 4
   PRINT n
-Vedi anche: WHILE, EXIT
+See also: WHILE, EXIT
 EXIT
 ----
 
 EXIT FOR | EXIT WHILE | EXIT DO
 EXIT SUB | EXIT FUNCTION
 
-Esce subito dal ciclo (FOR, WHILE, DO)
-o dalla routine (SUB, FUNCTION) in
-corso.
+Immediately leaves the current loop
+(FOR, WHILE, DO) or routine (SUB,
+FUNCTION).
 
-Esempio:
+Example:
   FOR i = 1 TO 100
     IF i * i > 50 THEN EXIT FOR
   NEXT i
   PRINT i
-Vedi anche: FOR, DO
+See also: FOR, DO
 SELECT CASE
 -----------
 
-SELECT CASE espressione
-  CASE valore {, valore | da TO a}
-  CASE IS operatore valore
+SELECT CASE expression
+  CASE value {, value | from TO to}
+  CASE IS operator value
   CASE ELSE
 END SELECT
 
-Sceglie fra piu' alternative in base a
-un valore intero o a una stringa. Un
-CASE puo' elencare valori (CASE 2, 3),
-intervalli (CASE 4 TO 6), confronti
-(CASE IS >= 7); con le stringhe anche
-CASE "a", "b" TO "m". Il tipo dei
-valori deve coincidere con quello del
-selettore. CASE ELSE raccoglie il
-resto.
+Chooses among several alternatives
+based on an integer or string value. A
+CASE can list values (CASE 2, 3),
+ranges (CASE 4 TO 6), comparisons
+(CASE IS >= 7); with strings also CASE
+"a", "b" TO "m". The type of the
+values must match that of the
+selector. CASE ELSE catches the rest.
 
-Esempio:
+Example:
   n = 5
   SELECT CASE n
     CASE 1, 2
-      PRINT "poco"
+      PRINT "few"
     CASE 3 TO 6
-      PRINT "medio"
+      PRINT "medium"
     CASE IS > 6
-      PRINT "tanto"
+      PRINT "many"
     CASE ELSE
       PRINT "zero"
   END SELECT
-Vedi anche: IF
+See also: IF
 GOTO
 ----
 
-GOTO etichetta | numero
+GOTO label | number
 
-Salta all'etichetta o al numero di
-riga indicato. In una cartuccia a piu'
-segmenti la destinazione deve stare
-nello stesso segmento.
+Jumps to the given label or line
+number. In a multi-segment cartridge
+the target must be in the same
+segment.
 
-Esempio:
+Example:
   i = 0
-  giro:
+  again:
     i = i + 1
     PRINT i;
-    IF i < 3 THEN GOTO giro
-Vedi anche: GOSUB, ETICHETTE
+    IF i < 3 THEN GOTO again
+See also: GOSUB, LABELS
 GOSUB
 -----
 
-GOSUB etichetta | numero
+GOSUB label | number
 RETURN
 
-GOSUB chiama una subroutine che inizia
-all'etichetta (o al numero di riga) e
-RETURN torna all'istruzione dopo la
-chiamata. Per routine con parametri e
-variabili locali usare SUB e FUNCTION.
+GOSUB calls a subroutine that starts
+at the label (or line number) and
+RETURN goes back to the statement
+after the call. For routines with
+parameters and local variables use SUB
+and FUNCTION.
 
-Esempio:
-  GOSUB saluta
-  PRINT "fine"
+Example:
+  GOSUB greet
+  PRINT "end"
   END
-  saluta:
-    PRINT "ciao"
+  greet:
+    PRINT "hello"
     RETURN
-Vedi anche: SUB, CALL
+See also: SUB, CALL
 SUB
 ---
 
-SUB nome [(parametro {, parametro})]
+SUB name [(parameter {, parameter})]
   ...
 END SUB
 
-Definisce una procedura. I parametri
-si passano per valore (interi o
-stringhe, con $); un array si passa
-per riferimento scrivendo a(). Le
-variabili usate dentro la SUB sono
-locali, salvo quelle dichiarate con
-SHARED. Si puo' chiamare con CALL o
-direttamente per nome. La ricorsione
-e' consentita. Massimo 20 routine, 8
-parametri ciascuna.
+Defines a procedure. Parameters are
+passed by value (integers or strings,
+with $); an array is passed by
+reference by writing a(). Variables
+used inside the SUB are local, except
+those declared with SHARED. It can be
+called with CALL or directly by name.
+Recursion is allowed. At most 20
+routines, 8 parameters each.
 
-Esempio:
-  SUB somma(a, b)
+Example:
+  SUB addup(a, b)
     PRINT a + b
   END SUB
-  CALL somma(3, 4)
-  somma 5, 6
-Vedi anche: FUNCTION, CALL, SHARED
+  CALL addup(3, 4)
+  addup 5, 6
+See also: FUNCTION, CALL, SHARED
 FUNCTION
 --------
 
-FUNCTION nome[$] [(parametri)]
+FUNCTION name[$] [(parameters)]
   ...
-  nome = valore
+  name = value
 END FUNCTION
 
-Come una SUB ma restituisce un valore:
-si assegna al nome della funzione
-(nome = ... oppure nome$ = ... per le
-stringhe). Si usa dentro le
-espressioni. Ricorsione consentita.
+Like a SUB but returns a value: it is
+assigned to the function name (name =
+... or name$ = ... for strings). It is
+used inside expressions. Recursion
+allowed.
 
-Esempio:
-  FUNCTION doppio(n)
-    doppio = n * 2
+Example:
+  FUNCTION twice(n)
+    twice = n * 2
   END FUNCTION
-  PRINT doppio(21)
-Vedi anche: SUB, CALL
+  PRINT twice(21)
+See also: SUB, CALL
 CALL
 ----
 
-CALL nome [(argomenti)]
-CALL FAR nome [(argomenti)]
+CALL name [(arguments)]
+CALL FAR name [(arguments)]
 
-Chiama una SUB. Le parentesi sono
-facoltative. CALL FAR forza la
-chiamata fra segmenti di una cartuccia
-(di norma il compilatore la riconosce
-da solo). CALL chiama una SUB, non
-un'etichetta: per le etichette usare
-GOSUB.
+Calls a SUB. The parentheses are
+optional. CALL FAR forces a call
+between segments of a cartridge
+(normally the compiler recognizes this
+by itself). CALL calls a SUB, not a
+label: for labels use GOSUB.
 
-Esempio:
+Example:
   SUB p(x$)
     PRINT x$
   END SUB
-  CALL p("ciao")
-Vedi anche: SUB, SEGMENT
+  CALL p("hello")
+See also: SUB, SEGMENT
 SHARED
 ------
 
-SHARED variabile {, variabile}
+SHARED variable {, variable}
 
-Dentro una SUB o FUNCTION dichiara che
-i nomi indicati sono le variabili
-globali (e non variabili locali con lo
-stesso nome).
+Inside a SUB or FUNCTION, declares
+that the given names are the global
+variables (and not local variables
+with the same name).
 
-Esempio:
-  totale = 0
-  SUB aggiungi(n)
-    SHARED totale
-    totale = totale + n
+Example:
+  total = 0
+  SUB addto(n)
+    SHARED total
+    total = total + n
   END SUB
-  aggiungi 5
-  aggiungi 7
-  PRINT totale
-Vedi anche: SUB, DIM
+  addto 5
+  addto 7
+  PRINT total
+See also: SUB, DIM
 DIM
 ---
 
-DIM nome(n) [, nome$(m) ...]
-DIM nome(n) MAPPER
+DIM name(n) [, name$(m) ...]
+DIM name(n) MAPPER
 
-Dichiara array di interi o di stringhe
-con indici da 0 a n (quindi n+1
-elementi). Gli indici sono
-controllati: fuori limite il programma
-si ferma con un errore. UBOUND(a) da'
-l'ultimo indice. Gli array si passano
-a SUB e FUNCTION scrivendo a(). Con
-MAPPER (solo .COM e cartucce con
-mapper RAM) un array di interi sta nel
-mapper RAM, fino a 32768 elementi.
+Declares arrays of integers or strings
+with indexes from 0 to n (so n+1
+elements). Indexes are checked: out of
+range the program stops with an error.
+UBOUND(a) gives the last index. Arrays
+are passed to SUB and FUNCTION by
+writing a(). With MAPPER (only .COM
+and cartridges with a RAM mapper) an
+integer array lives in the RAM mapper,
+up to 32768 elements.
 
-Esempio:
+Example:
   DIM a(4), n$(2)
   FOR i = 0 TO 4
     a(i) = i * i
   NEXT i
-  n$(1) = "uno"
+  n$(1) = "one"
   PRINT a(3); n$(1); UBOUND(a)
-Vedi anche: UBOUND, MALLOC
+See also: UBOUND, MALLOC
 UBOUND
 ------
 
 UBOUND(array)
 
-Restituisce il massimo indice di un
-array (anche quando e' un parametro di
-una routine).
+Returns the maximum index of an array
+(even when it is a routine parameter).
 
-Esempio:
+Example:
   DIM v(9)
   PRINT UBOUND(v)
-Vedi anche: DIM
+See also: DIM
 DATA
 ----
 
-DATA valore {, valore}
-READ variabile {, variabile}
-RESTORE [etichetta]
+DATA value {, value}
+READ variable {, variable}
+RESTORE [label]
 
-DATA contiene valori (interi o
-stringhe fra virgolette); READ li
-legge in ordine nelle variabili
-indicate; RESTORE riporta la lettura
-al primo DATA oppure a quello che
-segue immediatamente l'etichetta
-indicata. Leggere oltre l'ultimo DATA
-e' un errore.
+DATA holds values (integers or strings
+in quotes); READ reads them in order
+into the given variables; RESTORE
+moves reading back to the first DATA
+or to the one immediately following
+the given label. Reading past the last
+DATA is an error.
 
-Esempio:
-  DATA 10, -20, "ciao"
+Example:
+  DATA 10, -20, "hello"
   READ a, b, s$
   PRINT a; b; s$
   RESTORE
   READ c
   PRINT c
-Vedi anche: DIM
+See also: DIM
 MKI$
 ----
 
 MKI$(n)
-CVI(stringa$)
+CVI(string$)
 
-MKI$ converte un intero in una stringa
-di 2 byte; CVI fa l'operazione
-inversa. Servono con i file ad accesso
-casuale (campi FIELD).
+MKI$ converts an integer into a 2-byte
+string; CVI does the opposite. They
+are used with random-access files
+(FIELD fields).
 
-Esempio:
+Example:
   a$ = MKI$(1000)
   PRINT LEN(a$); CVI(a$)
-Vedi anche: FIELD
+See also: FIELD
 PRINT
 -----
 
-PRINT [espressione {; | ,
-    espressione}] [;]
-? espressione
+PRINT [expression {; | , expression}]
+    [;]
+? expression
 PRINT #n, ...
 
-Scrive sullo schermo. Il punto e
-virgola lascia il cursore subito dopo
-l'ultimo elemento; la virgola avanza
-alla zona di tabulazione successiva
-(colonne multiple di 14). Senza punto
-e virgola finale va a capo. I numeri
-sono preceduti da un segno (spazio se
-positivi) e seguiti da uno spazio; le
-stringhe si scrivono cosi' come sono.
-? e' un'abbreviazione di PRINT. Con
-#n, scrive nel file aperto.
+Writes to the screen. The semicolon
+leaves the cursor right after the last
+item; the comma advances to the next
+tab zone (columns that are multiples
+of 14). Without a trailing semicolon
+it moves to a new line. Numbers are
+preceded by a sign (a space if
+positive) and followed by a space;
+strings are written as they are. ? is
+an abbreviation of PRINT. With #n, it
+writes to the open file.
 
-Esempio:
-  PRINT "somma:"; 3 + 4
+Example:
+  PRINT "sum:"; 3 + 4
   PRINT 1, 2, 3
   PRINT "a";
   PRINT "b"
-Vedi anche: LOCATE, INPUT, OPEN
+See also: LOCATE, INPUT, OPEN
 INPUT
 -----
 
-INPUT ["testo" ;|,] variabile
-INPUT #n, variabile {, variabile}
+INPUT ["text" ;|,] variable
+INPUT #n, variable {, variable}
 
-Legge una riga dalla tastiera nella
-variabile (intera o stringa). Con il
-testo e il punto e virgola il testo e'
-seguito da "? "; con la virgola no. Si
-conferma con Invio; Backspace
-cancella. Un valore non numerico in
-una variabile intera da' 0. Con #n,
-legge dal file.
+Reads a line from the keyboard into
+the variable (integer or string). With
+the text and the semicolon the text is
+followed by "? "; with the comma it is
+not. Confirm with Enter; Backspace
+deletes. A non-numeric value in an
+integer variable gives 0. With #n, it
+reads from the file.
 
-Esempio:
-  INPUT "Nome"; n$
-  INPUT "Eta", e
-  PRINT "Ciao "; n$; e + 1
-Vedi anche: LINE INPUT, INKEY$
+Example:
+  INPUT "Name"; n$
+  INPUT "Age", e
+  PRINT "Hello "; n$; e + 1
+See also: LINE INPUT, INKEY$
 LINE INPUT
 ----------
 
-LINE INPUT [#n,] variabile$
+LINE INPUT [#n,] variable$
 
-Legge una riga intera (spazi e virgole
-compresi) in una variabile stringa; da
-tastiera o, con #n,, da un file.
+Reads a whole line (spaces and commas
+included) into a string variable; from
+the keyboard or, with #n,, from a
+file.
 
-Esempio:
+Example:
   LINE INPUT a$
   PRINT "[" ; a$ ; "]"
-Vedi anche: INPUT
+See also: INPUT
 CLS
 ---
 
 CLS
 
-Cancella lo schermo e porta il cursore
-in alto a sinistra (nella pagina
-attiva in SCREEN 5-8).
+Clears the screen and moves the cursor
+to the top left (on the active page in
+SCREEN 5-8).
 
-Esempio:
+Example:
   CLS
-  PRINT "pulito"
-Vedi anche: LOCATE
+  PRINT "clean"
+See also: LOCATE
 LOCATE
 ------
 
-LOCATE riga, colonna
+LOCATE row, column
 
-Posiziona il cursore del testo. Riga e
-colonna partono da 1.
+Positions the text cursor. Row and
+column start at 1.
 
-Esempio:
+Example:
   CLS
   LOCATE 5, 10
-  PRINT "qui"
-Vedi anche: PRINT, CLS
+  PRINT "here"
+See also: PRINT, CLS
 COLOR
 -----
 
-COLOR primo piano[, sfondo]
+COLOR foreground[, background]
 COLOR = (n, r, g, b)
 COLOR = RESTORE
-COLOR SPRITE(n) = colore
-COLOR SPRITE$(n) = colori$
+COLOR SPRITE(n) = color
+COLOR SPRITE$(n) = colors$
 
-Imposta i colori del testo (e il
-bordo) con numeri da 0 a 15 (in SCREEN
-8 il valore grezzo 0-255). COLOR =
-(n,r,g,b) ridefinisce un colore della
-palette (r, g, b da 0 a 7; MSX2) e
-COLOR = RESTORE ripristina la palette
-predefinita. COLOR SPRITE vedi gli
-sprite.
+Sets the text colors (and the border)
+with numbers from 0 to 15 (in SCREEN 8
+the raw value 0-255). COLOR =
+(n,r,g,b) redefines a palette color
+(r, g, b from 0 to 7; MSX2) and COLOR
+= RESTORE restores the default
+palette. For COLOR SPRITE see sprites.
 
-Esempio:
+Example:
   COLOR 15, 4
   CLS
-  PRINT "bianco su blu"
-Vedi anche: PALETTE, SCREEN
+  PRINT "white on blue"
+See also: PALETTE, SCREEN
 INKEY$
 ------
 
 INKEY$
 
-Restituisce il carattere del tasto
-premuto, oppure la stringa vuota se
-non ce n'e': non attende.
+Returns the character of the key
+pressed, or the empty string if there
+is none: it does not wait.
 
-Esempio:
+Example:
   DO
     k$ = INKEY$
   LOOP WHILE k$ = ""
-  PRINT "tasto:"; ASC(k$)
-Vedi anche: INPUT, STICK
+  PRINT "key:"; ASC(k$)
+See also: INPUT, STICK
 LEN
 ---
 
-LEN(stringa$)
+LEN(string$)
 
-Lunghezza di una stringa.
+Length of a string.
 
-Esempio:
-  PRINT LEN("ciao")
-Vedi anche: MID$
+Example:
+  PRINT LEN("hello")
+See also: MID$
 ASC
 ---
 
-ASC(stringa$)
+ASC(string$)
 
-Codice del primo carattere della
-stringa (0 se e' vuota).
+Code of the first character of the
+string (0 if it is empty).
 
-Esempio:
+Example:
   PRINT ASC("A")
-Vedi anche: CHR$
+See also: CHR$
 CHR$
 ----
 
-CHR$(codice)
+CHR$(code)
 
-Stringa di un carattere con il codice
-dato (0-255).
+One-character string with the given
+code (0-255).
 
-Esempio:
+Example:
   PRINT CHR$(72); CHR$(105)
-Vedi anche: ASC
+See also: ASC
 VAL
 ---
 
-VAL(stringa$)
+VAL(string$)
 
-Valore numerico di una stringa; si
-ferma al primo carattere non valido, 0
-se non inizia con un numero.
+Numeric value of a string; stops at
+the first invalid character, 0 if it
+does not start with a number.
 
-Esempio:
+Example:
   PRINT VAL("42") + 1
-Vedi anche: STR$
+See also: STR$
 STR$
 ----
 
-STR$(numero)
+STR$(number)
 
-Rappresentazione decimale del numero
-come stringa (con lo spazio iniziale
-per i positivi).
+Decimal representation of the number
+as a string (with a leading space for
+positive numbers).
 
-Esempio:
+Example:
   a$ = STR$(7)
   PRINT LEN(a$); a$
-Vedi anche: VAL
+See also: VAL
 LEFT$
 -----
 
-LEFT$(stringa$, n)
+LEFT$(string$, n)
 
-I primi n caratteri della stringa.
+The first n characters of the string.
 
-Esempio:
+Example:
   PRINT LEFT$("abcdef", 3)
-Vedi anche: RIGHT$, MID$
+See also: RIGHT$, MID$
 RIGHT$
 ------
 
-RIGHT$(stringa$, n)
+RIGHT$(string$, n)
 
-Gli ultimi n caratteri della stringa.
+The last n characters of the string.
 
-Esempio:
+Example:
   PRINT RIGHT$("abcdef", 2)
-Vedi anche: LEFT$, MID$
+See also: LEFT$, MID$
 MID$
 ----
 
-MID$(stringa$, inizio [, n])
+MID$(string$, start [, n])
 
-Sottostringa: parte dal carattere
-inizio (il primo e' 1) e prende n
-caratteri (fino alla fine se manca n).
+Substring: starts at character start
+(the first is 1) and takes n
+characters (up to the end if n is
+missing).
 
-Esempio:
+Example:
   PRINT MID$("abcdef", 2, 3)
   PRINT MID$("abcdef", 4)
-Vedi anche: LEFT$, RIGHT$, LEN
+See also: LEFT$, RIGHT$, LEN
 ABS
 ---
 
 ABS(n)
 
-Valore assoluto.
+Absolute value.
 
-Esempio:
+Example:
   PRINT ABS(-7)
-Vedi anche: SGN
+See also: SGN
 SGN
 ---
 
 SGN(n)
 
-Segno: -1, 0 oppure 1.
+Sign: -1, 0 or 1.
 
-Esempio:
+Example:
   PRINT SGN(-9); SGN(0); SGN(4)
-Vedi anche: ABS
+See also: ABS
 RND
 ---
 
 RND(n)
-RANDOMIZE seme
+RANDOMIZE seed
 
-RND(n) restituisce un numero
-pseudocasuale da 0 a n-1. RANDOMIZE
-imposta il seme della sequenza: lo
-stesso seme da' la stessa sequenza.
+RND(n) returns a pseudo-random number
+from 0 to n-1. RANDOMIZE sets the seed
+of the sequence: the same seed gives
+the same sequence.
 
-Esempio:
+Example:
   RANDOMIZE 7
   FOR i = 1 TO 5
     PRINT RND(100);
   NEXT i
-Vedi anche: TIMER
+See also: TIMER
 TIMER
 -----
 
 TIMER
 
-Contatore dei quadri video (1/50 o
-1/60 di secondo) letto da JIFFY; a 16
-bit, riparte da zero.
+Video frame counter (1/50 or 1/60 of a
+second) read from JIFFY; 16-bit, wraps
+around to zero.
 
-Esempio:
+Example:
   t = TIMER
   SLEEP 25
   PRINT TIMER - t
-Vedi anche: SLEEP
+See also: SLEEP
 PEEK
 ----
 
-PEEK(indirizzo)
-POKE indirizzo, valore
+PEEK(address)
+POKE address, value
 
-PEEK legge un byte della memoria; POKE
-lo scrive. Indirizzi a 16 bit (da 0 a
-65535, anche con valori negativi
-equivalenti).
+PEEK reads a byte of memory; POKE
+writes it. 16-bit addresses (0 to
+65535, also with equivalent negative
+values).
 
-Esempio:
+Example:
   POKE 50000, 77
   PRINT PEEK(50000)
-Vedi anche: VARPTR
+See also: VARPTR
 POKE
 ----
 
-POKE indirizzo, valore
+POKE address, value
 
-Scrive un byte in memoria. Vedi PEEK.
+Writes a byte to memory. See PEEK.
 
-Esempio:
+Example:
   POKE 50000, 12
   PRINT PEEK(50000)
-Vedi anche: PEEK
+See also: PEEK
 SLEEP
 -----
 
-SLEEP quadri
+SLEEP frames
 
-Attende il numero di quadri video
-indicato (50 o 60 al secondo secondo
-lo standard della macchina).
+Waits for the given number of video
+frames (50 or 60 per second depending
+on the machine's standard).
 
-Esempio:
-  PRINT "aspetta"
+Example:
+  PRINT "wait"
   SLEEP 50
-  PRINT "fatto"
-Vedi anche: TIMER
+  PRINT "done"
+See also: TIMER
 SCREEN
 ------
 
-SCREEN modo [, dimensione sprite]
+SCREEN mode [, sprite size]
 
-Sceglie il modo video. MSX1: 0 (testo
-40 col), 1 (testo a colori 32 col), 2
-(grafica 256x192), 3 (blocchi 64x48).
-MSX2 aggiunge 4, 5 (256x212, 16
-colori), 6 (512x212, 4 colori), 7
-(512x212, 16 colori), 8 (256x212, 256
-colori) e, su MSX2+/turbo R, 10-12
-(colori YJK). Le istruzioni PSET,
-LINE, CIRCLE, PAINT, GET/PUT e COPY
-lavorano in SCREEN 5-8 (PSET, POINT,
-LINE e CIRCLE anche in SCREEN 3). Il
-secondo parametro e' la dimensione
-degli sprite: 0 = 8x8, 1 = 8x8
-ingranditi, 2 = 16x16, 3 = 16x16
-ingranditi. Su MSX1 un modo oltre il 3
-da' "Illegal function call".
+Selects the video mode. MSX1: 0
+(40-column text), 1 (32-column color
+text), 2 (256x192 graphics), 3 (64x48
+blocks). MSX2 adds 4, 5 (256x212, 16
+colors), 6 (512x212, 4 colors), 7
+(512x212, 16 colors), 8 (256x212, 256
+colors) and, on MSX2+/turbo R, 10-12
+(YJK colors). PSET, LINE, CIRCLE,
+PAINT, GET/PUT and COPY work in SCREEN
+5-8 (PSET, POINT, LINE and CIRCLE also
+in SCREEN 3). The second parameter is
+the sprite size: 0 = 8x8, 1 = 8x8
+magnified, 2 = 16x16, 3 = 16x16
+magnified. On MSX1 a mode above 3
+gives "Illegal function call".
 
-Esempio:
+Example:
   SCREEN 5
   COLOR 15, 4
   CLS
   PSET (10, 10), 15
   LINE -(100, 80), 8
 
-Disponibile: MSX1: modi 0-3; MSX2: 0-8
-(10-12 su MSX2+)
-Vedi anche: PSET, LINE, SPRITE, SET
+Available: MSX1: modes 0-3; MSX2: 0-8
+(10-12 on MSX2+)
+See also: PSET, LINE, SPRITE, SET
 PSET
 ----
 
-PSET (x, y) [, colore [, operazione]]
-PRESET (x, y) [, colore [,
-    operazione]]
+PSET (x, y) [, color [, operation]]
+PRESET (x, y) [, color [, operation]]
 
-Accende (PSET) o spegne (PRESET,
-colore di sfondo) un punto. Le
-coordinate fuori schermo vengono
-ritagliate. L'operazione logica e'
-PSET, PRESET, AND, OR, XOR oppure la
-stessa preceduta da T (trasparente: il
-colore 0 non scrive).
+Turns a point on (PSET) or off
+(PRESET, background color). Off-screen
+coordinates are clipped. The logical
+operation is PSET, PRESET, AND, OR,
+XOR or the same prefixed with T
+(transparent: color 0 does not write).
 
-Esempio:
+Example:
   SCREEN 5
   PSET (128, 100), 12
   PSET (128, 100), 3, XOR
 
-Disponibile: Solo MSX2 (SCREEN 3
-compreso)
-Vedi anche: POINT, LINE
+Available: MSX2 only (including SCREEN
+3)
+See also: POINT, LINE
 POINT
 -----
 
 POINT(x, y)
 
-Colore del punto; -1 se fuori schermo.
+Color of the point; -1 if off-screen.
 
-Esempio:
+Example:
   SCREEN 5
   PSET (5, 5), 9
   PRINT POINT(5, 5)
 
-Disponibile: Solo MSX2
-Vedi anche: PSET
+Available: MSX2 only
+See also: PSET
 LINE
 ----
 
-LINE [(x1, y1)] - (x2, y2) [, colore
-    [, B|BF [, operazione]]]
+LINE [(x1, y1)] - (x2, y2) [, color [,
+    B|BF [, operation]]]
 
-Traccia una linea; senza il primo
-punto parte dall'ultimo punto grafico.
-Con B disegna un rettangolo, con BF un
-rettangolo pieno. Se manca il colore
-vale quello di COLOR. Non va confusa
-con LINE INPUT (che legge una riga di
-testo).
+Draws a line; without the first point
+it starts from the last graphics
+point. With B it draws a rectangle,
+with BF a filled rectangle. If the
+color is omitted the COLOR value is
+used. Not to be confused with LINE
+INPUT (which reads a line of text).
 
-Esempio:
+Example:
   SCREEN 5
   LINE (10, 10)-(100, 60), 15
   LINE (20, 80)-(120, 140), 9, BF
 
-Disponibile: Solo MSX2 (SCREEN 3
-compreso)
-Vedi anche: CIRCLE, PSET
+Available: MSX2 only (including SCREEN
+3)
+See also: CIRCLE, PSET
 CIRCLE
 ------
 
-CIRCLE (x, y), raggio [, colore]
+CIRCLE (x, y), radius [, color]
 
-Disegna una circonferenza.
+Draws a circle.
 
-Esempio:
+Example:
   SCREEN 5
   CIRCLE (128, 106), 50, 11
 
-Disponibile: Solo MSX2 (SCREEN 3
-compreso)
-Vedi anche: LINE, PAINT
+Available: MSX2 only (including SCREEN
+3)
+See also: LINE, PAINT
 PAINT
 -----
 
-PAINT (x, y) [, colore [, bordo]]
+PAINT (x, y) [, color [, border]]
 
-Riempie un'area partendo dal punto
-indicato. Nei modi a 16 colori e nei 4
-colori il bordo (colore che ferma il
-riempimento) va indicato se diverso
-dal colore di riempimento.
+Fills an area starting from the given
+point. In the 16-color and 4-color
+modes the border (the color that stops
+the fill) must be given if it differs
+from the fill color.
 
-Esempio:
+Example:
   SCREEN 5
   CIRCLE (128, 106), 50, 4
   PAINT (128, 106), 6, 4
 
-Disponibile: Solo MSX2
-Vedi anche: CIRCLE, LINE
+Available: MSX2 only
+See also: CIRCLE, LINE
 DRAW
 ----
 
-DRAW "comandi"
+DRAW "commands"
 
-Disegna con un linguaggio a comandi: U
-D L R E F G H (muovi su, giu',
-sinistra, destra e diagonali di n
-punti), M x,y (vai a; +/- relativo), B
-davanti a un comando (muovi senza
-tracciare), N (traccia e torna), C
-colore, S scala (in quarti). Esempio:
-DRAW "C7 R20 D10 L20 U10".
+Draws with a command language: U D L R
+E F G H (move up, down, left, right
+and diagonally by n points), M x,y
+(move to; +/- relative), B before a
+command (move without drawing), N
+(draw and return), C color, S scale
+(in quarters). Example: DRAW "C7 R20
+D10 L20 U10".
 
-Esempio:
+Example:
   SCREEN 5
   PSET (100, 100)
   DRAW "C8 R40 D30 L40 U30"
 
-Disponibile: Solo MSX2
-Vedi anche: LINE
+Available: MSX2 only
+See also: LINE
 GET
 ---
 
 GET (x1,y1)-(x2,y2), array
-PUT (x, y), array [, operazione]
+PUT (x, y), array [, operation]
 
-GET copia un rettangolo dello schermo
-in un array di interi; PUT lo
-ridisegna con un'operazione (PSET,
-PRESET, AND, OR, XOR). In grafica il
-rettangolo dev'essere contenuto in un
-array dimensionato con DIM. Non vanno
-confusi con GET #n / PUT #n (file ad
-accesso casuale) e PUT SPRITE.
+GET copies a screen rectangle into an
+integer array; PUT redraws it with an
+operation (PSET, PRESET, AND, OR,
+XOR). In graphics the rectangle must
+fit in an array dimensioned with DIM.
+Not to be confused with GET #n / PUT
+#n (random-access files) and PUT
+SPRITE.
 
-Esempio:
+Example:
   SCREEN 5
   DIM a(100)
   CIRCLE (20, 20), 8, 15
   GET (10, 10)-(30, 30), a
   PUT (100, 100), a, PSET
 
-Disponibile: Solo MSX2
-Vedi anche: COPY, PUT SPRITE, OPEN
+Available: MSX2 only
+See also: COPY, PUT SPRITE, OPEN
 COPY
 ----
 
-COPY (x1,y1)-(x2,y2)[,pagina] TO
-    (x3,y3)[,pagina] [, operazione]
+COPY (x1,y1)-(x2,y2)[,page] TO
+    (x3,y3)[,page] [, operation]
 
-Copia un rettangolo di schermo (anche
-fra pagine) con il motore comandi del
-VDP: velocissimo, ideale per sprite
-software e scorrimenti.
+Copies a screen rectangle (also
+between pages) using the VDP command
+engine: very fast, ideal for software
+sprites and scrolling.
 
-Esempio:
+Example:
   SCREEN 5
   CIRCLE (30, 30), 20, 12
   COPY (0, 0)-(60, 60) TO (150, 100)
 
-Disponibile: Solo MSX2
-Vedi anche: GET, SET
+Available: MSX2 only
+See also: GET, SET
 SET
 ---
 
-SET PAGE visibile, attiva
+SET PAGE visible, active
 SET SCROLL x, y
 
-SET PAGE sceglie la pagina mostrata e
-quella su cui si disegna (SCREEN 5-8):
-si disegna fuori vista e poi si
-mostra, per animazioni senza
-sfarfallio. SET SCROLL scorre lo
-schermo in modo morbido (registri 23 e
-18).
+SET PAGE selects the displayed page
+and the page being drawn on (SCREEN
+5-8): draw off-screen and then show
+it, for flicker-free animation. SET
+SCROLL scrolls the screen smoothly
+(registers 23 and 18).
 
-Esempio:
+Example:
   SCREEN 5
   SET PAGE 0, 1
   CIRCLE (100, 100), 40, 15
   SET PAGE 1, 1
 
-Disponibile: Solo MSX2
-Vedi anche: COPY, VBANK
+Available: MSX2 only
+See also: COPY, VBANK
 VIEW
 ----
 
 VIEW [(x1,y1)-(x2,y2)]
 WINDOW [SCREEN] [(x1,y1)-(x2,y2)]
 
-VIEW limita il disegno a una finestra
-dello schermo (senza argomenti la
-annulla); WINDOW ridefinisce il
-sistema di coordinate (WINDOW SCREEN:
-l'asse y cresce verso il basso).
+VIEW restricts drawing to a window of
+the screen (without arguments it
+cancels it); WINDOW redefines the
+coordinate system (WINDOW SCREEN: the
+y axis grows downward).
 
-Esempio:
+Example:
   SCREEN 5
   VIEW (50, 50)-(150, 150)
   LINE (0, 0)-(255, 211), 15
   VIEW
 
-Disponibile: Solo MSX2
-Vedi anche: LINE
+Available: MSX2 only
+See also: LINE
 PALETTE
 -------
 
 PALETTE n, r, g, b
-PALETTE n, colore
+PALETTE n, color
 COLOR = (n, r, g, b)
 COLOR = RESTORE
 
-Ridefinisce un colore della tavolozza
-(r, g, b da 0 a 7); la forma con due
-numeri assegna al colore n il colore
-predefinito indicato. COLOR = RESTORE
-ripristina la palette di fabbrica.
+Redefines a palette color (r, g, b
+from 0 to 7); the two-number form
+assigns the given default color to
+color n. COLOR = RESTORE restores the
+factory palette.
 
-Esempio:
+Example:
   SCREEN 5
   PALETTE 1, 7, 0, 0
   LINE (10, 10)-(100, 60), 1, BF
 
-Disponibile: Solo MSX2
-Vedi anche: COLOR
+Available: MSX2 only
+See also: COLOR
 VPOKE
 -----
 
-VPOKE indirizzo, valore
-VPEEK(indirizzo)
+VPOKE address, value
+VPEEK(address)
 
-Scrive/legge un byte della memoria
-video. Con VBANK l'indirizzo arriva a
-17 bit (128 KB su MSX2).
+Writes/reads a byte of video memory.
+With VBANK the address extends to 17
+bits (128 KB on MSX2).
 
-Esempio:
+Example:
   VPOKE 0, 65
   PRINT VPEEK(0)
-Vedi anche: VBANK, VFILL, VWRITE
+See also: VBANK, VFILL, VWRITE
 VBANK
 -----
 
 VBANK n
 
-Sceglie il blocco da 16 KB della VRAM
-usato da VPOKE, VPEEK, VFILL, VWRITE,
-VREAD$, BLOAD/BSAVE ... S (R#14 su
-MSX2).
+Selects the 16 KB VRAM block used by
+VPOKE, VPEEK, VFILL, VWRITE, VREAD$,
+BLOAD/BSAVE ... S (R#14 on MSX2).
 
-Esempio:
+Example:
   VBANK 1
   VPOKE 0, 5
 
-Disponibile: Solo MSX2
-Vedi anche: VPOKE
+Available: MSX2 only
+See also: VPOKE
 VFILL
 -----
 
-VFILL indirizzo, quanti, valore
+VFILL address, count, value
 
-Riempie un'area di VRAM con un byte.
+Fills a VRAM area with a byte.
 
-Esempio:
+Example:
   VFILL 0, 768, 32
-Vedi anche: VWRITE
+See also: VWRITE
 VWRITE
 ------
 
-VWRITE indirizzo, stringa$
+VWRITE address, string$
 
-Scrive in VRAM i byte di una stringa.
+Writes the bytes of a string to VRAM.
 
-Esempio:
-  VWRITE 0, "ciao"
-Vedi anche: VREAD$, VCOPY
+Example:
+  VWRITE 0, "hello"
+See also: VREAD$, VCOPY
 VREAD$
 ------
 
-VREAD$(indirizzo, quanti)
+VREAD$(address, count)
 
-Legge un'area di VRAM e la restituisce
-come stringa.
+Reads a VRAM area and returns it as a
+string.
 
-Esempio:
+Example:
   PRINT VREAD$(0, 4)
-Vedi anche: VWRITE
+See also: VWRITE
 BASE
 ----
 
 BASE(n)
 
-Indirizzo di VRAM delle tabelle del
-modo corrente (n come nel BASIC MSX: 0
-nomi, 2 colori/motivi, ...).
+VRAM address of the tables of the
+current mode (n as in MSX BASIC: 0
+names, 2 colors/patterns, ...).
 
-Esempio:
+Example:
   PRINT BASE(0)
-Vedi anche: VDP
+See also: VDP
 VDP
 ---
 
 VDP(n)
-VDP(n) = valore
+VDP(n) = value
 
-Legge o scrive il registro n del VDP
-(la lettura da' la copia in RAM del
-BIOS).
+Reads or writes VDP register n
+(reading gives the BIOS copy in RAM).
 
-Esempio:
+Example:
   VDP(7) = 9
   PRINT VDP(7)
-Vedi anche: BASE, OUT
+See also: BASE, OUT
 OUT
 ---
 
-OUT porta, valore
-INP(porta)
+OUT port, value
+INP(port)
 
-Scrive un byte su una porta di I/O;
-INP ne legge uno.
+Writes a byte to an I/O port; INP
+reads one.
 
-Esempio:
+Example:
   OUT 170, 3
-Vedi anche: INP, VDP
+See also: INP, VDP
 INP
 ---
 
-INP(porta)
+INP(port)
 
-Legge un byte da una porta di I/O.
+Reads a byte from an I/O port.
 
-Esempio:
+Example:
   PRINT INP(168)
-Vedi anche: OUT
+See also: OUT
 SPRITE
 ------
 
-SPRITE$(n) = stringa$
-PUT SPRITE piano, (x, y), colore,
-    motivo
-PUT SPRITE piano
-COLOR SPRITE(piano) = colore
+SPRITE$(n) = string$
+PUT SPRITE plane, (x, y), color,
+    pattern
+PUT SPRITE plane
+COLOR SPRITE(plane) = color
 COLLISION
 
-Gli sprite sono 32 oggetti hardware.
-SPRITE$(n) = stringa$ definisce il
-motivo n: 8 byte per un 8x8 (32 per un
-16x16), un bit per punto. PUT SPRITE
-piano,(x,y),colore,motivo mostra lo
-sprite; con le sole parole PUT SPRITE
-piano lo si nasconde. Le dimensioni
-(8x8 o 16x16, normale o ingrandito) si
-scelgono con il secondo parametro di
-SCREEN. COLOR SPRITE(n) = c cambia il
-colore di un piano; COLOR SPRITE$(n) =
-stringa$ da' un colore per riga (MSX2,
-sprite modo 2). COLLISION vale -1 se
-due sprite si sono toccati.
+Sprites are 32 hardware objects.
+SPRITE$(n) = string$ defines pattern
+n: 8 bytes for an 8x8 (32 for a
+16x16), one bit per dot. PUT SPRITE
+plane,(x,y),color,pattern shows the
+sprite; with just PUT SPRITE plane it
+is hidden. The size (8x8 or 16x16,
+normal or magnified) is chosen with
+the second parameter of SCREEN. COLOR
+SPRITE(n) = c changes the color of a
+plane; COLOR SPRITE$(n) = string$
+gives one color per line (MSX2, sprite
+mode 2). COLLISION is -1 if two
+sprites have touched.
 
-Esempio:
+Example:
   SCREEN 2, 0
   SPRITE$(0) = CHR$(255)+CHR$(129)+CHR
     $(129)+CHR$(129)+CHR$(129)+CHR$(12
     9)+CHR$(129)+CHR$(255)
   PUT SPRITE 0, (100, 90), 8, 0
 
-Disponibile: MSX1 e MSX2 (SCREEN 1-8)
-Vedi anche: SCREEN, COLLISION, STICK
+Available: MSX1 and MSX2 (SCREEN 1-8)
+See also: SCREEN, COLLISION, STICK
 PUT SPRITE
 ----------
 
-PUT SPRITE piano, (x, y), colore,
-    motivo
-PUT SPRITE piano
+PUT SPRITE plane, (x, y), color,
+    pattern
+PUT SPRITE plane
 
-Mostra (o con il solo piano nasconde)
-uno sprite. Vedi SPRITE.
+Shows a sprite (or hides it when only
+the plane is given). See SPRITE.
 
-Esempio:
+Example:
   SCREEN 2, 0
   SPRITE$(0) = CHR$(255)+CHR$(129)+CHR
     $(129)+CHR$(129)+CHR$(129)+CHR$(12
     9)+CHR$(129)+CHR$(255)
   PUT SPRITE 0, (50, 50), 15, 0
-Vedi anche: SPRITE
+See also: SPRITE
 COLLISION
 ---------
 
 COLLISION
 
-Vale -1 se due sprite si sono
-sovrapposti dopo l'ultima lettura
-(letto dallo stato del VDP), 0
-altrimenti.
+Is -1 if two sprites have overlapped
+since the last read (read from the VDP
+status), 0 otherwise.
 
-Esempio:
-  IF COLLISION THEN PRINT "urto"
-Vedi anche: SPRITE
+Example:
+  IF COLLISION THEN PRINT "hit"
+See also: SPRITE
 STICK
 -----
 
 STICK(n)
 
-Direzione del joystick n (0 = tasti
-cursore, 1 e 2 = porte). Valori da 0
-(fermo) a 8: 1 su, poi in senso
-orario.
+Direction of joystick n (0 = cursor
+keys, 1 and 2 = ports). Values from 0
+(centered) to 8: 1 is up, then
+clockwise.
 
-Esempio:
+Example:
   d = STICK(0)
-  IF d = 3 THEN PRINT "destra"
-Vedi anche: STRIG, INKEY$
+  IF d = 3 THEN PRINT "right"
+See also: STRIG, INKEY$
 STRIG
 -----
 
 STRIG(n)
 
-Pulsante di fuoco: n = 0 barra
-spaziatrice, 1 e 2 pulsanti A di
-joystick 1 e 2, 3 e 4 pulsanti B. Vale
--1 se premuto.
+Fire button: n = 0 space bar, 1 and 2
+A buttons of joysticks 1 and 2, 3 and
+4 B buttons. Is -1 if pressed.
 
-Esempio:
-  IF STRIG(0) THEN PRINT "fuoco"
-Vedi anche: STICK
+Example:
+  IF STRIG(0) THEN PRINT "fire"
+See also: STICK
 BEEP
 ----
 
 BEEP
 
-Emette il beep di sistema.
+Emits the system beep.
 
-Esempio:
+Example:
   BEEP
-Vedi anche: SOUND, PLAY
+See also: SOUND, PLAY
 SOUND
 -----
 
-SOUND registro, valore
+SOUND register, value
 
-Scrive direttamente un registro (0-13)
-del generatore sonoro PSG AY-3-8910:
-toni, rumore, mixer, volumi,
-inviluppo.
+Writes directly to a register (0-13)
+of the AY-3-8910 PSG sound generator:
+tones, noise, mixer, volumes,
+envelope.
 
-Esempio:
+Example:
   SOUND 7, 62
   SOUND 8, 12
   SOUND 0, 254
   SOUND 1, 0
-Vedi anche: PLAY, BEEP
+See also: PLAY, BEEP
 PLAY
 ----
 
-PLAY voce1$ [, voce2$ [, voce3$]]
+PLAY voice1$ [, voice2$ [, voice3$]]
 
-Suona una melodia su 1-3 voci con il
-linguaggio MML e attende la fine.
-Comandi: A-G (nota, con # o + diesis,
-- bemolle; seguite da un numero per la
-durata e da punti), R pausa, O ottava
-(1-8), L durata di default (1-64), T
-tempo (32-255), V volume (0-15), N n
-(nota numerica), < e > ottava giu'/su,
-M e S (modulazione/forma d'inviluppo
-come nel BASIC MSX).
+Plays a melody on 1-3 voices using the
+MML language and waits for the end.
+Commands: A-G (note, with # or + for
+sharp, - for flat; followed by a
+number for the length and by dots), R
+rest, O octave (1-8), L default length
+(1-64), T tempo (32-255), V volume
+(0-15), N n (numeric note), < and >
+octave down/up, M and S
+(modulation/envelope shape as in MSX
+BASIC).
 
-Esempio:
+Example:
   PLAY "T120 O4 L8 CDEFGAB>C"
   PLAY "O3 C2", "O4 E2", "O4 G2"
-Vedi anche: SOUND, BEEP
+See also: SOUND, BEEP
 OPEN
 ----
 
-OPEN nome$ FOR INPUT|OUTPUT|APPEND AS
+OPEN name$ FOR INPUT|OUTPUT|APPEND AS
     [#]n
-OPEN nome$ [FOR RANDOM] AS [#]n LEN =
+OPEN name$ [FOR RANDOM] AS [#]n LEN =
     k
 
-Apre un file (solo programmi .COM, non
-cartucce). n da 1 a 3. INPUT: lettura;
-OUTPUT: crea/azzera; APPEND: scrive in
-coda; RANDOM: file ad accesso casuale
-con record di k byte (1-128). I file
-aperti si chiudono da soli alla fine
-del programma.
+Opens a file (.COM programs only, not
+cartridges). n from 1 to 3. INPUT:
+read; OUTPUT: create/truncate; APPEND:
+write at the end; RANDOM: random-
+access file with records of k bytes
+(1-128). Open files are closed
+automatically at the end of the
+program.
 
-Esempio:
-  OPEN "PROVA.TXT" FOR OUTPUT AS #1
-  PRINT #1, "riga uno"
+Example:
+  OPEN "TEST.TXT" FOR OUTPUT AS #1
+  PRINT #1, "line one"
   CLOSE #1
-  OPEN "PROVA.TXT" FOR INPUT AS #1
+  OPEN "TEST.TXT" FOR INPUT AS #1
   LINE INPUT #1, a$
   CLOSE #1
   PRINT a$
 
-Disponibile: Solo .COM
-Vedi anche: CLOSE, PRINT, INPUT, EOF,
+Available: DOS programs only (.COM)
+See also: CLOSE, PRINT, INPUT, EOF,
 FIELD
 CLOSE
 -----
 
 CLOSE [#n {, #n}]
 
-Chiude i file indicati (tutti, se
-senza argomenti).
+Closes the given files (all of them,
+if no arguments).
 
-Esempio:
+Example:
   CLOSE #1
 
-Disponibile: Solo .COM
-Vedi anche: OPEN
+Available: DOS programs only (.COM)
+See also: OPEN
 WRITE
 -----
 
-WRITE #n, espressione {, espressione}
+WRITE #n, expression {, expression}
 
-Scrive valori nel file separati da
-virgole, con le stringhe fra
-virgolette.
+Writes values to the file separated by
+commas, with strings in quotes.
 
-Esempio:
+Example:
   WRITE #1, 5, "ab"
 
-Disponibile: Solo .COM
-Vedi anche: PRINT, OPEN
+Available: DOS programs only (.COM)
+See also: PRINT, OPEN
 EOF
 ---
 
 EOF(n)
 
-Vale -1 quando il file n e' finito.
+Is -1 when file n has ended.
 
-Esempio:
+Example:
   WHILE NOT EOF(1)
     LINE INPUT #1, a$
     PRINT a$
   WEND
 
-Disponibile: Solo .COM
-Vedi anche: OPEN
+Available: DOS programs only (.COM)
+See also: OPEN
 KILL
 ----
 
-KILL nome$
+KILL name$
 
-Cancella un file dal disco.
+Deletes a file from the disk.
 
-Esempio:
-  KILL "PROVA.TXT"
+Example:
+  KILL "TEST.TXT"
 
-Disponibile: Solo .COM
-Vedi anche: OPEN
+Available: DOS programs only (.COM)
+See also: OPEN
 FIELD
 -----
 
-FIELD #n, larghezza AS var$ {,
-    larghezza AS var$}
-LSET var$ = testo$
-RSET var$ = testo$
+FIELD #n, width AS var$ {, width AS
+    var$}
+LSET var$ = text$
+RSET var$ = text$
 
-File ad accesso casuale: FIELD divide
-il record in campi associati a
-variabili stringa (fino a 8);
-LSET/RSET riempiono il campo
-allineando a sinistra o a destra
-(completando con spazi); PUT #n,r
-scrive il record r, GET #n,r lo legge
-(record da 1). LOF(n) da' il numero di
-record.
+Random-access files: FIELD splits the
+record into fields tied to string
+variables (up to 8); LSET/RSET fill
+the field aligning left or right
+(padding with spaces); PUT #n,r writes
+record r, GET #n,r reads it (records
+start at 1). LOF(n) gives the number
+of records.
 
-Esempio:
+Example:
   OPEN "R.DAT" AS #1 LEN = 20
   FIELD #1, 10 AS n$, 10 AS c$
   LSET n$ = "Mario"
@@ -1499,173 +1481,172 @@ Esempio:
   PRINT n$; c$
   CLOSE #1
 
-Disponibile: Solo .COM
-Vedi anche: OPEN, MKI$, LOF
+Available: DOS programs only (.COM)
+See also: OPEN, MKI$, LOF
 LOF
 ---
 
 LOF(n)
 
-Numero di record del file ad accesso
-casuale n.
+Number of records of random-access
+file n.
 
-Esempio:
+Example:
   PRINT LOF(1)
 
-Disponibile: Solo .COM
-Vedi anche: FIELD
+Available: DOS programs only (.COM)
+See also: FIELD
 BLOAD
 -----
 
-BSAVE nome$, inizio, lunghezza [, S]
-BLOAD nome$ [, S] [, scostamento]
+BSAVE name$, start, length [, S]
+BLOAD name$ [, S] [, offset]
 
-Salva/carica un blocco di memoria nel
-formato binario MSX. Con S i dati
-vanno da/verso la VRAM (VBANK vale).
+Saves/loads a memory block in the MSX
+binary format. With S the data goes
+from/to VRAM (VBANK applies).
 
-Esempio:
-  BSAVE "SCHERMO.BIN", 0, 6144, S
-  BLOAD "SCHERMO.BIN", S
+Example:
+  BSAVE "SCREEN.BIN", 0, 6144, S
+  BLOAD "SCREEN.BIN", S
 
-Disponibile: Solo .COM
-Vedi anche: VBANK, OPEN
+Available: DOS programs only (.COM)
+See also: VBANK, OPEN
 SEGMENT
 -------
 
 SEGMENT n
 
-In una cartuccia a piu' banchi sposta
-il codice che segue nel segmento n
-(precedente + 1). Il segmento 0
-contiene il runtime. Una SUB/FUNCTION
-di un altro segmento si chiama
-normalmente; GOTO e GOSUB non
-attraversano i segmenti. Per progetti
-grandi ogni segmento puo' stare in un
-file NOME000, NOME001...: vedi
-SEGMENTI.
+In a multi-bank cartridge, moves the
+following code into segment n
+(previous + 1). Segment 0 contains the
+runtime. A SUB/FUNCTION in another
+segment is called normally; GOTO and
+GOSUB do not cross segments. For large
+projects each segment can live in its
+own file NAME000, NAME001...: see
+SEGMENTS.
 
-Esempio:
+Example:
   OPTION TARGET ASCII8
   SEGMENT 1
   SUB bis()
-    PRINT "nel segmento 1"
+    PRINT "in segment 1"
   END SUB
 
-Disponibile: Cartucce
-ASCII8/ASCII16/KONAMI/SCC
-Vedi anche: OPTION, INCBIN, CALL
+Available: ASCII8/ASCII16/Konami/SCC
+cartridges
+See also: OPTION, INCBIN, CALL
 INCBIN
 ------
 
 INCBIN "file"
 
-Include i byte di un file nel segmento
-corrente (grafica, musica, tabelle).
+Includes the bytes of a file in the
+current segment (graphics, music,
+tables).
 
-Esempio:
+Example:
   SEGMENT 2
   INCBIN "SPRITES.BIN"
 
-Disponibile: Cartucce multisegmento
-Vedi anche: SETBANK, SEGMENT
+Available: Multi-segment cartridges
+See also: SETBANK, SEGMENT
 SETBANK
 -------
 
 SETBANK n
 DATAWIN
 
-SETBANK mappa il segmento n nella
-finestra dati; DATAWIN e' l'indirizzo
-della finestra (A000h per i banchi da
-8 KB, 8000h per ASCII16).
+SETBANK maps segment n into the data
+window; DATAWIN is the address of the
+window (A000h for 8 KB banks, 8000h
+for ASCII16).
 
-Esempio:
+Example:
   SETBANK 2
   VCOPY DATAWIN, 0, 256
 
-Disponibile: Cartucce multisegmento
-Vedi anche: INCBIN, VCOPY
+Available: Multi-segment cartridges
+See also: INCBIN, VCOPY
 VCOPY
 -----
 
-VCOPY indirizzo_memoria,
-    indirizzo_vram, quanti
+VCOPY memory_address, vram_address,
+    count
 
-Copia byte dalla memoria alla VRAM.
+Copies bytes from memory to VRAM.
 
-Esempio:
+Example:
   VCOPY DATAWIN, 0, 2048
-Vedi anche: SETBANK, VWRITE
+See also: SETBANK, VWRITE
 MALLOC
 ------
 
 MAPPERSEGS
 MALLOC
-MFREE segmento
+MFREE segment
 
-Mapper RAM: MAPPERSEGS da' il numero
-di segmenti da 16 KB (0 se manca il
-mapper); MALLOC ne assegna uno e ne
-da' il numero; MFREE lo restituisce.
+RAM mapper: MAPPERSEGS gives the
+number of 16 KB segments (0 if there
+is no mapper); MALLOC allocates one
+and returns its number; MFREE releases
+it.
 
-Esempio:
+Example:
   s = MALLOC
   PRINT MAPPERSEGS; s
   MFREE s
 
-Disponibile: Con mapper RAM
-Vedi anche: MGET, MPUT, DIM
+Available: With RAM mapper
+See also: MGET, MPUT, DIM
 MGET
 ----
 
-MGET(segmento, offset)
-MPUT segmento, offset, valore
-MREAD segmento, offset, indirizzo,
-    quanti
-MWRITE segmento, offset, indirizzo,
-    quanti
-VARPTR(variabile)
+MGET(segment, offset)
+MPUT segment, offset, value
+MREAD segment, offset, address, count
+MWRITE segment, offset, address, count
+VARPTR(variable)
 
-Accesso al mapper RAM: MGET legge un
-byte, MPUT lo scrive, MREAD copia dal
-mapper in memoria, MWRITE da memoria
-al mapper. VARPTR da' l'indirizzo di
-una variabile (o di un elemento di
-array) da passare a MREAD/MWRITE. Gli
-indirizzi di memoria dei blocchi non
-devono cadere in 8000h-BFFFh.
+RAM mapper access: MGET reads a byte,
+MPUT writes it, MREAD copies from the
+mapper to memory, MWRITE from memory
+to the mapper. VARPTR gives the
+address of a variable (or array
+element) to pass to MREAD/MWRITE. The
+memory addresses of the blocks must
+not fall in 8000h-BFFFh.
 
-Esempio:
+Example:
   s = MALLOC
   MPUT s, 0, 123
   PRINT MGET(s, 0)
   MFREE s
 
-Disponibile: Con mapper RAM
-Vedi anche: MALLOC, VARPTR, DIM
+Available: With RAM mapper
+See also: MALLOC, VARPTR, DIM
 OPTION
 ------
 
 OPTION NUMBERED | LABELS | MIXED
-OPTION TARGET tipo
+OPTION TARGET type
 OPTION DEBUG
 
-Direttive di compilazione, da mettere
-all'inizio del sorgente. NUMBERED: il
-programma ha numeri di riga e nessuna
-etichetta; LABELS: solo etichette;
-MIXED (predefinita): entrambe. TARGET
-sceglie il formato di uscita (vedi
-OPTION TARGET). DEBUG attiva il
-debugger (vedi DEBUG).
+Compilation directives, to be placed
+at the start of the source. NUMBERED:
+the program has line numbers and no
+labels; LABELS: labels only; MIXED
+(default): both. TARGET selects the
+output format (see OPTION TARGET).
+DEBUG enables the debugger (see
+DEBUG).
 
-Esempio:
+Example:
   OPTION LABELS
   PRINT "ok"
-Vedi anche: OPTION TARGET, OPTION
-DEBUG, ETICHETTE
+See also: OPTION TARGET, OPTION DEBUG,
+LABELS
 OPTION TARGET
 -------------
 
@@ -1674,376 +1655,364 @@ OPTION TARGET ROM_16 | ROM_32 |
     ROM_ASCII8 | ROM_ASCII16 |
     ROM_KONAMI | ROM_KONAMISCC
 
-Se e' la prima riga, sceglie che cosa
-produce il compilatore. DOS
-(predefinito, anche COM): programma
-NOME.COM per MSX-DOS. BIN: programma
-NOME.BIN per MSX-BASIC, senza DOS
-(vedi BIN). ROM_16 e ROM_32: cartuccia
-semplice da 16 o 32 KB. ROM_ASCII8,
-ROM_ASCII16, ROM_KONAMI e
-ROM_KONAMISCC (anche ROM_SCC):
-cartucce a banchi, con segmenti (vedi
-SEGMENT e SEGMENTI). Restano validi i
-vecchi nomi ROM16, ROM32, ASCII8,
-ASCII16, KONAMI, SCC. Una cartuccia al
-termine attende un tasto e riavvia la
-macchina; nelle cartucce non ci sono
-file ne' BLOAD/BSAVE ne' il debugger
-completo; l'assembler in linea
-funziona.
+When it is the first line, it selects
+what the compiler produces. DOS
+(default, also COM): NAME.COM program
+for MSX-DOS. BIN: NAME.BIN program for
+MSX-BASIC, without DOS (see BIN).
+ROM_16 and ROM_32: plain 16 or 32 KB
+cartridge. ROM_ASCII8, ROM_ASCII16,
+ROM_KONAMI and ROM_KONAMISCC (also
+ROM_SCC): banked cartridges, with
+segments (see SEGMENT and SEGMENTS).
+The old names ROM16, ROM32, ASCII8,
+ASCII16, KONAMI, SCC remain valid. A
+cartridge waits for a key at the end
+and restarts the machine; cartridges
+have no files, no BLOAD/BSAVE and no
+full debugger; the inline assembler
+works.
 
-Esempio:
+Example:
   OPTION TARGET ROM_16
-  PRINT "Sono una cartuccia"
-Vedi anche: BIN, DOS, SEGMENT, OPTION
+  PRINT "I am a cartridge"
+See also: BIN, DOS, SEGMENT, OPTION
 BIN
 ---
 
 OPTION TARGET BIN
 
-Produce NOME.BIN, un programma in
-linguaggio macchina per MSX-BASIC,
-senza MSX-DOS. Il file e' nel formato
-di BLOAD e parte dall'indirizzo 8400h.
-Da MSX-BASIC: CLEAR 200,&H83FF e poi
-BLOAD "NOME.BIN",R. A fine programma
-si attende un tasto e si torna al
-prompt del BASIC. Non sono disponibili
-i file su disco (OPEN, BLOAD,
-BSAVE...), il mapper RAM e il
-debugger; tutto il resto (grafica,
-sprite, suono, stringhe, array,
-SUB/FUNCTION, assembler in linea)
-funziona come nei programmi DOS. Il
-codice puo' arrivare a circa 12 KB
-oltre il runtime; i dati e lo heap
-stanno da D000h in su.
+Produces NAME.BIN, a machine-language
+program for MSX-BASIC, without MSX-
+DOS. The file is in BLOAD format and
+starts at address 8400h. From MSX-
+BASIC: CLEAR 200,&H83FF and then BLOAD
+"NAME.BIN",R. At the end of the
+program it waits for a key and returns
+to the BASIC prompt. Disk files (OPEN,
+BLOAD, BSAVE...), the RAM mapper and
+the debugger are not available;
+everything else (graphics, sprites,
+sound, strings, arrays, SUB/FUNCTION,
+inline assembler) works as in DOS
+programs. The code can reach about 12
+KB beyond the runtime; data and heap
+sit from D000h upward.
 
-Esempio:
+Example:
   OPTION TARGET BIN
-  PRINT "Ciao da MSX-BASIC"
+  PRINT "Hello from MSX-BASIC"
 
-Disponibile: MSX1 e MSX2, senza DOS
-Vedi anche: DOS, OPTION TARGET, ASM
+Available: MSX1 and MSX2, no DOS
+See also: DOS, OPTION TARGET, ASM
 DOS
 ---
 
 OPTION TARGET DOS
 
-Valore predefinito: produce NOME.COM
-per MSX-DOS (1 o 2) con l'accesso ai
-file su disco. Equivale a non scrivere
-nessuna OPTION TARGET. I programmi DOS
-partono a 0100h.
-Vedi anche: BIN, OPTION TARGET
+Default value: produces NAME.COM for
+MSX-DOS (1 or 2) with access to disk
+files. Equivalent to writing no OPTION
+TARGET. DOS programs start at 0100h.
+See also: BIN, OPTION TARGET
 OPTION NUMBERED
 ---------------
 
 OPTION NUMBERED
 
-Righe con numero (ordinate per numero,
-solo numeri, niente etichette). Circa
-590 righe di programma.
+Numbered lines (sorted by number,
+numbers only, no labels). About 590
+program lines.
 
-Esempio:
+Example:
   10 PRINT "a"
   20 GOTO 10
-Vedi anche: OPTION, ETICHETTE
+See also: OPTION, LABELS
 OPTION LABELS
 -------------
 
 OPTION LABELS
 
-Solo etichette, nessun numero di riga.
+Labels only, no line numbers.
 
-Esempio:
+Example:
   OPTION LABELS
   ciclo:
     PRINT "x";
-    GOTO ciclo
-Vedi anche: OPTION
+    GOTO again
+See also: OPTION
 OPTION MIXED
 ------------
 
 OPTION MIXED
 
-Numeri di riga ed etichette insieme
-(predefinita).
+Line numbers and labels together
+(default).
 
-Esempio:
+Example:
   OPTION MIXED
-Vedi anche: OPTION
+See also: OPTION
 OPTION DEBUG
 ------------
 
 OPTION DEBUG
 
-Compila con il debugger incorporato:
-il programma parte fermo sulla prima
-istruzione. Vedi DEBUG.
+Compiles with the built-in debugger:
+the program starts stopped at the
+first statement. See DEBUG.
 
-Esempio:
+Example:
   OPTION DEBUG
   a = 1
   b = a + 1
-Vedi anche: DEBUG
+See also: DEBUG
 ASM
 ---
 
 __ASM
-  istruzioni Z80
+  Z80 instructions
 __ENDASM
 
-Un blocco __ASM ... __ENDASM (ciascuno
-su una riga propria, maiuscole o
-minuscole) contiene codice Z80
-documentato, scritto come in un
-qualsiasi assemblatore. Commenti con
-;. Etichette locali nome: (anche nome
-EQU valore). Numeri: decimali, $1F,
-0x1F, 1FH, %101, 101B, 'x'; $ e'
-l'indirizzo corrente. Direttive:
-DB/DEFB (anche stringhe), DW/DEFW,
-DS/DEFS. Un nome che non e' etichetta
-locale e' una variabile BASIC globale
-(LD HL,(CONTA), LD HL,NOME$) oppure,
-in un salto, un'etichetta BASIC (JP
-FINE, JP NZ,FINE). JR e DJNZ solo
-verso etichette locali. Si puo'
-cambiare ogni registro tranne IX
-(frame delle SUB/FUNCTION) e lo stack
-va lasciato in pari. Il debugger non
-si ferma dentro i blocchi. Funziona
-anche nelle cartucce. Errori: 17
-sintassi/operando, 18 valore o salto
-fuori campo, 19 simbolo doppio o
-__ENDASM mancante, 20 QASM.OVL non
-trovato.
+An __ASM ... __ENDASM block (each on
+its own line, upper or lower case)
+contains documented Z80 code, written
+as in any assembler. Comments with ;.
+Local labels name: (also name EQU
+value). Numbers: decimal, $1F, 0x1F,
+1FH, %101, 101B, 'x'; $ is the current
+address. Directives: DB/DEFB (also
+strings), DW/DEFW, DS/DEFS. A name
+that is not a local label is a global
+BASIC variable (LD HL,(COUNT), LD
+HL,NOME$) or, in a jump, a BASIC label
+(JP DONE, JP NZ,DONE). JR and DJNZ
+only to local labels. Every register
+can be changed except IX (frame of
+SUB/FUNCTION) and the stack must be
+left balanced. The debugger does not
+stop inside the blocks. It also works
+in cartridges. Errors: 17
+syntax/operand, 18 value or jump out
+of range, 19 duplicate symbol or
+missing __ENDASM, 20 QASM.OVL not
+found.
 
-Esempio:
-  conta = 0
+Example:
+  count = 0
   __ASM
-    ld hl,(conta)
+    ld hl,(count)
     inc hl
-    ld (conta),hl
+    ld (count),hl
   __ENDASM
-  PRINT conta
-Vedi anche: VARPTR, OPTION
+  PRINT count
+See also: VARPTR, OPTION
 DEBUG
 -----
 
 OPTION DEBUG
 
-Si scrive OPTION DEBUG nel sorgente e
-si preme F5: il programma parte fermo
-sulla prima istruzione, in una
-schermata testo con la riga corrente,
-le variabili globali scalari con il
-loro valore e l'elenco dei breakpoint.
-Tasti: SPAZIO (o S, INVIO) esegue
-un'istruzione; R esegue fino al
-prossimo breakpoint; B numero INVIO
-mette o toglie un breakpoint (solo
-INVIO = riga corrente, 0 = li toglie
-tutti); C toglie tutti i breakpoint; V
-pagina successiva delle variabili; E
-chiede il nome di una variabile
-(locale, parametro, globale, elemento
-di array come V(3) o N$) e ne mostra
-il valore; Q termina il programma.
-Dentro una SUB le variabili locali e i
-parametri compaiono per primi con il
-prefisso >. CTRL-STOP durante
-l'esecuzione rientra nel debugger. Lo
-schermo del programma resta intatto.
-Nelle cartucce il debugger funziona ma
-non mostra le variabili. I programmi
-normali (senza OPTION DEBUG) non
-pagano nulla.
+Write OPTION DEBUG in the source and
+press F5: the program starts stopped
+at the first statement, in a text
+screen showing the current line, the
+global scalar variables with their
+value and the list of breakpoints.
+Keys: SPACE (or S, ENTER) runs one
+statement; R runs to the next
+breakpoint; B number ENTER sets or
+clears a breakpoint (ENTER alone =
+current line, 0 = clear them all); C
+clears all breakpoints; V next page of
+variables; E asks for a variable name
+(local, parameter, global, array
+element such as V(3) or N$) and shows
+its value; Q ends the program. Inside
+a SUB the local variables and
+parameters appear first with the >
+prefix. CTRL-STOP while running re-
+enters the debugger. The program
+screen stays intact. In cartridges the
+debugger works but does not show
+variables. Normal programs (without
+OPTION DEBUG) pay nothing.
 
-Esempio:
+Example:
   OPTION DEBUG
   s = 0
   FOR i = 1 TO 3
     s = s + i
   NEXT i
   PRINT s
-Vedi anche: OPTION DEBUG
+See also: OPTION DEBUG
 EDITOR
 ------
 
-Esc = menu, frecce, F1-F4
+Esc = menu, arrows, F1-F4
 
-Si avvia con SAMPRBAS nome (anche con
-un percorso, su MSX-DOS 2). Menu da
-tastiera: Esc apre il menu File; F1
-File, F2 Edit, F3 Find, F4 Help; Run
-e' a destra; frecce sinistra/destra
-cambiano menu, su/giu' le voci, Invio
-sceglie, una lettera evidenziata
-attiva la voce, Esc chiude.
-Scorciatoie: F5 compila ed esegue, F6
-Help sulla parola sotto il cursore, F7
-indice dell'aiuto, F8 File > Segment
-(cambia segmento). Le parole chiave
-sono colorate (su MSX2); su MSX1
-l'editor ha 40 colonne, su MSX2 80, in
-automatico. Se non cambia nulla F5
-rilancia subito il programma.
-Vedi anche: HELP
-SEGMENTI
+Start it with SAMPRBAS name (also with
+a path, on MSX-DOS 2). Keyboard menu:
+Esc opens the File menu; F1 File, F2
+Edit, F3 Find, F4 Help; Run is on the
+right; left/right arrows change menu,
+up/down the items, Enter selects, a
+highlighted letter activates the item,
+Esc closes. Shortcuts: F5 compiles and
+runs, F6 Help on the word under the
+cursor, F7 help index, F8 File >
+Segment (changes segment). Keywords
+are colored (on MSX2); on MSX1 the
+editor has 40 columns, on MSX2 80,
+automatically. If nothing has changed
+F5 reruns the program immediately.
+See also: HELP
+SEGMENTS
 --------
 
-NOME000.SPB, NOME001.SPB ...
+NAME000.SPB, NAME001.SPB ...
 File > Segment... (F8)
 
-Una cartuccia a segmenti (ASCII8,
-ASCII16, KONAMI, SCC) si scrive in un
-file per segmento: NOME000.SPB
-(segmento 0, fisso, con le OPTION) e
-NOME001, NOME002... (5 caratteri + 3
-cifre). Il compilatore li legge in
-sequenza e li collega in NOME.ROM; si
-compila da qualunque file con F5. Le
-OPTION stanno solo nel file 000;
-SEGMENT non si scrive. Un file
-NOMEnnn.BIN (assembler, sprite, font,
-dati) e' un segmento gia' compilato:
-viene inserito cosi' com'e'. F8 (File
-> Segment...) salva il file corrente e
-apre il segmento di cui si digita il
-numero (anche senza zeri); se il file
-non esiste, o e' un .BIN, dice perche'
-e il file attivo non cambia. La
-numerazione parte da 0: e' il primo
-blocco della cartuccia, non la BIOS.
-Vedi anche: SEGMENT, OPTION TARGET,
+A segmented cartridge (ASCII8,
+ASCII16, KONAMI, SCC) is written as
+one file per segment: NAME000.SPB
+(segment 0, fixed, with the OPTIONs)
+and NAME001, NAME002... (5 characters
++ 3 digits). The compiler reads them
+in sequence and links them into
+NAME.ROM; you compile from any file
+with F5. The OPTIONs go only in file
+000; SEGMENT is not written. A file
+NAMEnnn.BIN (assembler, sprites, font,
+data) is an already compiled segment:
+it is inserted as is. F8 (File >
+Segment...) saves the current file and
+opens the segment whose number you
+type (also without zeros); if the file
+does not exist, or is a .BIN, it says
+why and the active file does not
+change. Numbering starts at 0: it is
+the first block of the cartridge, not
+the BIOS.
+See also: SEGMENT, OPTION TARGET,
 EDITOR
 DIRECTORY
 ---------
 
-SAMPRBAS \DIR\NOME
-SET SPBHOME=\STRUMENTI
+SAMPRBAS \DIR\NAME
+SET SPBHOME=\TOOLS
 
-Con MSX-DOS 2 la directory di lavoro
-e' sempre quella del file aperto:
-sorgente, .COM/.ROM e i file del
-programma stanno nella cartella del
-progetto, gli strumenti nella loro. Si
-puo' dare un percorso sulla riga di
-comando; File > Open naviga fra le
-cartelle. Variabili d'ambiente:
-SPBHOME (strumenti, la cartella da cui
-si avvia l'editor la prima volta) e
-SPBPROJ (progetto). Con MSX-DOS 1 non
-ci sono cartelle.
-Vedi anche: SPB, EDITOR
+With MSX-DOS 2 the working directory
+is always that of the open file:
+source, .COM/.ROM and the program's
+files live in the project folder, the
+tools in theirs. You can give a path
+on the command line; File > Open
+navigates between folders. Environment
+variables: SPBHOME (tools, the folder
+the editor is first started from) and
+SPBPROJ (project). With MSX-DOS 1
+there are no folders.
+See also: SPB, EDITOR
 SPB
 ---
 
-SAMPRBAS nome
+SAMPRBAS name
 File > Open, File > Save As
 
-I programmi hanno estensione .SPB
-(SamPr Basic). SAMPRBAS PROVA apre
-PROVA.SPB se esiste, altrimenti parte
-con un file nuovo gia' chiamato
-PROVA.SPB. Open (Ctrl+O) mostra una
-finestra con i file .SPB (e, con MSX-
-DOS 2, le cartelle): frecce, Invio,
-una lettera per saltare, Esc per
-uscire. Save As (Ctrl+W) accetta al
-massimo 8 caratteri e aggiunge .SPB.
-Il programma compilato e' NOME.COM (o
-NOME.ROM).
-Vedi anche: EDITOR, COMPILAZIONE
+Programs have the .SPB extension
+(SamPr Basic). SAMPRBAS TEST opens
+PROVA.SPB if it exists, otherwise
+starts with a new file already named
+PROVA.SPB. Open (Ctrl+O) shows a
+window with the .SPB files (and, with
+MSX-DOS 2, the folders): arrows,
+Enter, a letter to jump, Esc to exit.
+Save As (Ctrl+W) accepts at most 8
+characters and adds .SPB. The compiled
+program is NAME.COM (or NAME.ROM).
+See also: EDITOR, COMPILING
 HELP
 ----
 
-menu Help: Index (F7), Topic..., On
+Help menu: Index (F7), Topic..., On
     word (F6), Shortcuts, About
 
-L'aiuto legge i file HELP.TXT e
-HELP.IDX nella directory corrente.
-Index (F7) mostra l'elenco degli
-argomenti; Topic... chiede un nome
-(es. PRINT, ASM, DEBUG, OPTION); On
-word (F6) mostra l'argomento della
-parola sotto il cursore. Nel visore:
-frecce e PgUp/PgDn scorrono, Esc
-chiude. HELP.TXT e' un normale file di
-testo (righe di 38 colonne): si puo'
-leggere e ampliare; HELP.IDX e'
-l'indice generato dallo strumento
-gen_docs.py.
-Vedi anche: EDITOR
-ERRORI
+Help reads the HELP.TXT and HELP.IDX
+files in the current directory. Index
+(F7) shows the list of topics;
+Topic... asks for a name (e.g. PRINT,
+ASM, DEBUG, OPTION); On word (F6)
+shows the topic for the word under the
+cursor. In the viewer: arrows and
+PgUp/PgDn scroll, Esc closes. HELP.TXT
+is a plain text file (38-column
+lines): it can be read and extended;
+HELP.IDX is the index generated by the
+gen_docs.py tool.
+See also: EDITOR
+ERRORS
 ------
 
-Codici di errore
+Error codes
 
-1 sintassi; 2 etichetta o riga
-inesistente; 3 non ancora supportato;
-4 carattere illegale; 5 blocco non
-chiuso; 6 ELSE/END IF/NEXT/WEND senza
-blocco; 7 nome duplicato; 8 troppe
-variabili, etichette o blocchi; 9
-programma troppo grande; 10 sorgente
-troppo grande; 11 errore di lettura;
-12 errore di scrittura; 13 non ammesso
-con l'OPTION scelta; 14 tipi
-incompatibili o array non dichiarato;
-15 dati del programma troppo grandi;
-16 RT.BIN non trovato; 17-20 assembler
-in linea. L'editor si riapre con il
-cursore sulla riga dell'errore.
-Vedi anche: LIMITI
-LIMITI
+1 syntax; 2 nonexistent label or line;
+3 not yet supported; 4 illegal
+character; 5 unclosed block; 6
+ELSE/END IF/NEXT/WEND without block; 7
+duplicate name; 8 too many variables,
+labels or blocks; 9 program too large;
+10 source too large; 11 read error; 12
+write error; 13 not allowed with the
+chosen OPTION; 14 incompatible types
+or undeclared array; 15 program data
+too large; 16 RT.BIN not found; 17-20
+inline assembler. The editor reopens
+with the cursor on the error line.
+See also: LIMITS
+LIMITS
 ------
 
-Limiti del compilatore
+Compiler limits
 
-Sorgente circa 12,5 KB per file (15 KB
-nelle cartucce); programma 16 KB; 96
-etichette; 100 variabili e array; 20
-SUB/FUNCTION (8 parametri ciascuna, 64
-in totale); 29 interi locali e 256
-byte per stringa locale; 24 blocchi
-annidati; nomi significativi su 11
-caratteri; circa 590 righe in OPTION
-NUMBERED; stringhe di 255 caratteri;
-interi da -32768 a 32767; file aperti:
-3.
-Vedi anche: ERRORI
+Source about 12.5 KB per file (15 KB
+in cartridges); program 16 KB; 96
+labels; 100 variables and arrays; 20
+SUB/FUNCTION (8 parameters each, 64 in
+total); 29 local integers and 256
+bytes per local string; 24 nested
+blocks; names significant to 11
+characters; about 590 lines in OPTION
+NUMBERED; strings of 255 characters;
+integers from -32768 to 32767; open
+files: 3.
+See also: ERRORS
 MSX1
 ----
 
 MSX1 / MSX2
 
-Il sistema riconosce la macchina.
-MSX1: editor e testo a 40 colonne,
-SCREEN 0-3, niente colori delle parole
-chiave, niente grafica 5-12, palette,
-pagine, mapper. MSX2: 80 colonne,
-SCREEN fino a 8 (10-12 su MSX2+),
-PALETTE, COPY, SET PAGE, VBANK 17 bit,
-mapper RAM. Provato con Sony HB-75P e
-un MSX2 con MSX-DOS 1 e 2.
-Vedi anche: SCREEN
+The system detects the machine. MSX1:
+editor and text at 40 columns, SCREEN
+0-3, no keyword colors, no graphics
+5-12, palette, pages, mapper. MSX2: 80
+columns, SCREEN up to 8 (10-12 on
+MSX2+), PALETTE, COPY, SET PAGE,
+17-bit VBANK, RAM mapper. Tested with
+a Sony HB-75P and an MSX2 with MSX-DOS
+1 and 2.
+See also: SCREEN
 COM
 ---
 
-F5, QBC.COM, NOME.COM / NOME.ROM
+F5, QBC.COM, NAME.COM / NAME.ROM
 
-F5 salva il sorgente, avvia il
-compilatore QBC.COM che scrive
-NOME.COM e lo esegue; a fine programma
-si torna all'editor. Con OPTION TARGET
-si ottiene invece una cartuccia
-NOME.ROM. File necessari sul disco:
-SAMPRBAS.COM, QBC.COM, RT.BIN (e
-RTD.BIN per il debug, QBCR.COM e
-RTROM.BIN per le cartucce, QASM.OVL
-per __ASM).
-Vedi anche: OPTION TARGET
+F5 saves the source, starts the
+QBC.COM compiler which writes
+NAME.COM, and runs it; at the end of
+the program you return to the editor.
+With OPTION TARGET you get a NAME.ROM
+cartridge instead. Files needed on the
+disk: SAMPRBAS.COM, QBC.COM, RT.BIN
+(and RTD.BIN for debugging, QBCR.COM
+and RTROM.BIN for cartridges, QASM.OVL
+for __ASM).
+See also: OPTION TARGET

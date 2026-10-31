@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""Genera il manuale PDF di SamPr Basic. uso: python gen_pdf.py [uscita.pdf]"""
+"""Builds the SamPr Basic PDF manual. usage: python gen_pdf.py [output.pdf]"""
 import os
 import re
 import sys
@@ -65,10 +65,10 @@ def md(s):
 class Doc(BaseDocTemplate):
     def __init__(self, fn):
         super().__init__(fn, pagesize=A4, leftMargin=22 * mm, rightMargin=20 * mm, topMargin=24 * mm, bottomMargin=20 * mm,
-                         title='SamPr Basic - Manuale d\'uso', author='Fausto Pracek', subject='BASIC compiler and IDE for MSX')
+                         title='SamPr Basic - User manual', author='Fausto Pracek', subject='BASIC compiler and IDE for MSX')
         fr = Frame(self.leftMargin, self.bottomMargin, self.width, self.height, id='f')
         self.addPageTemplates([PageTemplate(id='cover', frames=[Frame(0, 0, A4[0], A4[1], id='c', leftPadding=0, rightPadding=0, topPadding=0, bottomPadding=0)], onPage=cover_page),
-                               PageTemplate(id='main', frames=[fr], onPage=page_deco)])
+                               PageTemplate(id='main', frames=[fr], onPageEnd=page_deco)])
         self.chapter = ''
 
     def beforeDocument(self):
@@ -125,24 +125,24 @@ def cover_page(c, doc):
     c.drawString(30 * mm, H * 0.60 - 62, 'Basic')
     c.setFillColor(CYAN)
     c.setFont('Helvetica-Bold', 17)
-    c.drawString(30 * mm, H * 0.60 - 98, 'Compilatore e ambiente di sviluppo BASIC per MSX')
+    c.drawString(30 * mm, H * 0.60 - 98, 'BASIC compiler and development environment for MSX')
     c.setFillColor(colors.HexColor('#c8d4ff'))
     c.setFont('Helvetica', 12)
-    c.drawString(30 * mm, H * 0.60 - 120, 'Editor, compilatore Z80, assembler in linea e debugger — tutto sull\'MSX')
+    c.drawString(30 * mm, H * 0.60 - 120, 'Editor, Z80 compiler, inline assembler and debugger — all on the MSX')
     # finto schermo MSX
     sx, sy, sw, sh = 30 * mm, H * 0.40 + 40, 150 * mm, 0
     c.setFillColor(colors.HexColor('#e9edf9'))
     c.setFont('Helvetica-Bold', 13)
-    c.drawString(30 * mm, H * 0.40 - 30, 'Manuale d\'uso e riferimento del linguaggio')
+    c.drawString(30 * mm, H * 0.40 - 30, 'User manual and language reference')
     c.setFont('Helvetica', 11)
     c.setFillColor(colors.HexColor('#9fb2e8'))
-    c.drawString(30 * mm, H * 0.40 - 50, 'Versione 1.0  ·  MSX1 / MSX2 / MSX2+ / turbo R  ·  MSX-DOS 1 e 2')
+    c.drawString(30 * mm, H * 0.40 - 50, 'Version 1.0  ·  MSX1 / MSX2 / MSX2+ / turbo R  ·  MSX-DOS 1 and 2')
     c.setFillColor(colors.white)
     c.setFont('Helvetica-Bold', 12)
     c.drawString(30 * mm, 36 * mm, '2026  Fausto Pracek')
     c.setFont('Courier', 10)
     c.setFillColor(YEL)
-    c.drawString(30 * mm, 28 * mm, 'PRINT "Ciao MSX!"')
+    c.drawString(30 * mm, 28 * mm, 'PRINT "Hello MSX!"')
     c.setFillColor(colors.white)
     # cursore lampeggiante
     c.rect(30 * mm + 112, 28 * mm - 1, 6, 11, stroke=0, fill=1)
@@ -164,7 +164,7 @@ def page_deco(c, doc):
     c.setFillColor(GREY)
     c.setFont('Helvetica', 8.5)
     c.drawString(22 * mm, 10 * mm, '2026 Fausto Pracek')
-    c.drawRightString(W - 20 * mm, 10 * mm, 'Pagina %d' % (doc.page - 1))
+    c.drawRightString(W - 20 * mm, 10 * mm, 'Page %d' % (doc.page - 1))
     c.restoreState()
 
 
@@ -219,12 +219,12 @@ def topic_flow(t):
     items.append(code_block(syn) if False else Preformatted(syn, SYN))
     items.append(Spacer(1, 3))
     items.append(Paragraph(md(t['desc']), BODY))
-    if t['avail'] != 'MSX1 e MSX2':
-        items.append(Paragraph('<b>Disponibilità:</b> ' + esc(t['avail']), SMALL))
+    if t['avail'] != 'MSX1 and MSX2':
+        items.append(Paragraph('<b>Availability:</b> ' + esc(t['avail']), SMALL))
     if t['ex']:
         items.append(code_block(t['ex']))
     if t['see']:
-        items.append(Paragraph('Vedi anche: ' + ', '.join(esc(x) for x in t['see']), SMALL))
+        items.append(Paragraph('See also: ' + ', '.join(esc(x) for x in t['see']), SMALL))
     items.append(Spacer(1, 6))
     return [KeepTogether(items[:5] if len(items) > 5 else items)] + items[5:]
 
@@ -234,18 +234,18 @@ def build(fn):
     story = [NextPageTemplate('main'), PageBreak()]
     toc = TableOfContents()
     toc.levelStyles = [TOC1, TOC2]
-    story += [Paragraph('Indice', H1), toc, PageBreak()]
+    story += [Paragraph('Contents', H1), toc, PageBreak()]
     for title, blocks in CHAPTERS:
-        if title == 'Errori e limiti':
+        if title == 'Errors and limits':
             continue
         story.append(Paragraph(esc(title), H1))
         story += blocks_to_flow(blocks)
         story.append(PageBreak())
     # riferimento
-    story.append(Paragraph('Riferimento del linguaggio', H1))
-    story.append(Paragraph("Tutte le istruzioni e funzioni, raggruppate per categoria. Le sintassi usano questa convenzione: <font face='Courier'>[ ]</font> = facoltativo, "
-                           "<font face='Courier'>{ }</font> = ripetibile, <font face='Courier'>|</font> = alternativa. Il nome di una funzione o istruzione si scrive indifferentemente "
-                           "in maiuscolo o minuscolo.", BODY))
+    story.append(Paragraph('Language reference', H1))
+    story.append(Paragraph("Every statement and function, grouped by category. Syntax notation: <font face='Courier'>[ ]</font> = optional, "
+                           "<font face='Courier'>{ }</font> = repeatable, <font face='Courier'>|</font> = alternative. Statement and function names "
+                           "can be written in upper or lower case.", BODY))
     cats = []
     for t in TOPICS:
         if t['cat'] not in cats:
@@ -259,13 +259,13 @@ def build(fn):
                 story += topic_flow(t)
     story.append(PageBreak())
     for title, blocks in CHAPTERS:
-        if title != 'Errori e limiti':
+        if title != 'Errors and limits':
             continue
         story.append(Paragraph(esc(title), H1))
         story += blocks_to_flow(blocks)
     # indice analitico
     story.append(PageBreak())
-    story.append(Paragraph('Indice delle parole chiave', H1))
+    story.append(Paragraph('Keyword index', H1))
     names = sorted({n for t in TOPICS for n in t['names']}, key=lambda s: s.upper())
     cols = 4
     rows = []
@@ -280,6 +280,6 @@ def build(fn):
 
 
 if __name__ == '__main__':
-    out = sys.argv[1] if len(sys.argv) > 1 else os.path.join(HERE, 'SamPrBasic-Manuale.pdf')
+    out = sys.argv[1] if len(sys.argv) > 1 else os.path.join(HERE, 'SamPrBasic-Manual.pdf')
     build(out)
-    print('scritto', out, os.path.getsize(out), 'byte')
+    print('written', out, os.path.getsize(out), 'byte')
