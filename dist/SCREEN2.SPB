@@ -1,0 +1,16 @@
+' SamPr Basic - SCREEN 2 (MSX1), sprite, archi e VIEW
+COLOR 15, 1
+SCREEN 2, 0
+CLS
+CIRCLE (128, 96), 70, 11
+CIRCLE (128, 96), 70, 8, 0, 180
+CIRCLE (128, 96), 40, 10, , , 50
+LINE (20, 20)-(60, 50), 6, BF
+LOCATE 2, 12
+PRINT "SCREEN 2";
+FOR i = 1 TO 8 : s$ = s$ + CHR$(255 - i * 30) : NEXT i
+SPRITE$(0) = s$
+FOR x = 0 TO 240 STEP 3
+  PUT SPRITE 0, (x, 170), 9
+  SLEEP 1
+NEXT x

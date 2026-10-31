@@ -77,9 +77,10 @@ def main():
     # Help -> About con la tastiera
     key(sc, ESC)
     key(sc, RIGHT, 3)
-    key(sc, DOWN)
+    key(sc, DOWN, 4)
     key(sc, ENTER)
     sc.dump('m13_about')
+    key(sc, (8, 0x01))                  # Spazio: chiude la finestra
     # clic sul titolo mentre un altro menu e' aperto: passa a quello
     sc.pointer(2, 0)
     sc.click(0.2)                       # apre File
@@ -161,13 +162,13 @@ def main():
 
     print('--- m13 Help > About')
     rows, vs, bl = load('m13_about')
-    msg = rows[0].replace('~', '')
-    check('SamPr Basic 0.2' in msg and vs['menuopen'] == 0, 'messaggio: ' + msg[19:60].strip())
+    box = ' '.join(row_text(rows, r, 80) for r in range(9, 13)).replace('#', ' ')
+    check('SamPr' in box and '1.0' in box and 'Pracek' in box and vs['menuopen'] == 0, 'finestra About: ' + box.strip())
 
     print('--- m14/m15 cambio menu col mouse')
     rows, vs, bl = load('m14_switch')
     check(vs['menuopen'] == 4, f'menuopen={vs["menuopen"]}')
-    check('Shortcuts' in row_text(rows, 2, 40) and 'About' in row_text(rows, 3, 40), 'voci di Help: ' + row_text(rows, 2, 40))
+    check('Index' in row_text(rows, 2, 40) and 'Shortcuts' in row_text(rows, 5, 40) and 'About' in row_text(rows, 6, 40), 'voci di Help: ' + row_text(rows, 2, 40))
     rows, vs, bl = load('m15_toggle_close')
     check(vs['menuopen'] == 0, 'secondo clic sullo stesso titolo chiude')
     print('FALLITI:', etest.FAILS)

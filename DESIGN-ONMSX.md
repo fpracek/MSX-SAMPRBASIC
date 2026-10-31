@@ -7,11 +7,11 @@ Requisito: l'utente lavora **solo su macchina fisica** (editor → compilatore �
 MSX-DOS 1 non ha la chiamata di esecuzione di un programma figlio, quindi i tre programmi si
 **caricano a catena** nella TPA (0100h), passandosi il lavoro nella riga di comando a 0080h:
 
-    QB.COM  (editor)  --F5-->  salva il sorgente, carica QBC.COM, cmdline "NOME.BAS"
+    SAMPRBAS.COM  (editor)  --F5-->  salva il sorgente, carica QBC.COM, cmdline "NOME.BAS"
     QBC.COM (compilatore)      legge NOME.BAS, genera NOME.COM, lo scrive su disco, lo avvia
-    NOME.COM (programma)       alla fine: "Press any key", ricarica QB.COM, cmdline "NOME.BAS"
+    NOME.COM (programma)       alla fine: "Press any key", ricarica SAMPRBAS.COM, cmdline "NOME.BAS"
 
-Errore di compilazione: QBC ricarica QB.COM con cmdline `NOME.BAS E<riga> <codice>`; l'editor
+Errore di compilazione: QBC ricarica SAMPRBAS.COM con cmdline `NOME.BAS E<riga> <codice>`; l'editor
 apre il file, porta il cursore sulla riga e mostra il messaggio.
 Il caricatore a catena (open FCB + lettura a blocchi in 0100h + `jp 0100h`) è copiato in RAM alta
 (0D000h) prima di sovrascrivere la TPA.

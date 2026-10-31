@@ -1,0 +1,8 @@
+' MSXQB - esempio
+INPUT "Name"; n$
+DIM sq(5)
+FOR i = 1 TO 5 : sq(i) = i * i : NEXT i
+PRINT "Hello, "; n$; "!"
+FOR i = 1 TO 5
+  PRINT i; sq(i); LEFT$("*****", i)
+NEXT i

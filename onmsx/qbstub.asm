@@ -1,4 +1,4 @@
-; QB.COM di prova: stampa la riga di comando ricevuta (per i test del compilatore)
+; SAMPRBAS.COM di prova: stampa la riga di comando ricevuta (per i test del compilatore)
         ORG 0100h
         ld hl,0081h
         ld a,(0080h)

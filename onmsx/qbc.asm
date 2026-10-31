@@ -2,8 +2,8 @@
 ; MSXQB compilatore su MSX (QBC.COM) - stadio 1
 ; BASIC -> codice macchina Z80 (programma .COM con il runtime rtcom.asm).
 ; Una passata, emissione diretta; HL = accumulatore, operando sinistro sullo stack.
-; Input: riga di comando " NOME.BAS"  ->  scrive NOME.COM e lo avvia.
-; Errore: ricarica l'editor con " NOME.BAS E<riga> <codice>".
+; Input: riga di comando " NOME.SPB"  ->  scrive NOME.COM e lo avvia.
+; Errore: ricarica l'editor con " NOME.SPB E<riga> <codice>".
 ; Memoria: codice 0100h-3CFFh, tabelle 3D00h-4CFFh, sorgente 4D00h-7FFFh,
 ;          output 8000h-BEFFh (indirizzi virtuali da 0100h: virt = fisico - 7F00h).
 ; =====================================================================
@@ -373,7 +373,7 @@ fail:   ld de,0081h
         sbc hl,de
         ld a,l
         ld (0080h),a
-        ld hl,ldr_img           ; ricarica l'editor (ldr_fn = QB.COM di default)
+        ld hl,ldr_img           ; ricarica l'editor (ldr_fn = SAMPRBAS.COM di default)
         ld de,LDR
         ld bc,ldr_size
         ldir
@@ -408,7 +408,7 @@ dec_str:                        ; HL = valore -> cifre ASCII a (DE), DE avanza
         ret
 
 ; ---------------------------------------------------------------- file
-getname:                        ; riga di comando -> fname (maiuscolo, ".BAS" se manca l'estensione)
+getname:                        ; riga di comando -> fname (maiuscolo, ".SPB" se manca l'estensione)
         ld hl,0081h
         ld a,(0080h)
         or a
@@ -451,7 +451,7 @@ getname:                        ; riga di comando -> fname (maiuscolo, ".BAS" se
 .z:     xor a
         ld (de),a
         ret
-s_bas:  db ".BAS"
+s_bas:  db ".SPB"
 
 mk_fcb:                         ; (namep) -> fcb (8.3 maiuscolo, unita' opzionale "A:")
         ld hl,fcb

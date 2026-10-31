@@ -51,7 +51,7 @@ KWBLINK equ 010h               ; R#13
 MPAD    equ 12                  ; GTPAD: 12 = mouse porta 1 (16 = porta 2)
 
         IFDEF COM
-BUF     equ 3400h               ; gap buffer: 3400h-BFFFh (TPA, pagine 0-2)
+BUF     equ 3E00h               ; gap buffer: 3A00h-BFFFh (TPA, pagine 0-2)
 UNDO    equ RAMB+0460h          ; registro di annullamento: C460h-CFFFh
 UNDOSZ  equ 0BA0h
 CLIP    equ UNDO+UNDOSZ         ; clipboard: D000h fino a (0006h)-0300h
@@ -91,6 +91,10 @@ hmax1w  equ RAMB+043Dh              ; w  HMAX+1
 pattb   equ RAMB+043Fh              ; w  tabella dei pattern: 1000h (80 colonne) o 0800h (40)
 mxmax   equ RAMB+0441h              ; w  limite x del mouse = sw*8
 rbm2    equ RAMB+0443h              ; w  indirizzo di rowbuf+sw-2
+helpstr equ RAMB+0448h              ; 16 byte: argomento di help (maiuscolo, 12 caratteri con riempimento a zero)
+hlptop  equ RAMB+0458h              ; w  prima riga visibile del testo di help
+hlpbeg  equ RAMB+045Ah              ; w  inizio del testo di help
+hscr    equ RAMB+045Ch              ; w  area di lavoro (nel gap) con il testo di help
 kutmp   equ RAMB+0445h              ; w  JIFFY d'inizio dell'attesa dei tasti
 kwnext  equ RAMB+0423h              ; b  prossima riga schermo (0..) da colorare nei tempi morti (VROWS = fatto)
 cur     equ RAMB+0000h              ; w  offset logico del cursore
@@ -274,6 +278,18 @@ start:
         inc hl
         ld (hl),0
         call keys_up            ; il tasto premuto per uscire dal programma puo' essere ancora giu': non deve ripetersi nel testo
+        ld hl,0F8CFh            ; F6 (Shift+F1): menu Help + "W" = aiuto sulla parola sotto il cursore
+        ld (hl),0Ah
+        inc hl
+        ld (hl),'W'
+        inc hl
+        ld (hl),0
+        ld hl,0F8DFh            ; F7 (Shift+F2): menu Help + "I" = indice
+        ld (hl),0Ah
+        inc hl
+        ld (hl),'I'
+        inc hl
+        ld (hl),0
         BIOS KILBUF             ; scarta i tasti in attesa (ripetizioni, F5 del lancio precedente)
         call vdp_init
         call font_load
@@ -1925,7 +1941,7 @@ menutab:
         dw it_edit
         db 24,4
         dw it_find
-        db 20,2
+        db 20,5
         dw it_help
         db 20,1
         dw it_run
@@ -1961,7 +1977,13 @@ it_find: dw l_find,s_ctf,k_find
         db 'R'
         dw casestr,s_none,k_case
         db 'M'
-it_help: dw l_help,s_none,k_help
+it_help: dw l_hindex,s_f7,k_hindex
+        db 'I'
+        dw l_htopic,s_none,k_htopic
+        db 'T'
+        dw l_hword,s_f6,k_hword
+        db 'W'
+        dw l_help,s_none,k_help
         db 'S'
         dw l_about,s_none,k_about
         db 'A'
@@ -1985,6 +2007,16 @@ l_find:   db "Find...",0
 l_fnext:  db "Find next",0
 l_repl:   db "Replace...",0
 l_help:   db "Shortcuts",0
+l_hindex: db "Index",0
+l_htopic: db "Topic...",0
+l_hword:  db "On word",0
+s_f6:     db "F6",0
+s_f7:     db "F7",0
+s_topicp: db "Help topic: ",0
+m_nohelp: db "HELP.IDX / HELP.TXT not found",0
+m_helpmem: db "Not enough free memory for help",0
+m_nohlp1: db "No help for ",0
+about_txt: db 0,"SamPr Basic 1.0",0,"2026 Fausto Pracek",0,0
 l_about:  db "About",0
 s_none:   db 0
 s_cto:    db "Ctrl+O",0
@@ -2002,7 +2034,7 @@ s_ctf:    db "Ctrl+F",0
 s_ctg:    db "Ctrl+G",0
 s_ctt:    db "Ctrl+T",0
 m_about:  db "SamPr Basic 0.2 - BASIC IDE and compiler for MSX2",0
-m_keys:   db "Esc,F1-F4=menu F5=run Ctrl+S/W/O/Q file Ctrl+C/X/V clip Ctrl+Z/Y undo Ctrl+F/G/T find",0
+m_keys:   db "Esc,F1-F4=menu F5=run F6=help on word F7=help index Ctrl+S/W/O/Q file Ctrl+C/X/V clip Ctrl+Z/Y undo Ctrl+F/G/T find",0
 m_nodisk: db "No disk access in this build",0
 
 k_menu: ld a,1                  ; ESC: apre il menu File
@@ -2024,10 +2056,50 @@ k_mdel: call sel_range
         jp c,ed_delete
         jp sel_delete
 
-k_about:
-        ld hl,m_about
-        ld (msgptr),hl
-        ret
+k_about:                        ; finestra: "SamPr Basic 1.0" / "2026 Fausto Pracek"; un tasto la chiude
+        call refresh            ; toglie il menu a tendina
+        call ptr_hide
+        ld hl,about_txt
+        ld d,9
+.l:     push de
+        push hl
+        ld hl,rowbuf
+        ld de,rowbuf+1
+        ld bc,27
+        ld (hl),' '
+        ldir
+        pop hl
+        ld de,rowbuf+4
+        call strcpy
+        inc hl                  ; stringa successiva
+        push hl
+        ld hl,rowbuf
+        ld b,28
+.o:     set 7,(hl)
+        inc hl
+        djnz .o
+        ld a,(sw)
+        sub 28
+        srl a
+        ld e,a
+        pop hl
+        pop de                  ; D = riga
+        push hl
+        push de
+        call cell_addr
+        call vsetw
+        ld hl,rowbuf
+        ld b,28
+        ld c,VDPD
+        otir
+        pop de
+        pop hl
+        inc d
+        ld a,d
+        cp 13
+        jr nz,.l
+        BIOS CHGET
+        jp mark_text
 
 k_help: ld hl,m_keys
         ld (msgptr),hl
@@ -2039,6 +2111,9 @@ k_open:
 k_save:
 k_saveas:
 k_run:
+k_hindex:
+k_htopic:
+k_hword:
 k_quit: ld hl,m_nodisk
         ld (msgptr),hl
         ret

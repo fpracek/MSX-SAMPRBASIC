@@ -128,10 +128,10 @@ Tutte le suite: `etest` 41 · `esel` 30 · `emenu` 34 · `esrch` 34 · `eundo` 4
 
 ## Run (F5) — collegamento al compilatore
 Menu **Run** (ultimo della barra) o **F5**: salva il sorgente (chiede il nome se manca, aggiunge `.BAS` se non c'e'
-estensione), carica `QBC.COM` a catena, compila ed esegue; alla fine il programma ricarica l'editor (`QB.COM`).
+estensione), carica `QBC.COM` a catena, compila ed esegue; alla fine il programma ricarica l'editor (`SAMPRBAS.COM`).
 In caso di errore l'editor riparte con il cursore sulla riga e il messaggio `Line N: ...` nel titolo.
 F5 e' un tasto funzione MSX: all'avvio l'editor imposta la stringa di F5 a un solo byte (15h) e lo gestisce come comando.
-Il file deve chiamarsi `QB.COM` sul disco (il compilatore lo ricarica per nome). Vedi `../onmsx/README.md`.
+Il file deve chiamarsi `SAMPRBAS.COM` sul disco (il compilatore lo ricarica per nome). Vedi `../onmsx/README.md`.
 Test: `python erun.py` (usa `../onmsx/qbc.asm`).
 
 ## Colori delle parole chiave (stadio 24)
@@ -176,3 +176,16 @@ restano su MSX2. Il `.COM` (con il DOS) non e' ancora stato provato su MSX1: in 
   massima durante il disco passano molti secondi emulati) e la tastiera MSX lo ripete: l'editor riceveva decine di Invio e `cls` scendeva alla riga 17 con il testo «modificato».
   Ora il runtime (`rt_keyup`, dopo il tasto di fine programma) e l'editor (`keys_up`, all'avvio) attendono che nessun tasto sia premuto (SNSMAT sulle righe 0-8, al massimo
   ~10 s) prima di proseguire.
+
+## File .SPB, finestra di apertura, Help e About (versione 1.0)
+- L'eseguibile dell'editor si chiama `SAMPRBAS.COM` (il caricatore a catena lo ricarica per nome, `ldr_fn` in `onmsx/ldr.asm`).
+- I sorgenti hanno estensione `.SPB` (SamPr Basic). `SAMPRBAS nome` apre `NOME.SPB` se esiste, altrimenti parte con un file nuovo
+  già chiamato `NOME.SPB`; l'estensione si aggiunge solo se manca (`ensure_spb`). Il compilatore (`QBC.COM`) usa lo stesso default.
+- Save As (Ctrl+W, e F5 su un testo senza nome) chiede al massimo 8 caratteri e aggiunge sempre `.SPB` (`prompt_spb`, `spb_force`).
+- File > Open è una finestra a tutto schermo (`k_open`, `bw_*` in `fileio.asm`, sorgente in `browser.inc`): file `.SPB` ordinati, due colonne a 40
+  colonne / quattro a 80; con MSX-DOS 2 anche le cartelle (`[NOME]`, `[..]`, funzioni 40h/41h/5Ah/59h; il DOS 2 si riconosce con `_DOSVER`
+  B>=2), con il DOS 1 solo i file (ricerca FCB 11h/12h). Tasti: frecce, PgUp/PgDn, Home, una lettera per saltare, Invio, Esc. Lo stato sta
+  nel gap (2 KB, serve `gsz` >= 2048). Il buffer di testo parte ora da `BUF equ 3E00h` (circa 24 KB).
+- Menu Help: Index (F7), Topic..., On word (F6), Shortcuts, About ("SamPr Basic 1.0 / 2026 Fausto Pracek"). L'aiuto legge `HELP.TXT`/`HELP.IDX`
+  (generati da `../doc/gen_help.py`) con letture BDOS a blocchi nell'area del gap.
+- Collaudo: `ebrowse.py` (DOS 1; con `DOS2=1 GMACHINE=Panasonic_FS-A1ST` anche cartelle e `..`), `ehelp.py` (aiuto e About), `emenu.py`.

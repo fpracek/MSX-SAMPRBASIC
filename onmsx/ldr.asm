@@ -8,7 +8,7 @@ LDR     equ 0C000h
         ORG LDR
 ldr_load:
         jp ldr_main
-ldr_fn: db "QB      COM"
+ldr_fn: db "SAMPRBASCOM"
 ldr_copy:
         ld de,0100h
         ldir

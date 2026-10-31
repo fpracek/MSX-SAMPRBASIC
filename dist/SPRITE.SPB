@@ -1,0 +1,14 @@
+' SamPr Basic - sprite 16x16 (una faccina)
+COLOR 15, 1
+SCREEN 5, 2
+CLS
+s$ = ""
+FOR i = 1 TO 4
+  s$ = s$ + CHR$(7) + CHR$(31) + CHR$(63) + CHR$(63) + CHR$(63) + CHR$(63) + CHR$(31) + CHR$(7)
+NEXT i
+SPRITE$(0) = s$
+FOR x = 0 TO 220 STEP 4
+  PUT SPRITE 0, (x, 90), 10
+  SLEEP 1
+NEXT x
+PUT SPRITE 0, (110, 90), 8

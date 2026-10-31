@@ -1,0 +1,6 @@
+OPTION DEBUG
+A = 5
+B$ = "HELLO"
+C = A * 2
+PRINT C
+END

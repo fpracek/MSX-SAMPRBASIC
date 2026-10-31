@@ -7,3 +7,7 @@ editor/demo.txt
 onmsx/patch*.py
 out.rom
 *.bak*
+doc/out/
+disco_prova/MSXDOS.SYS
+disco_prova/COMMAND.COM
+editor/fix_browser.py

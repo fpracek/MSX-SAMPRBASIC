@@ -70,6 +70,7 @@ class Msx:
         import random
         rnd = random.Random(FILL)
         self.w(0, bytes(rnd.randrange(256) for _ in range(0xF000)))
+        self.w(0x2D, b'')                   # ROM-ID: MSX2 (il runtime lo legge per scegliere 40/80 colonne)
         self.w(0x100, com)
         t = (' ' + tail + '\r').encode()
         self.w(0x80, bytes([len(t)]) + t)
@@ -220,9 +221,9 @@ def compile_and_run(src, name='T.BAS', qbc=None, keys=(13,)):
     res = ms.run()
     info = {'phase1': res}
     cname = name.rsplit('.', 1)[0] + '.COM'
-    if res == 'chain':                                  # il caricatore e' pronto: QB.COM = errore di compilazione, altrimenti NOME.COM
+    if res == 'chain':                                  # il caricatore e' pronto: SAMPRBAS.COM = errore di compilazione, altrimenti NOME.COM
         fn = ms.r(LDR + 3, 11)
-        if fn.startswith(b'QB '):
+        if fn.startswith(b'SAMPRBAS'):
             info['tail'] = ms.r(0x81, ms.m.memory[0x80]).decode('latin-1').strip()
             return info
         res = 'copy'

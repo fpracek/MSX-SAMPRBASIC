@@ -43,7 +43,7 @@ def main():
     for f in ('MSXDOS.SYS', 'COMMAND.COM'):
         shutil.copy(os.path.join(DOSDIR, f), DISK)
     shutil.copy(os.path.join(BUILD, 'qbc.com'), os.path.join(DISK, 'QBC.COM'))
-    shutil.copy(os.path.join(BUILD, 'qbstub.com'), os.path.join(DISK, 'QB.COM'))
+    shutil.copy(os.path.join(BUILD, 'qbstub.com'), os.path.join(DISK, 'SAMPRBAS.COM'))
     shutil.copy(os.path.join(BUILD, 'rt.bin'), os.path.join(DISK, 'RT.BIN'))
     lines = [TCL]
     t = 20.0

@@ -27,15 +27,15 @@ def main():
         sys.exit(2)
     shutil.copy(os.path.join(ONMSX, 'build', 'qbc.com'), os.path.join(DISK, 'QBC.COM'))
     shutil.copy(os.path.join(ONMSX, 'build', 'rt.bin'), os.path.join(DISK, 'RT.BIN'))
-    shutil.copy(os.path.join(HERE, 'ed.com'), os.path.join(DISK, 'QB.COM'))
+    shutil.copy(os.path.join(HERE, 'ed.com'), os.path.join(DISK, 'SAMPRBAS.COM'))
     new = ['PRINT "Hello from MSXQB"', 'FOR i = 1 TO 3 : PRINT i; : NEXT', 'PRINT']
     err = ['PRINT "one"', 'PRINT "two"', 'x = 5', 'PRINT 1 +', 'PRINT "never"']
-    open(os.path.join(DISK, 'NEW.BAS'), 'wb').write((CRLF.join(new) + CRLF).encode())
-    open(os.path.join(DISK, 'ERR.BAS'), 'wb').write((CRLF.join(err) + CRLF).encode())
+    open(os.path.join(DISK, 'NEW.SPB'), 'wb').write((CRLF.join(new) + CRLF).encode())
+    open(os.path.join(DISK, 'ERR.SPB'), 'wb').write((CRLF.join(err) + CRLF).encode())
 
     sc = Scenario(syms)
     sc.t = 20.0
-    sc.text('QB NEW.BAS' + BS + 'r', 30.0)
+    sc.text('SAMPRBAS NEW.SPB' + BS + 'r', 30.0)
     sc.dump('r0b_typed')
     sc.tap(7, 0x02, 1, 0.5)                          # F5
     sc.t += 70.0                                     # salvataggio + QBC + compilazione + scrittura + avvio
@@ -53,8 +53,9 @@ def main():
     sc.t += 30.0
     sc.do('unset ::nopatch', 0.1)
     sc.dump('r2d_back2')
-    ecom.chord(sc, *ecom.CTRL_O, gap=1.0)            # apre ERR.BAS
-    sc.text('ERR.BAS' + BS + 'r', 8.0)
+    ecom.chord(sc, *ecom.CTRL_O, gap=1.0)            # apre ERR.SPB
+    sc.text('E', 0.5)
+    sc.tap(7, 0x80, 1, 8.0)
     sc.dump('r2b_err_loaded')
     sc.tap(7, 0x02, 1, 0.5)
     sc.t += 70.0
@@ -90,7 +91,7 @@ def main():
     check('Loaded' in rows[0] and rows[1][:24] == 'PRINT "Hello from MSXQB"', f"e torna all'editor: {rows[0][:40]!r}")
     print('--- r3 errore di sintassi')
     rows, vs, bl = load('r2b_err_loaded')
-    check(rows[4][:9] == 'PRINT 1 +', f'ERR.BAS aperto: {rows[4][:12]!r}')
+    check(rows[4][:9] == 'PRINT 1 +', f'ERR.SPB aperto: {rows[4][:12]!r}')
     rows, vs, bl = load('r3_error')
     t = rows[0].replace('~', '')
     check('Line 4: Syntax error' in t, f'messaggio: {t[:60]!r}')

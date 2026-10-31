@@ -39,15 +39,19 @@ def assemble_com():
 def prepare_disk():
     if os.path.isdir(DISK):
         for f in os.listdir(DISK):
-            os.remove(os.path.join(DISK, f))
+            fp = os.path.join(DISK, f)
+            if os.path.isdir(fp):
+                shutil.rmtree(fp)
+            else:
+                os.remove(fp)
     os.makedirs(DISK, exist_ok=True)
     for f in ('MSXDOS.SYS', 'COMMAND.COM'):
         shutil.copy(os.path.join(DOSDIR, f), DISK)
-    open(os.path.join(DISK, 'HELLO.TXT'), 'wb').write(b'Hello MSX\r\n\tindented line\r\nthird line\r\n')
+    open(os.path.join(DISK, 'HELLO.SPB'), 'wb').write(b'Hello MSX\r\n\tindented line\r\nthird line\r\n')
     med = ''.join(f'{i:04d} medium line number {i}\r\n' for i in range(1, 501)).encode()
-    open(os.path.join(DISK, 'MED.TXT'), 'wb').write(med)
+    open(os.path.join(DISK, 'MED.SPB'), 'wb').write(med)
     big = ''.join(f'{i:05d} this is a long enough line to fill the buffer quickly\r\n' for i in range(1, 1201)).encode()
-    open(os.path.join(DISK, 'BIG.TXT'), 'wb').write(big)
+    open(os.path.join(DISK, 'BIG.SPB'), 'wb').write(big)
     return med, big
 
 
@@ -75,21 +79,22 @@ def main():
     syms = assemble_com()
     sc = Scenario(syms)
     sc.t = 20.0                              # boot del DOS e prompt A>
-    sc.text('ED HELLO.TXT\\r', 8.0)
+    sc.text('ED HELLO.SPB\\r', 8.0)
     sc.dump('c1_open')
     sc.text('X', 0.5)
     chord(sc, *CTRL_S, gap=5.0)
     sc.dump('c2_saved')
     chord(sc, *CTRL_W, gap=0.8)
     sc.dump('c3_prompt')
-    sc.text('NEW.TXT\\r', 6.0)
+    sc.text('NEW\\r', 6.0)
     sc.dump('c4_saveas')
     sc.text('Q', 0.5)
     chord(sc, *CTRL_O, gap=0.8)
     sc.dump('c5_confirm')
     chord(sc, *CTRL_O, gap=0.8)
     sc.dump('c6_prompt2')
-    sc.text('HELLO.TXT\\r', 5.0)
+    sc.text('H', 0.5)
+    sc.tap(7, 0x80, 1, 5.0)
     sc.dump('c7_reopened')
     sc.do('keymatrixdown 6 1', 0.15)             # selezione e taglia/incolla anche sotto DOS
     sc.tap(8, 0x40, 1, 0.4)
@@ -104,22 +109,24 @@ def main():
     sc.dump('c7b2_undone')
     chord(sc, *CTRL_Y, gap=1.0)
     chord(sc, *CTRL_Y, gap=1.0)
-    chord(sc, *CTRL_S, gap=5.0)                  # risalva: HELLO.TXT deve restare identico
+    chord(sc, *CTRL_S, gap=5.0)                  # risalva: HELLO.SPB deve restare identico
     sc.dump('c7b3_redone')
     sc.tap(7, 0x04, 1, 0.5)                      # ESC: menu File
     sc.text('n', 1.0)                            # File > New (tasto rapido N)
     sc.dump('c7c_new')
     sc.tap(7, 0x04, 1, 0.5)                      # ESC, poi O: File > Open... dal menu
     sc.text('o', 1.0)
-    sc.text('MED.TXT\\r', 15.0)
+    sc.text('M', 0.5)
+    sc.tap(7, 0x80, 1, 15.0)
     sc.dump('c8_med')
     chord(sc, *CTRL_Z, gap=1.0)                  # dopo l'apertura la cronologia e' vuota
     sc.dump('c8b_noundo')
     chord(sc, *CTRL_W, gap=0.8)
-    sc.text('COPY.TXT\\r', 25.0)
+    sc.text('COPY\\r', 25.0)
     sc.dump('c9_copy')
     chord(sc, *CTRL_O, gap=0.8)
-    sc.text('BIG.TXT\\r', 35.0)
+    sc.text('B', 0.5)
+    sc.tap(7, 0x80, 1, 35.0)
     sc.dump('c10_big')
     chord(sc, *CTRL_Q, gap=1.0)
     sc.t += 1.0
@@ -133,7 +140,7 @@ def main():
             os.remove(os.path.join(BUILD, f))
     subprocess.run([OPENMSX, '-machine', MACHINE, '-diska', DISK, '-script', tcl], timeout=600)
 
-    med = open(os.path.join(DISK, 'MED.TXT'), 'rb').read()
+    med = open(os.path.join(DISK, 'MED.SPB'), 'rb').read()
     print('--- c1 apertura da riga di comando')
     rows, vs, bl = load('c1_open')
     t = title(rows)
@@ -148,30 +155,30 @@ def main():
     t = title(rows)
     check('Saved' in t and 'bytes' in t, 'messaggio di salvataggio: ' + t[:46].strip())
     check(rows[1][:10] == 'XHello MSX', 'testo modificato visibile')
-    hello = open(os.path.join(DISK, 'HELLO.TXT'), 'rb').read()
+    hello = open(os.path.join(DISK, 'HELLO.SPB'), 'rb').read()
     exp = b'XHello MSX\r\n    indented line\r\nthird line\r\n'
-    # (il contenuto salvato da Ctrl+S e' verificato da NEW.TXT, salvato subito dopo; HELLO.TXT viene poi riscritto)
+    # (il contenuto salvato da Ctrl+S e' verificato da NEW.SPB, salvato subito dopo; HELLO.SPB viene poi riscritto)
 
     print('--- c3/c4 salva con nome')
     rows, vs, bl = load('c3_prompt')
     check('Save as:' in title(rows), 'prompt: ' + title(rows)[:30].strip())
     rows, vs, bl = load('c4_saveas')
     check('Saved' in title(rows), 'messaggio dopo save as: ' + title(rows)[:46].strip())
-    new = os.path.join(DISK, 'NEW.TXT')
-    check(os.path.exists(new) and open(new, 'rb').read() == exp, 'NEW.TXT creato con lo stesso contenuto')
+    new = os.path.join(DISK, 'NEW.SPB')
+    check(os.path.exists(new) and open(new, 'rb').read() == exp, 'NEW.SPB creato con lo stesso contenuto')
 
     print('--- c5/c6/c7 conferma e riapertura')
     rows, vs, bl = load('c5_confirm')
     check('Unsaved' in title(rows), 'avviso modifiche non salvate: ' + title(rows)[:46].strip())
     rows, vs, bl = load('c6_prompt2')
-    check('Open file:' in title(rows), 'secondo Ctrl+O apre il prompt')
+    check('Open:' in title(rows), 'secondo Ctrl+O apre il prompt')
     rows, vs, bl = load('c7_reopened')
-    check(rows[1][:10] == 'XHello MSX', 'HELLO.TXT riaperto (ha la X salvata): ' + rows[1][:12])
+    check(rows[1][:10] == 'XHello MSX', 'HELLO.SPB riaperto (ha la X salvata): ' + rows[1][:12])
 
     rows, vs, bl = load('c7b_cutpaste')
     exp2 = b'    indented line\r\nthird line\r\nXHello MSX\r\n'
-    got2 = open(os.path.join(DISK, 'HELLO.TXT'), 'rb').read()
-    check(got2.split(b'')[0] == exp2, f'taglia+incolla+salva: HELLO.TXT = {got2!r}')   # (salvataggio in posto: ^Z e residuo ammessi)
+    got2 = open(os.path.join(DISK, 'HELLO.SPB'), 'rb').read()
+    check(got2.split(b'')[0] == exp2, f'taglia+incolla+salva: HELLO.SPB = {got2!r}')   # (salvataggio in posto: ^Z e residuo ammessi)
     check('Saved' in title(rows), 'messaggio: ' + title(rows)[:40].strip())
 
     rows, vs, bl = load('c7b2_undone')
@@ -184,13 +191,13 @@ def main():
 
     print('--- c8/c9 file da 500 righe: round trip')
     rows, vs, bl = load('c8_med')
-    check(vs['nlines'] == 501, f'MED.TXT nlines={vs["nlines"]}')
+    check(vs['nlines'] == 501, f'MED.SPB nlines={vs["nlines"]}')
     check(rows[1][:25] == '0001 medium line number 1' and rows[22].startswith('0022 medium line number'), 'prime righe')
     check(vs['len'] == len(med) - 500, f'len={vs["len"]} (atteso {len(med) - 500}, senza i CR)')
     rows, vs, bl = load('c8b_noundo')
     check('Nothing to undo' in title(rows) and vs['nlines'] == 501, 'Ctrl+Z dopo Open: ' + title(rows)[25:50].strip())
-    cp = os.path.join(DISK, 'COPY.TXT')
-    check(os.path.exists(cp) and open(cp, 'rb').read() == med, 'COPY.TXT identico a MED.TXT (CR/LF ricostruiti)')
+    cp = os.path.join(DISK, 'COPY.SPB')
+    check(os.path.exists(cp) and open(cp, 'rb').read() == med, 'COPY.SPB identico a MED.SPB (CR/LF ricostruiti)')
 
     print('--- c10 file troppo grande')
     rows, vs, bl = load('c10_big')

@@ -18,7 +18,7 @@ def main():
     syms = ecom.assemble_com()
     sc = Scenario(syms)
     sc.t = 20.0
-    sc.text('ED HELLO.TXT' + BS + 'r', 8.0)
+    sc.text('ED HELLO.SPB' + BS + 'r', 8.0)
     sc.text('ABCDEFGHIJ', 1.0)
     chord(sc, *CTRL_S, gap=5.0)                       # piu' lungo: si estende in posto
     sc.dump('v0_longer')
@@ -26,7 +26,8 @@ def main():
     chord(sc, *CTRL_S, gap=5.0)                       # piu' corto: ^Z + residuo
     sc.dump('v1_shorter')
     chord(sc, *CTRL_O, gap=0.8)
-    sc.text('HELLO.TXT' + BS + 'r', 5.0)
+    sc.text('H', 0.5)
+    sc.tap(7, 0x80, 1, 5.0)
     sc.dump('v2_reloaded')
     tcl = os.path.join(BUILD, 'esave.tcl')
     open(tcl, 'w').write(sc.script())
@@ -35,7 +36,7 @@ def main():
             os.remove(os.path.join(BUILD, f))
     import subprocess
     subprocess.run([etest.OPENMSX, '-machine', etest.MACHINE, '-diska', ecom.DISK, '-script', tcl], timeout=600)
-    data = open(os.path.join(ecom.DISK, 'HELLO.TXT'), 'rb').read()
+    data = open(os.path.join(ecom.DISK, 'HELLO.SPB'), 'rb').read()
     exp = b'Hello MSX\r\n    indented line\r\nthird line\r\n'
     rows, vs, bl = load('v0_longer')
     check('Saved' in title(rows), 'primo salvataggio: ' + title(rows)[:40].strip())

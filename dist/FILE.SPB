@@ -1,0 +1,15 @@
+' File di testo: scrive, rilegge, aggiunge
+OPEN "PROVA.TXT" FOR OUTPUT AS #1
+PRINT #1, "prima riga"
+WRITE #1, "nome", 42, -7
+CLOSE #1
+OPEN "PROVA.TXT" FOR APPEND AS #1
+PRINT #1, "ultima"
+CLOSE #1
+OPEN "PROVA.TXT" FOR INPUT AS #1
+DO WHILE NOT EOF(1)
+  LINE INPUT #1, r$
+  PRINT r$
+LOOP
+CLOSE #1
+KILL "PROVA.TXT"

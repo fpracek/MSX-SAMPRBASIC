@@ -70,7 +70,7 @@ def run_cases(cases, wait_run=float(os.environ.get('QWAIT', '42'))):
     for f in ('MSXDOS.SYS', 'COMMAND.COM'):
         shutil.copy(os.path.join(DOSDIR, f), DISK)
     shutil.copy(os.path.join(BUILD, 'qbc.com'), os.path.join(DISK, 'QBC.COM'))
-    shutil.copy(os.path.join(BUILD, 'qbstub.com'), os.path.join(DISK, 'QB.COM'))
+    shutil.copy(os.path.join(BUILD, 'qbstub.com'), os.path.join(DISK, 'SAMPRBAS.COM'))
     shutil.copy(os.path.join(BUILD, 'rt.bin'), os.path.join(DISK, 'RT.BIN'))
     shutil.copy(os.path.join(BUILD, 'rtrom.bin'), os.path.join(DISK, 'RTROM.BIN'))
     shutil.copy(os.path.join(BUILD, 'rtd.bin'), os.path.join(DISK, 'RTD.BIN'))
@@ -97,7 +97,7 @@ def run_cases(cases, wait_run=float(os.environ.get('QWAIT', '42'))):
         t += wait_run
         lines.append('after time %.1f {dump %s}' % (t, name))
         t += 1.0
-        # il programma attende un tasto e poi torna al QB.COM di prova (che resta fermo): riavvio del DOS
+        # il programma attende un tasto e poi torna al SAMPRBAS.COM di prova (che resta fermo): riavvio del DOS
         lines.append('after time %.1f {keymatrixdown 7 128; after time 0.15 {keymatrixup 7 128}}' % t)
         t += 3.0
         lines.append('after time %.1f {dump %s_after}' % (t, name))

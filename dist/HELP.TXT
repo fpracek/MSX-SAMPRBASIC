@@ -1,0 +1,1939 @@
+INDICE DEGLI ARGOMENTI
+
+Scrivi il nome in Help > Topic, oppure
+F6 sulla parola sotto il cursore.
+
+STRUTTURA DEL PROGRAMMA
+REM          ETICHETTE
+TIPI         OPERATORI
+CONST        LET
+END          DECLARE
+
+CONTROLLO DEL FLUSSO
+IF           FOR
+WHILE        DO
+EXIT         SELECT CASE
+GOTO         GOSUB
+SUB          FUNCTION
+CALL         SHARED
+
+DATI E ARRAY
+DIM          UBOUND
+DATA         MKI$
+
+TESTO E TASTIERA
+PRINT        INPUT
+LINE INPUT   CLS
+LOCATE       COLOR
+INKEY$
+
+FUNZIONI NUMERICHE E STRINGHE
+LEN          ASC
+CHR$         VAL
+STR$         LEFT$
+RIGHT$       MID$
+ABS          SGN
+RND          TIMER
+PEEK         POKE
+SLEEP
+
+SCHERMO E GRAFICA
+SCREEN       PSET
+POINT        LINE
+CIRCLE       PAINT
+DRAW         GET
+COPY         SET
+VIEW         PALETTE
+VPOKE        VBANK
+VFILL        VWRITE
+VREAD$       BASE
+VDP          OUT
+INP
+
+SPRITE
+SPRITE       PUT SPRITE
+COLLISION    STICK
+STRIG
+
+SUONO
+BEEP         SOUND
+PLAY
+
+FILE SU DISCO
+OPEN         CLOSE
+WRITE        EOF
+KILL         FIELD
+LOF          BLOAD
+
+CARTUCCE ROM, SEGMENTI E MAPPER
+SEGMENT      INCBIN
+SETBANK      VCOPY
+MALLOC       MGET
+
+OPZIONI (OPTION)
+OPTION       OPTION MIXED
+OPTION DEBUG
+
+GUIDE
+ASM          DEBUG
+EDITOR       SPB
+HELP         ERRORI
+LIMITI       MSX1
+COM
+
+REM
+---
+
+REM commento
+' commento
+
+Commento: tutto il resto della riga
+viene ignorato. L'apostrofo si puo'
+mettere anche dopo un'istruzione,
+sulla stessa riga.
+
+Esempio:
+  REM questo e' un commento
+  PRINT "ciao"   ' anche questo
+Vedi anche: PRINT
+ETICHETTE
+---------
+
+nome:
+10 PRINT "x"
+
+Un programma puo' usare etichette
+(nome: da solo su una riga o davanti a
+un'istruzione) e/o numeri di riga.
+GOTO, GOSUB e il ripristino con
+RESTORE accettano l'una o l'altro. Il
+modo si sceglie con OPTION: NUMBERED
+(solo numeri, ordinati per numero),
+LABELS (solo etichette) o MIXED
+(predefinito, entrambi). I nomi delle
+etichette seguono le regole dei nomi
+di variabile. Piu' istruzioni sulla
+stessa riga si separano con i due
+punti.
+
+Esempio:
+  inizio:
+    PRINT "a" : PRINT "b"
+    GOTO fine
+    PRINT "mai"
+  fine:
+    PRINT "fine"
+Vedi anche: OPTION, GOTO, GOSUB
+TIPI
+----
+
+a   a$   a(10)   a$(10)
+
+Esistono due tipi: interi a 16 bit con
+segno (da -32768 a 32767) e stringhe
+(fino a 255 caratteri). Il nome di una
+variabile stringa termina con $; A e
+A$ sono variabili distinte. Il
+suffisso % si accetta e si ignora (A%
+e' A). I nomi non distinguono
+maiuscole e minuscole; sono
+significativi i primi 11 caratteri
+piu' il suffisso. Le variabili non
+dichiarate valgono 0 o la stringa
+vuota. Valori numerici: decimali,
+esadecimali &H1F, binari &B101. Il
+valore "vero" di un confronto e' -1,
+il "falso" 0.
+
+Esempio:
+  n = &HFF
+  b = &B1010
+  PRINT n; b
+  PRINT 3 > 2; 3 < 2
+Vedi anche: DIM, CONST, OPERATORI
+OPERATORI
+---------
+
++  -  *  /  \  MOD
+=  <>  <  >  <=  >=
+NOT  AND  OR  XOR
+
+Aritmetici: + - * / e \ (divisione
+intera, anche / fra interi) e MOD
+(resto). Confronti: = <> < > <= >=
+(anche fra stringhe, in ordine
+alfabetico). Logici bit a bit sugli
+interi: NOT AND OR XOR. Il + concatena
+le stringhe. In caso di dubbio sulla
+precedenza usare le parentesi: prima
+gli operatori aritmetici, poi i
+confronti, poi quelli logici.
+
+Esempio:
+  PRINT 7 \ 2; 7 MOD 2
+  PRINT 5 AND 3; 5 OR 3; 5 XOR 3
+  PRINT "ab" + "cd"; "a" < "b"
+Vedi anche: TIPI
+CONST
+-----
+
+CONST nome = [-]numero {, nome =
+    numero}
+
+Definisce costanti numeriche. Si usano
+nelle espressioni e come dimensione di
+DIM; assegnare un valore a una
+costante e' un errore.
+
+Esempio:
+  CONST max = 5, base = 100
+  DIM a(max)
+  a(max) = base + 1
+  PRINT a(5)
+Vedi anche: DIM
+LET
+---
+
+[LET] variabile = espressione
+[LET] array(i) = espressione
+
+Assegna un valore a una variabile o a
+un elemento di array. La parola LET e'
+facoltativa. Il tipo dell'espressione
+deve coincidere con quello della
+variabile (altrimenti errore 14: tipi
+incompatibili).
+
+Esempio:
+  LET a = 5
+  b$ = "ciao"
+  c = a * 2
+  PRINT b$; c
+Vedi anche: DIM
+END
+---
+
+END
+STOP
+
+Termina il programma. In un programma
+.COM mostra "Press any key.." e
+attende un tasto (poi torna
+all'editor); in una cartuccia attende
+un tasto e riavvia la macchina. Alla
+fine del sorgente il programma termina
+da solo. In un programma STOP equivale
+a END (non c'e' il debugger
+interattivo: per questo vedi OPTION
+DEBUG). Con un secondo termine END
+chiude anche i blocchi: END IF, END
+SUB, END FUNCTION, END SELECT.
+
+Esempio:
+  PRINT "inizio"
+  END
+  PRINT "mai"
+Vedi anche: DEBUG
+DECLARE
+-------
+
+DECLARE SUB nome(...)
+DECLARE FUNCTION nome(...)
+
+Accettata per compatibilita' e
+ignorata: le firme di SUB e FUNCTION
+si leggono con una pre-scansione del
+sorgente, quindi una routine si puo'
+chiamare prima di essere definita.
+Vedi anche: SUB, FUNCTION
+IF
+--
+
+IF condizione THEN istruzione [ELSE
+    istruzione]
+IF condizione THEN
+  ...
+[ELSEIF condizione THEN
+  ...]
+[ELSE
+  ...]
+END IF
+
+Esegue istruzioni in base a una
+condizione (vera se diversa da zero).
+Forma su una riga: IF a > 3 THEN PRINT
+"si" ELSE PRINT "no". Forma a blocchi:
+IF ... THEN a fine riga, un numero
+qualsiasi di ELSEIF, un ELSE
+facoltativo e END IF. I blocchi si
+possono annidare.
+
+Esempio:
+  n = 5
+  IF n > 9 THEN
+    PRINT "grande"
+  ELSEIF n > 3 THEN
+    PRINT "medio"
+  ELSE
+    PRINT "piccolo"
+  END IF
+Vedi anche: SELECT CASE, OPERATORI
+FOR
+---
+
+FOR variabile = inizio TO fine [STEP
+    passo]
+  ...
+NEXT [variabile]
+
+Ciclo con contatore. STEP e' una
+costante intera, anche negativa; se
+omesso vale 1. Il ciclo non viene
+eseguito se il valore iniziale supera
+gia' il finale. EXIT FOR esce dal
+ciclo. I cicli si possono annidare.
+
+Esempio:
+  FOR i = 1 TO 10 STEP 3
+    PRINT i;
+  NEXT i
+  PRINT
+  FOR j = 3 TO 1 STEP -1
+    PRINT j;
+  NEXT j
+Vedi anche: EXIT
+WHILE
+-----
+
+WHILE condizione
+  ...
+WEND
+
+Ripete il blocco finche' la condizione
+e' vera (controllo all'inizio). EXIT
+WHILE esce dal ciclo.
+
+Esempio:
+  n = 3
+  WHILE n > 0
+    PRINT n;
+    n = n - 1
+  WEND
+Vedi anche: DO, EXIT
+DO
+--
+
+DO [WHILE|UNTIL condizione]
+  ...
+LOOP [WHILE|UNTIL condizione]
+
+Ciclo con controllo all'inizio
+(condizione dopo DO) o alla fine (dopo
+LOOP), oppure senza condizione (ciclo
+infinito, da interrompere con EXIT
+DO). UNTIL ripete fino a quando la
+condizione diventa vera.
+
+Esempio:
+  n = 0
+  DO
+    n = n + 1
+  LOOP UNTIL n >= 4
+  PRINT n
+Vedi anche: WHILE, EXIT
+EXIT
+----
+
+EXIT FOR | EXIT WHILE | EXIT DO
+EXIT SUB | EXIT FUNCTION
+
+Esce subito dal ciclo (FOR, WHILE, DO)
+o dalla routine (SUB, FUNCTION) in
+corso.
+
+Esempio:
+  FOR i = 1 TO 100
+    IF i * i > 50 THEN EXIT FOR
+  NEXT i
+  PRINT i
+Vedi anche: FOR, DO
+SELECT CASE
+-----------
+
+SELECT CASE espressione
+  CASE valore {, valore | da TO a}
+  CASE IS operatore valore
+  CASE ELSE
+END SELECT
+
+Sceglie fra piu' alternative in base a
+un valore intero o a una stringa. Un
+CASE puo' elencare valori (CASE 2, 3),
+intervalli (CASE 4 TO 6), confronti
+(CASE IS >= 7); con le stringhe anche
+CASE "a", "b" TO "m". Il tipo dei
+valori deve coincidere con quello del
+selettore. CASE ELSE raccoglie il
+resto.
+
+Esempio:
+  n = 5
+  SELECT CASE n
+    CASE 1, 2
+      PRINT "poco"
+    CASE 3 TO 6
+      PRINT "medio"
+    CASE IS > 6
+      PRINT "tanto"
+    CASE ELSE
+      PRINT "zero"
+  END SELECT
+Vedi anche: IF
+GOTO
+----
+
+GOTO etichetta | numero
+
+Salta all'etichetta o al numero di
+riga indicato. In una cartuccia a piu'
+segmenti la destinazione deve stare
+nello stesso segmento.
+
+Esempio:
+  i = 0
+  giro:
+    i = i + 1
+    PRINT i;
+    IF i < 3 THEN GOTO giro
+Vedi anche: GOSUB, ETICHETTE
+GOSUB
+-----
+
+GOSUB etichetta | numero
+RETURN
+
+GOSUB chiama una subroutine che inizia
+all'etichetta (o al numero di riga) e
+RETURN torna all'istruzione dopo la
+chiamata. Per routine con parametri e
+variabili locali usare SUB e FUNCTION.
+
+Esempio:
+  GOSUB saluta
+  PRINT "fine"
+  END
+  saluta:
+    PRINT "ciao"
+    RETURN
+Vedi anche: SUB, CALL
+SUB
+---
+
+SUB nome [(parametro {, parametro})]
+  ...
+END SUB
+
+Definisce una procedura. I parametri
+si passano per valore (interi o
+stringhe, con $); un array si passa
+per riferimento scrivendo a(). Le
+variabili usate dentro la SUB sono
+locali, salvo quelle dichiarate con
+SHARED. Si puo' chiamare con CALL o
+direttamente per nome. La ricorsione
+e' consentita. Massimo 20 routine, 8
+parametri ciascuna.
+
+Esempio:
+  SUB somma(a, b)
+    PRINT a + b
+  END SUB
+  CALL somma(3, 4)
+  somma 5, 6
+Vedi anche: FUNCTION, CALL, SHARED
+FUNCTION
+--------
+
+FUNCTION nome[$] [(parametri)]
+  ...
+  nome = valore
+END FUNCTION
+
+Come una SUB ma restituisce un valore:
+si assegna al nome della funzione
+(nome = ... oppure nome$ = ... per le
+stringhe). Si usa dentro le
+espressioni. Ricorsione consentita.
+
+Esempio:
+  FUNCTION doppio(n)
+    doppio = n * 2
+  END FUNCTION
+  PRINT doppio(21)
+Vedi anche: SUB, CALL
+CALL
+----
+
+CALL nome [(argomenti)]
+CALL FAR nome [(argomenti)]
+
+Chiama una SUB. Le parentesi sono
+facoltative. CALL FAR forza la
+chiamata fra segmenti di una cartuccia
+(di norma il compilatore la riconosce
+da solo). CALL chiama una SUB, non
+un'etichetta: per le etichette usare
+GOSUB.
+
+Esempio:
+  SUB p(x$)
+    PRINT x$
+  END SUB
+  CALL p("ciao")
+Vedi anche: SUB, SEGMENT
+SHARED
+------
+
+SHARED variabile {, variabile}
+
+Dentro una SUB o FUNCTION dichiara che
+i nomi indicati sono le variabili
+globali (e non variabili locali con lo
+stesso nome).
+
+Esempio:
+  totale = 0
+  SUB aggiungi(n)
+    SHARED totale
+    totale = totale + n
+  END SUB
+  aggiungi 5
+  aggiungi 7
+  PRINT totale
+Vedi anche: SUB, DIM
+DIM
+---
+
+DIM nome(n) [, nome$(m) ...]
+DIM nome(n) MAPPER
+
+Dichiara array di interi o di stringhe
+con indici da 0 a n (quindi n+1
+elementi). Gli indici sono
+controllati: fuori limite il programma
+si ferma con un errore. UBOUND(a) da'
+l'ultimo indice. Gli array si passano
+a SUB e FUNCTION scrivendo a(). Con
+MAPPER (solo .COM e cartucce con
+mapper RAM) un array di interi sta nel
+mapper RAM, fino a 32768 elementi.
+
+Esempio:
+  DIM a(4), n$(2)
+  FOR i = 0 TO 4
+    a(i) = i * i
+  NEXT i
+  n$(1) = "uno"
+  PRINT a(3); n$(1); UBOUND(a)
+Vedi anche: UBOUND, MALLOC
+UBOUND
+------
+
+UBOUND(array)
+
+Restituisce il massimo indice di un
+array (anche quando e' un parametro di
+una routine).
+
+Esempio:
+  DIM v(9)
+  PRINT UBOUND(v)
+Vedi anche: DIM
+DATA
+----
+
+DATA valore {, valore}
+READ variabile {, variabile}
+RESTORE [etichetta]
+
+DATA contiene valori (interi o
+stringhe fra virgolette); READ li
+legge in ordine nelle variabili
+indicate; RESTORE riporta la lettura
+al primo DATA oppure a quello che
+segue immediatamente l'etichetta
+indicata. Leggere oltre l'ultimo DATA
+e' un errore.
+
+Esempio:
+  DATA 10, -20, "ciao"
+  READ a, b, s$
+  PRINT a; b; s$
+  RESTORE
+  READ c
+  PRINT c
+Vedi anche: DIM
+MKI$
+----
+
+MKI$(n)
+CVI(stringa$)
+
+MKI$ converte un intero in una stringa
+di 2 byte; CVI fa l'operazione
+inversa. Servono con i file ad accesso
+casuale (campi FIELD).
+
+Esempio:
+  a$ = MKI$(1000)
+  PRINT LEN(a$); CVI(a$)
+Vedi anche: FIELD
+PRINT
+-----
+
+PRINT [espressione {; | ,
+    espressione}] [;]
+? espressione
+PRINT #n, ...
+
+Scrive sullo schermo. Il punto e
+virgola lascia il cursore subito dopo
+l'ultimo elemento; la virgola avanza
+alla zona di tabulazione successiva
+(colonne multiple di 14). Senza punto
+e virgola finale va a capo. I numeri
+sono preceduti da un segno (spazio se
+positivi) e seguiti da uno spazio; le
+stringhe si scrivono cosi' come sono.
+? e' un'abbreviazione di PRINT. Con
+#n, scrive nel file aperto.
+
+Esempio:
+  PRINT "somma:"; 3 + 4
+  PRINT 1, 2, 3
+  PRINT "a";
+  PRINT "b"
+Vedi anche: LOCATE, INPUT, OPEN
+INPUT
+-----
+
+INPUT ["testo" ;|,] variabile
+INPUT #n, variabile {, variabile}
+
+Legge una riga dalla tastiera nella
+variabile (intera o stringa). Con il
+testo e il punto e virgola il testo e'
+seguito da "? "; con la virgola no. Si
+conferma con Invio; Backspace
+cancella. Un valore non numerico in
+una variabile intera da' 0. Con #n,
+legge dal file.
+
+Esempio:
+  INPUT "Nome"; n$
+  INPUT "Eta", e
+  PRINT "Ciao "; n$; e + 1
+Vedi anche: LINE INPUT, INKEY$
+LINE INPUT
+----------
+
+LINE INPUT [#n,] variabile$
+
+Legge una riga intera (spazi e virgole
+compresi) in una variabile stringa; da
+tastiera o, con #n,, da un file.
+
+Esempio:
+  LINE INPUT a$
+  PRINT "[" ; a$ ; "]"
+Vedi anche: INPUT
+CLS
+---
+
+CLS
+
+Cancella lo schermo e porta il cursore
+in alto a sinistra (nella pagina
+attiva in SCREEN 5-8).
+
+Esempio:
+  CLS
+  PRINT "pulito"
+Vedi anche: LOCATE
+LOCATE
+------
+
+LOCATE riga, colonna
+
+Posiziona il cursore del testo. Riga e
+colonna partono da 1.
+
+Esempio:
+  CLS
+  LOCATE 5, 10
+  PRINT "qui"
+Vedi anche: PRINT, CLS
+COLOR
+-----
+
+COLOR primo piano[, sfondo]
+COLOR = (n, r, g, b)
+COLOR = RESTORE
+COLOR SPRITE(n) = colore
+COLOR SPRITE$(n) = colori$
+
+Imposta i colori del testo (e il
+bordo) con numeri da 0 a 15 (in SCREEN
+8 il valore grezzo 0-255). COLOR =
+(n,r,g,b) ridefinisce un colore della
+palette (r, g, b da 0 a 7; MSX2) e
+COLOR = RESTORE ripristina la palette
+predefinita. COLOR SPRITE vedi gli
+sprite.
+
+Esempio:
+  COLOR 15, 4
+  CLS
+  PRINT "bianco su blu"
+Vedi anche: PALETTE, SCREEN
+INKEY$
+------
+
+INKEY$
+
+Restituisce il carattere del tasto
+premuto, oppure la stringa vuota se
+non ce n'e': non attende.
+
+Esempio:
+  DO
+    k$ = INKEY$
+  LOOP WHILE k$ = ""
+  PRINT "tasto:"; ASC(k$)
+Vedi anche: INPUT, STICK
+LEN
+---
+
+LEN(stringa$)
+
+Lunghezza di una stringa.
+
+Esempio:
+  PRINT LEN("ciao")
+Vedi anche: MID$
+ASC
+---
+
+ASC(stringa$)
+
+Codice del primo carattere della
+stringa (0 se e' vuota).
+
+Esempio:
+  PRINT ASC("A")
+Vedi anche: CHR$
+CHR$
+----
+
+CHR$(codice)
+
+Stringa di un carattere con il codice
+dato (0-255).
+
+Esempio:
+  PRINT CHR$(72); CHR$(105)
+Vedi anche: ASC
+VAL
+---
+
+VAL(stringa$)
+
+Valore numerico di una stringa; si
+ferma al primo carattere non valido, 0
+se non inizia con un numero.
+
+Esempio:
+  PRINT VAL("42") + 1
+Vedi anche: STR$
+STR$
+----
+
+STR$(numero)
+
+Rappresentazione decimale del numero
+come stringa (con lo spazio iniziale
+per i positivi).
+
+Esempio:
+  a$ = STR$(7)
+  PRINT LEN(a$); a$
+Vedi anche: VAL
+LEFT$
+-----
+
+LEFT$(stringa$, n)
+
+I primi n caratteri della stringa.
+
+Esempio:
+  PRINT LEFT$("abcdef", 3)
+Vedi anche: RIGHT$, MID$
+RIGHT$
+------
+
+RIGHT$(stringa$, n)
+
+Gli ultimi n caratteri della stringa.
+
+Esempio:
+  PRINT RIGHT$("abcdef", 2)
+Vedi anche: LEFT$, MID$
+MID$
+----
+
+MID$(stringa$, inizio [, n])
+
+Sottostringa: parte dal carattere
+inizio (il primo e' 1) e prende n
+caratteri (fino alla fine se manca n).
+
+Esempio:
+  PRINT MID$("abcdef", 2, 3)
+  PRINT MID$("abcdef", 4)
+Vedi anche: LEFT$, RIGHT$, LEN
+ABS
+---
+
+ABS(n)
+
+Valore assoluto.
+
+Esempio:
+  PRINT ABS(-7)
+Vedi anche: SGN
+SGN
+---
+
+SGN(n)
+
+Segno: -1, 0 oppure 1.
+
+Esempio:
+  PRINT SGN(-9); SGN(0); SGN(4)
+Vedi anche: ABS
+RND
+---
+
+RND(n)
+RANDOMIZE seme
+
+RND(n) restituisce un numero
+pseudocasuale da 0 a n-1. RANDOMIZE
+imposta il seme della sequenza: lo
+stesso seme da' la stessa sequenza.
+
+Esempio:
+  RANDOMIZE 7
+  FOR i = 1 TO 5
+    PRINT RND(100);
+  NEXT i
+Vedi anche: TIMER
+TIMER
+-----
+
+TIMER
+
+Contatore dei quadri video (1/50 o
+1/60 di secondo) letto da JIFFY; a 16
+bit, riparte da zero.
+
+Esempio:
+  t = TIMER
+  SLEEP 25
+  PRINT TIMER - t
+Vedi anche: SLEEP
+PEEK
+----
+
+PEEK(indirizzo)
+POKE indirizzo, valore
+
+PEEK legge un byte della memoria; POKE
+lo scrive. Indirizzi a 16 bit (da 0 a
+65535, anche con valori negativi
+equivalenti).
+
+Esempio:
+  POKE 50000, 77
+  PRINT PEEK(50000)
+Vedi anche: VARPTR
+POKE
+----
+
+POKE indirizzo, valore
+
+Scrive un byte in memoria. Vedi PEEK.
+
+Esempio:
+  POKE 50000, 12
+  PRINT PEEK(50000)
+Vedi anche: PEEK
+SLEEP
+-----
+
+SLEEP quadri
+
+Attende il numero di quadri video
+indicato (50 o 60 al secondo secondo
+lo standard della macchina).
+
+Esempio:
+  PRINT "aspetta"
+  SLEEP 50
+  PRINT "fatto"
+Vedi anche: TIMER
+SCREEN
+------
+
+SCREEN modo [, dimensione sprite]
+
+Sceglie il modo video. MSX1: 0 (testo
+40 col), 1 (testo a colori 32 col), 2
+(grafica 256x192), 3 (blocchi 64x48).
+MSX2 aggiunge 4, 5 (256x212, 16
+colori), 6 (512x212, 4 colori), 7
+(512x212, 16 colori), 8 (256x212, 256
+colori) e, su MSX2+/turbo R, 10-12
+(colori YJK). Le istruzioni PSET,
+LINE, CIRCLE, PAINT, GET/PUT e COPY
+lavorano in SCREEN 5-8 (PSET, POINT,
+LINE e CIRCLE anche in SCREEN 3). Il
+secondo parametro e' la dimensione
+degli sprite: 0 = 8x8, 1 = 8x8
+ingranditi, 2 = 16x16, 3 = 16x16
+ingranditi. Su MSX1 un modo oltre il 3
+da' "Illegal function call".
+
+Esempio:
+  SCREEN 5
+  COLOR 15, 4
+  CLS
+  PSET (10, 10), 15
+  LINE -(100, 80), 8
+
+Disponibile: MSX1: modi 0-3; MSX2: 0-8
+(10-12 su MSX2+)
+Vedi anche: PSET, LINE, SPRITE, SET
+PSET
+----
+
+PSET (x, y) [, colore [, operazione]]
+PRESET (x, y) [, colore [,
+    operazione]]
+
+Accende (PSET) o spegne (PRESET,
+colore di sfondo) un punto. Le
+coordinate fuori schermo vengono
+ritagliate. L'operazione logica e'
+PSET, PRESET, AND, OR, XOR oppure la
+stessa preceduta da T (trasparente: il
+colore 0 non scrive).
+
+Esempio:
+  SCREEN 5
+  PSET (128, 100), 12
+  PSET (128, 100), 3, XOR
+
+Disponibile: Solo MSX2 (SCREEN 3
+compreso)
+Vedi anche: POINT, LINE
+POINT
+-----
+
+POINT(x, y)
+
+Colore del punto; -1 se fuori schermo.
+
+Esempio:
+  SCREEN 5
+  PSET (5, 5), 9
+  PRINT POINT(5, 5)
+
+Disponibile: Solo MSX2
+Vedi anche: PSET
+LINE
+----
+
+LINE [(x1, y1)] - (x2, y2) [, colore
+    [, B|BF [, operazione]]]
+
+Traccia una linea; senza il primo
+punto parte dall'ultimo punto grafico.
+Con B disegna un rettangolo, con BF un
+rettangolo pieno. Se manca il colore
+vale quello di COLOR. Non va confusa
+con LINE INPUT (che legge una riga di
+testo).
+
+Esempio:
+  SCREEN 5
+  LINE (10, 10)-(100, 60), 15
+  LINE (20, 80)-(120, 140), 9, BF
+
+Disponibile: Solo MSX2 (SCREEN 3
+compreso)
+Vedi anche: CIRCLE, PSET
+CIRCLE
+------
+
+CIRCLE (x, y), raggio [, colore]
+
+Disegna una circonferenza.
+
+Esempio:
+  SCREEN 5
+  CIRCLE (128, 106), 50, 11
+
+Disponibile: Solo MSX2 (SCREEN 3
+compreso)
+Vedi anche: LINE, PAINT
+PAINT
+-----
+
+PAINT (x, y) [, colore [, bordo]]
+
+Riempie un'area partendo dal punto
+indicato. Nei modi a 16 colori e nei 4
+colori il bordo (colore che ferma il
+riempimento) va indicato se diverso
+dal colore di riempimento.
+
+Esempio:
+  SCREEN 5
+  CIRCLE (128, 106), 50, 4
+  PAINT (128, 106), 6, 4
+
+Disponibile: Solo MSX2
+Vedi anche: CIRCLE, LINE
+DRAW
+----
+
+DRAW "comandi"
+
+Disegna con un linguaggio a comandi: U
+D L R E F G H (muovi su, giu',
+sinistra, destra e diagonali di n
+punti), M x,y (vai a; +/- relativo), B
+davanti a un comando (muovi senza
+tracciare), N (traccia e torna), C
+colore, S scala (in quarti). Esempio:
+DRAW "C7 R20 D10 L20 U10".
+
+Esempio:
+  SCREEN 5
+  PSET (100, 100)
+  DRAW "C8 R40 D30 L40 U30"
+
+Disponibile: Solo MSX2
+Vedi anche: LINE
+GET
+---
+
+GET (x1,y1)-(x2,y2), array
+PUT (x, y), array [, operazione]
+
+GET copia un rettangolo dello schermo
+in un array di interi; PUT lo
+ridisegna con un'operazione (PSET,
+PRESET, AND, OR, XOR). In grafica il
+rettangolo dev'essere contenuto in un
+array dimensionato con DIM. Non vanno
+confusi con GET #n / PUT #n (file ad
+accesso casuale) e PUT SPRITE.
+
+Esempio:
+  SCREEN 5
+  DIM a(100)
+  CIRCLE (20, 20), 8, 15
+  GET (10, 10)-(30, 30), a
+  PUT (100, 100), a, PSET
+
+Disponibile: Solo MSX2
+Vedi anche: COPY, PUT SPRITE, OPEN
+COPY
+----
+
+COPY (x1,y1)-(x2,y2)[,pagina] TO
+    (x3,y3)[,pagina] [, operazione]
+
+Copia un rettangolo di schermo (anche
+fra pagine) con il motore comandi del
+VDP: velocissimo, ideale per sprite
+software e scorrimenti.
+
+Esempio:
+  SCREEN 5
+  CIRCLE (30, 30), 20, 12
+  COPY (0, 0)-(60, 60) TO (150, 100)
+
+Disponibile: Solo MSX2
+Vedi anche: GET, SET
+SET
+---
+
+SET PAGE visibile, attiva
+SET SCROLL x, y
+
+SET PAGE sceglie la pagina mostrata e
+quella su cui si disegna (SCREEN 5-8):
+si disegna fuori vista e poi si
+mostra, per animazioni senza
+sfarfallio. SET SCROLL scorre lo
+schermo in modo morbido (registri 23 e
+18).
+
+Esempio:
+  SCREEN 5
+  SET PAGE 0, 1
+  CIRCLE (100, 100), 40, 15
+  SET PAGE 1, 1
+
+Disponibile: Solo MSX2
+Vedi anche: COPY, VBANK
+VIEW
+----
+
+VIEW [(x1,y1)-(x2,y2)]
+WINDOW [SCREEN] [(x1,y1)-(x2,y2)]
+
+VIEW limita il disegno a una finestra
+dello schermo (senza argomenti la
+annulla); WINDOW ridefinisce il
+sistema di coordinate (WINDOW SCREEN:
+l'asse y cresce verso il basso).
+
+Esempio:
+  SCREEN 5
+  VIEW (50, 50)-(150, 150)
+  LINE (0, 0)-(255, 211), 15
+  VIEW
+
+Disponibile: Solo MSX2
+Vedi anche: LINE
+PALETTE
+-------
+
+PALETTE n, r, g, b
+PALETTE n, colore
+COLOR = (n, r, g, b)
+COLOR = RESTORE
+
+Ridefinisce un colore della tavolozza
+(r, g, b da 0 a 7); la forma con due
+numeri assegna al colore n il colore
+predefinito indicato. COLOR = RESTORE
+ripristina la palette di fabbrica.
+
+Esempio:
+  SCREEN 5
+  PALETTE 1, 7, 0, 0
+  LINE (10, 10)-(100, 60), 1, BF
+
+Disponibile: Solo MSX2
+Vedi anche: COLOR
+VPOKE
+-----
+
+VPOKE indirizzo, valore
+VPEEK(indirizzo)
+
+Scrive/legge un byte della memoria
+video. Con VBANK l'indirizzo arriva a
+17 bit (128 KB su MSX2).
+
+Esempio:
+  VPOKE 0, 65
+  PRINT VPEEK(0)
+Vedi anche: VBANK, VFILL, VWRITE
+VBANK
+-----
+
+VBANK n
+
+Sceglie il blocco da 16 KB della VRAM
+usato da VPOKE, VPEEK, VFILL, VWRITE,
+VREAD$, BLOAD/BSAVE ... S (R#14 su
+MSX2).
+
+Esempio:
+  VBANK 1
+  VPOKE 0, 5
+
+Disponibile: Solo MSX2
+Vedi anche: VPOKE
+VFILL
+-----
+
+VFILL indirizzo, quanti, valore
+
+Riempie un'area di VRAM con un byte.
+
+Esempio:
+  VFILL 0, 768, 32
+Vedi anche: VWRITE
+VWRITE
+------
+
+VWRITE indirizzo, stringa$
+
+Scrive in VRAM i byte di una stringa.
+
+Esempio:
+  VWRITE 0, "ciao"
+Vedi anche: VREAD$, VCOPY
+VREAD$
+------
+
+VREAD$(indirizzo, quanti)
+
+Legge un'area di VRAM e la restituisce
+come stringa.
+
+Esempio:
+  PRINT VREAD$(0, 4)
+Vedi anche: VWRITE
+BASE
+----
+
+BASE(n)
+
+Indirizzo di VRAM delle tabelle del
+modo corrente (n come nel BASIC MSX: 0
+nomi, 2 colori/motivi, ...).
+
+Esempio:
+  PRINT BASE(0)
+Vedi anche: VDP
+VDP
+---
+
+VDP(n)
+VDP(n) = valore
+
+Legge o scrive il registro n del VDP
+(la lettura da' la copia in RAM del
+BIOS).
+
+Esempio:
+  VDP(7) = 9
+  PRINT VDP(7)
+Vedi anche: BASE, OUT
+OUT
+---
+
+OUT porta, valore
+INP(porta)
+
+Scrive un byte su una porta di I/O;
+INP ne legge uno.
+
+Esempio:
+  OUT 170, 3
+Vedi anche: INP, VDP
+INP
+---
+
+INP(porta)
+
+Legge un byte da una porta di I/O.
+
+Esempio:
+  PRINT INP(168)
+Vedi anche: OUT
+SPRITE
+------
+
+SPRITE$(n) = stringa$
+PUT SPRITE piano, (x, y), colore,
+    motivo
+PUT SPRITE piano
+COLOR SPRITE(piano) = colore
+COLLISION
+
+Gli sprite sono 32 oggetti hardware.
+SPRITE$(n) = stringa$ definisce il
+motivo n: 8 byte per un 8x8 (32 per un
+16x16), un bit per punto. PUT SPRITE
+piano,(x,y),colore,motivo mostra lo
+sprite; con le sole parole PUT SPRITE
+piano lo si nasconde. Le dimensioni
+(8x8 o 16x16, normale o ingrandito) si
+scelgono con il secondo parametro di
+SCREEN. COLOR SPRITE(n) = c cambia il
+colore di un piano; COLOR SPRITE$(n) =
+stringa$ da' un colore per riga (MSX2,
+sprite modo 2). COLLISION vale -1 se
+due sprite si sono toccati.
+
+Esempio:
+  SCREEN 2, 0
+  SPRITE$(0) = CHR$(255)+CHR$(129)+CHR
+    $(129)+CHR$(129)+CHR$(129)+CHR$(12
+    9)+CHR$(129)+CHR$(255)
+  PUT SPRITE 0, (100, 90), 8, 0
+
+Disponibile: MSX1 e MSX2 (SCREEN 1-8)
+Vedi anche: SCREEN, COLLISION, STICK
+PUT SPRITE
+----------
+
+PUT SPRITE piano, (x, y), colore,
+    motivo
+PUT SPRITE piano
+
+Mostra (o con il solo piano nasconde)
+uno sprite. Vedi SPRITE.
+
+Esempio:
+  SCREEN 2, 0
+  SPRITE$(0) = CHR$(255)+CHR$(129)+CHR
+    $(129)+CHR$(129)+CHR$(129)+CHR$(12
+    9)+CHR$(129)+CHR$(255)
+  PUT SPRITE 0, (50, 50), 15, 0
+Vedi anche: SPRITE
+COLLISION
+---------
+
+COLLISION
+
+Vale -1 se due sprite si sono
+sovrapposti dopo l'ultima lettura
+(letto dallo stato del VDP), 0
+altrimenti.
+
+Esempio:
+  IF COLLISION THEN PRINT "urto"
+Vedi anche: SPRITE
+STICK
+-----
+
+STICK(n)
+
+Direzione del joystick n (0 = tasti
+cursore, 1 e 2 = porte). Valori da 0
+(fermo) a 8: 1 su, poi in senso
+orario.
+
+Esempio:
+  d = STICK(0)
+  IF d = 3 THEN PRINT "destra"
+Vedi anche: STRIG, INKEY$
+STRIG
+-----
+
+STRIG(n)
+
+Pulsante di fuoco: n = 0 barra
+spaziatrice, 1 e 2 pulsanti A di
+joystick 1 e 2, 3 e 4 pulsanti B. Vale
+-1 se premuto.
+
+Esempio:
+  IF STRIG(0) THEN PRINT "fuoco"
+Vedi anche: STICK
+BEEP
+----
+
+BEEP
+
+Emette il beep di sistema.
+
+Esempio:
+  BEEP
+Vedi anche: SOUND, PLAY
+SOUND
+-----
+
+SOUND registro, valore
+
+Scrive direttamente un registro (0-13)
+del generatore sonoro PSG AY-3-8910:
+toni, rumore, mixer, volumi,
+inviluppo.
+
+Esempio:
+  SOUND 7, 62
+  SOUND 8, 12
+  SOUND 0, 254
+  SOUND 1, 0
+Vedi anche: PLAY, BEEP
+PLAY
+----
+
+PLAY voce1$ [, voce2$ [, voce3$]]
+
+Suona una melodia su 1-3 voci con il
+linguaggio MML e attende la fine.
+Comandi: A-G (nota, con # o + diesis,
+- bemolle; seguite da un numero per la
+durata e da punti), R pausa, O ottava
+(1-8), L durata di default (1-64), T
+tempo (32-255), V volume (0-15), N n
+(nota numerica), < e > ottava giu'/su,
+M e S (modulazione/forma d'inviluppo
+come nel BASIC MSX).
+
+Esempio:
+  PLAY "T120 O4 L8 CDEFGAB>C"
+  PLAY "O3 C2", "O4 E2", "O4 G2"
+Vedi anche: SOUND, BEEP
+OPEN
+----
+
+OPEN nome$ FOR INPUT|OUTPUT|APPEND AS
+    [#]n
+OPEN nome$ [FOR RANDOM] AS [#]n LEN =
+    k
+
+Apre un file (solo programmi .COM, non
+cartucce). n da 1 a 3. INPUT: lettura;
+OUTPUT: crea/azzera; APPEND: scrive in
+coda; RANDOM: file ad accesso casuale
+con record di k byte (1-128). I file
+aperti si chiudono da soli alla fine
+del programma.
+
+Esempio:
+  OPEN "PROVA.TXT" FOR OUTPUT AS #1
+  PRINT #1, "riga uno"
+  CLOSE #1
+  OPEN "PROVA.TXT" FOR INPUT AS #1
+  LINE INPUT #1, a$
+  CLOSE #1
+  PRINT a$
+
+Disponibile: Solo .COM
+Vedi anche: CLOSE, PRINT, INPUT, EOF,
+FIELD
+CLOSE
+-----
+
+CLOSE [#n {, #n}]
+
+Chiude i file indicati (tutti, se
+senza argomenti).
+
+Esempio:
+  CLOSE #1
+
+Disponibile: Solo .COM
+Vedi anche: OPEN
+WRITE
+-----
+
+WRITE #n, espressione {, espressione}
+
+Scrive valori nel file separati da
+virgole, con le stringhe fra
+virgolette.
+
+Esempio:
+  WRITE #1, 5, "ab"
+
+Disponibile: Solo .COM
+Vedi anche: PRINT, OPEN
+EOF
+---
+
+EOF(n)
+
+Vale -1 quando il file n e' finito.
+
+Esempio:
+  WHILE NOT EOF(1)
+    LINE INPUT #1, a$
+    PRINT a$
+  WEND
+
+Disponibile: Solo .COM
+Vedi anche: OPEN
+KILL
+----
+
+KILL nome$
+
+Cancella un file dal disco.
+
+Esempio:
+  KILL "PROVA.TXT"
+
+Disponibile: Solo .COM
+Vedi anche: OPEN
+FIELD
+-----
+
+FIELD #n, larghezza AS var$ {,
+    larghezza AS var$}
+LSET var$ = testo$
+RSET var$ = testo$
+
+File ad accesso casuale: FIELD divide
+il record in campi associati a
+variabili stringa (fino a 8);
+LSET/RSET riempiono il campo
+allineando a sinistra o a destra
+(completando con spazi); PUT #n,r
+scrive il record r, GET #n,r lo legge
+(record da 1). LOF(n) da' il numero di
+record.
+
+Esempio:
+  OPEN "R.DAT" AS #1 LEN = 20
+  FIELD #1, 10 AS n$, 10 AS c$
+  LSET n$ = "Mario"
+  LSET c$ = "Rossi"
+  PUT #1, 1
+  GET #1, 1
+  PRINT n$; c$
+  CLOSE #1
+
+Disponibile: Solo .COM
+Vedi anche: OPEN, MKI$, LOF
+LOF
+---
+
+LOF(n)
+
+Numero di record del file ad accesso
+casuale n.
+
+Esempio:
+  PRINT LOF(1)
+
+Disponibile: Solo .COM
+Vedi anche: FIELD
+BLOAD
+-----
+
+BSAVE nome$, inizio, lunghezza [, S]
+BLOAD nome$ [, S] [, scostamento]
+
+Salva/carica un blocco di memoria nel
+formato binario MSX. Con S i dati
+vanno da/verso la VRAM (VBANK vale).
+
+Esempio:
+  BSAVE "SCHERMO.BIN", 0, 6144, S
+  BLOAD "SCHERMO.BIN", S
+
+Disponibile: Solo .COM
+Vedi anche: VBANK, OPEN
+SEGMENT
+-------
+
+SEGMENT n
+
+In una cartuccia a piu' banchi sposta
+il codice che segue nel segmento n
+(precedente + 1). Il segmento 0
+contiene il runtime. Una SUB/FUNCTION
+di un altro segmento si chiama
+normalmente; GOTO e GOSUB non
+attraversano i segmenti.
+
+Esempio:
+  OPTION TARGET ASCII8
+  SEGMENT 1
+  SUB bis()
+    PRINT "nel segmento 1"
+  END SUB
+
+Disponibile: Cartucce
+ASCII8/ASCII16/KONAMI/SCC
+Vedi anche: OPTION, INCBIN, CALL
+INCBIN
+------
+
+INCBIN "file"
+
+Include i byte di un file nel segmento
+corrente (grafica, musica, tabelle).
+
+Esempio:
+  SEGMENT 2
+  INCBIN "SPRITES.BIN"
+
+Disponibile: Cartucce multisegmento
+Vedi anche: SETBANK, SEGMENT
+SETBANK
+-------
+
+SETBANK n
+DATAWIN
+
+SETBANK mappa il segmento n nella
+finestra dati; DATAWIN e' l'indirizzo
+della finestra (A000h per i banchi da
+8 KB, 8000h per ASCII16).
+
+Esempio:
+  SETBANK 2
+  VCOPY DATAWIN, 0, 256
+
+Disponibile: Cartucce multisegmento
+Vedi anche: INCBIN, VCOPY
+VCOPY
+-----
+
+VCOPY indirizzo_memoria,
+    indirizzo_vram, quanti
+
+Copia byte dalla memoria alla VRAM.
+
+Esempio:
+  VCOPY DATAWIN, 0, 2048
+Vedi anche: SETBANK, VWRITE
+MALLOC
+------
+
+MAPPERSEGS
+MALLOC
+MFREE segmento
+
+Mapper RAM: MAPPERSEGS da' il numero
+di segmenti da 16 KB (0 se manca il
+mapper); MALLOC ne assegna uno e ne
+da' il numero; MFREE lo restituisce.
+
+Esempio:
+  s = MALLOC
+  PRINT MAPPERSEGS; s
+  MFREE s
+
+Disponibile: Con mapper RAM
+Vedi anche: MGET, MPUT, DIM
+MGET
+----
+
+MGET(segmento, offset)
+MPUT segmento, offset, valore
+MREAD segmento, offset, indirizzo,
+    quanti
+MWRITE segmento, offset, indirizzo,
+    quanti
+VARPTR(variabile)
+
+Accesso al mapper RAM: MGET legge un
+byte, MPUT lo scrive, MREAD copia dal
+mapper in memoria, MWRITE da memoria
+al mapper. VARPTR da' l'indirizzo di
+una variabile (o di un elemento di
+array) da passare a MREAD/MWRITE. Gli
+indirizzi di memoria dei blocchi non
+devono cadere in 8000h-BFFFh.
+
+Esempio:
+  s = MALLOC
+  MPUT s, 0, 123
+  PRINT MGET(s, 0)
+  MFREE s
+
+Disponibile: Con mapper RAM
+Vedi anche: MALLOC, VARPTR, DIM
+OPTION
+------
+
+OPTION NUMBERED | LABELS | MIXED
+OPTION TARGET tipo
+OPTION DEBUG
+
+Direttive di compilazione, da mettere
+all'inizio del sorgente. NUMBERED: il
+programma ha numeri di riga e nessuna
+etichetta; LABELS: solo etichette;
+MIXED (predefinita): entrambe. TARGET
+sceglie il formato di uscita (vedi
+OPTION TARGET). DEBUG attiva il
+debugger (vedi DEBUG).
+
+Esempio:
+  OPTION LABELS
+  PRINT "ok"
+Vedi anche: OPTION TARGET, OPTION
+DEBUG, ETICHETTE
+OPTION TARGET
+-------------
+
+OPTION TARGET ROM16 | ROM32 | ASCII8 |
+    ASCII16 | KONAMI | SCC
+
+Se e' la prima riga, il compilatore
+produce una cartuccia NOME.ROM invece
+di un NOME.COM. ROM16: 16 KB; ROM32:
+32 KB; ASCII8, ASCII16, KONAMI (senza
+SCC) e SCC: cartucce a banchi, con
+SEGMENT. La cartuccia al termine
+attende un tasto e riavvia la
+macchina. Nelle cartucce non ci sono
+file ne' BLOAD/BSAVE ne' il debugger
+completo; l'assembler in linea
+funziona.
+
+Esempio:
+  OPTION TARGET ROM16
+  PRINT "Sono una cartuccia"
+Vedi anche: SEGMENT, OPTION
+OPTION NUMBERED
+---------------
+
+OPTION NUMBERED
+
+Righe con numero (ordinate per numero,
+solo numeri, niente etichette). Circa
+590 righe di programma.
+
+Esempio:
+  10 PRINT "a"
+  20 GOTO 10
+Vedi anche: OPTION, ETICHETTE
+OPTION LABELS
+-------------
+
+OPTION LABELS
+
+Solo etichette, nessun numero di riga.
+
+Esempio:
+  OPTION LABELS
+  ciclo:
+    PRINT "x";
+    GOTO ciclo
+Vedi anche: OPTION
+OPTION MIXED
+------------
+
+OPTION MIXED
+
+Numeri di riga ed etichette insieme
+(predefinita).
+
+Esempio:
+  OPTION MIXED
+Vedi anche: OPTION
+OPTION DEBUG
+------------
+
+OPTION DEBUG
+
+Compila con il debugger incorporato:
+il programma parte fermo sulla prima
+istruzione. Vedi DEBUG.
+
+Esempio:
+  OPTION DEBUG
+  a = 1
+  b = a + 1
+Vedi anche: DEBUG
+ASM
+---
+
+__ASM
+  istruzioni Z80
+__ENDASM
+
+Un blocco __ASM ... __ENDASM (ciascuno
+su una riga propria, maiuscole o
+minuscole) contiene codice Z80
+documentato, scritto come in un
+qualsiasi assemblatore. Commenti con
+;. Etichette locali nome: (anche nome
+EQU valore). Numeri: decimali, $1F,
+0x1F, 1FH, %101, 101B, 'x'; $ e'
+l'indirizzo corrente. Direttive:
+DB/DEFB (anche stringhe), DW/DEFW,
+DS/DEFS. Un nome che non e' etichetta
+locale e' una variabile BASIC globale
+(LD HL,(CONTA), LD HL,NOME$) oppure,
+in un salto, un'etichetta BASIC (JP
+FINE, JP NZ,FINE). JR e DJNZ solo
+verso etichette locali. Si puo'
+cambiare ogni registro tranne IX
+(frame delle SUB/FUNCTION) e lo stack
+va lasciato in pari. Il debugger non
+si ferma dentro i blocchi. Funziona
+anche nelle cartucce. Errori: 17
+sintassi/operando, 18 valore o salto
+fuori campo, 19 simbolo doppio o
+__ENDASM mancante, 20 QASM.OVL non
+trovato.
+
+Esempio:
+  conta = 0
+  __ASM
+    ld hl,(conta)
+    inc hl
+    ld (conta),hl
+  __ENDASM
+  PRINT conta
+Vedi anche: VARPTR, OPTION
+DEBUG
+-----
+
+OPTION DEBUG
+
+Si scrive OPTION DEBUG nel sorgente e
+si preme F5: il programma parte fermo
+sulla prima istruzione, in una
+schermata testo con la riga corrente,
+le variabili globali scalari con il
+loro valore e l'elenco dei breakpoint.
+Tasti: SPAZIO (o S, INVIO) esegue
+un'istruzione; R esegue fino al
+prossimo breakpoint; B numero INVIO
+mette o toglie un breakpoint (solo
+INVIO = riga corrente, 0 = li toglie
+tutti); C toglie tutti i breakpoint; V
+pagina successiva delle variabili; Q
+termina il programma. CTRL-STOP
+durante l'esecuzione rientra nel
+debugger. Lo schermo del programma
+resta intatto. Nelle cartucce il
+debugger funziona ma non mostra le
+variabili. I programmi normali (senza
+OPTION DEBUG) non pagano nulla.
+
+Esempio:
+  OPTION DEBUG
+  s = 0
+  FOR i = 1 TO 3
+    s = s + i
+  NEXT i
+  PRINT s
+Vedi anche: OPTION DEBUG
+EDITOR
+------
+
+Esc = menu, frecce, F1-F4
+
+Si avvia con SAMPRBAS nome. Menu da
+tastiera: Esc apre il menu File; F1
+File, F2 Edit, F3 Find, F4 Help; Run
+e' a destra; frecce sinistra/destra
+cambiano menu, su/giu' le voci, Invio
+sceglie, una lettera evidenziata
+attiva la voce, Esc chiude.
+Scorciatoie: F5 compila ed esegue, F6
+Help sulla parola sotto il cursore, F7
+indice dell'aiuto. Le parole chiave
+sono colorate (su MSX2); su MSX1
+l'editor ha 40 colonne, su MSX2 80, in
+automatico. Se non cambia nulla F5
+rilancia subito il programma.
+Vedi anche: HELP
+SPB
+---
+
+SAMPRBAS nome
+File > Open, File > Save As
+
+I programmi hanno estensione .SPB
+(SamPr Basic). SAMPRBAS PROVA apre
+PROVA.SPB se esiste, altrimenti parte
+con un file nuovo gia' chiamato
+PROVA.SPB. Open (Ctrl+O) mostra una
+finestra con i file .SPB (e, con MSX-
+DOS 2, le cartelle): frecce, Invio,
+una lettera per saltare, Esc per
+uscire. Save As (Ctrl+W) accetta al
+massimo 8 caratteri e aggiunge .SPB.
+Il programma compilato e' NOME.COM (o
+NOME.ROM).
+Vedi anche: EDITOR, COMPILAZIONE
+HELP
+----
+
+menu Help: Index (F7), Topic..., On
+    word (F6), Shortcuts, About
+
+L'aiuto legge i file HELP.TXT e
+HELP.IDX nella directory corrente.
+Index (F7) mostra l'elenco degli
+argomenti; Topic... chiede un nome
+(es. PRINT, ASM, DEBUG, OPTION); On
+word (F6) mostra l'argomento della
+parola sotto il cursore. Nel visore:
+frecce e PgUp/PgDn scorrono, Esc
+chiude. HELP.TXT e' un normale file di
+testo (righe di 38 colonne): si puo'
+leggere e ampliare; HELP.IDX e'
+l'indice generato dallo strumento
+gen_docs.py.
+Vedi anche: EDITOR
+ERRORI
+------
+
+Codici di errore
+
+1 sintassi; 2 etichetta o riga
+inesistente; 3 non ancora supportato;
+4 carattere illegale; 5 blocco non
+chiuso; 6 ELSE/END IF/NEXT/WEND senza
+blocco; 7 nome duplicato; 8 troppe
+variabili, etichette o blocchi; 9
+programma troppo grande; 10 sorgente
+troppo grande; 11 errore di lettura;
+12 errore di scrittura; 13 non ammesso
+con l'OPTION scelta; 14 tipi
+incompatibili o array non dichiarato;
+15 dati del programma troppo grandi;
+16 RT.BIN non trovato; 17-20 assembler
+in linea. L'editor si riapre con il
+cursore sulla riga dell'errore.
+Vedi anche: LIMITI
+LIMITI
+------
+
+Limiti del compilatore
+
+Sorgente circa 13 KB; programma 16 KB;
+96 etichette; 100 variabili e array;
+20 SUB/FUNCTION (8 parametri ciascuna,
+64 in totale); 29 interi locali e 256
+byte per stringa locale; 24 blocchi
+annidati; nomi significativi su 11
+caratteri; circa 590 righe in OPTION
+NUMBERED; stringhe di 255 caratteri;
+interi da -32768 a 32767; file aperti:
+3.
+Vedi anche: ERRORI
+MSX1
+----
+
+MSX1 / MSX2
+
+Il sistema riconosce la macchina.
+MSX1: editor e testo a 40 colonne,
+SCREEN 0-3, niente colori delle parole
+chiave, niente grafica 5-12, palette,
+pagine, mapper. MSX2: 80 colonne,
+SCREEN fino a 8 (10-12 su MSX2+),
+PALETTE, COPY, SET PAGE, VBANK 17 bit,
+mapper RAM. Provato con Sony HB-75P e
+un MSX2 con MSX-DOS 1 e 2.
+Vedi anche: SCREEN
+COM
+---
+
+F5, QBC.COM, NOME.COM / NOME.ROM
+
+F5 salva il sorgente, avvia il
+compilatore QBC.COM che scrive
+NOME.COM e lo esegue; a fine programma
+si torna all'editor. Con OPTION TARGET
+si ottiene invece una cartuccia
+NOME.ROM. File necessari sul disco:
+SAMPRBAS.COM, QBC.COM, RT.BIN (e
+RTD.BIN per il debug, QBCR.COM e
+RTROM.BIN per le cartucce, QASM.OVL
+per __ASM).
+Vedi anche: OPTION TARGET

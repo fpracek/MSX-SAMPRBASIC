@@ -11,10 +11,10 @@ qtest.build_all()
 for f in ('MSXDOS.SYS', 'COMMAND.COM'):
     shutil.copy(os.path.join(qtest.DOSDIR, f), DISK)
 for f in os.listdir(DISK):
-    if f.upper().endswith(('.BAS', '.COM', '.ROM')) and f.upper() not in ('QBC.COM', 'QBCR.COM', 'QB.COM', 'COMMAND.COM'):
+    if f.upper().endswith(('.BAS', '.COM', '.ROM')) and f.upper() not in ('QBC.COM', 'QBCR.COM', 'SAMPRBAS.COM', 'COMMAND.COM'):
         os.remove(os.path.join(DISK, f))
 shutil.copy(os.path.join(BUILD, 'qbc.com'), os.path.join(DISK, 'QBC.COM'))
-shutil.copy(os.path.join(BUILD, 'qbstub.com'), os.path.join(DISK, 'QB.COM'))
+shutil.copy(os.path.join(BUILD, 'qbstub.com'), os.path.join(DISK, 'SAMPRBAS.COM'))
 shutil.copy(os.path.join(BUILD, 'qbcr.com'), os.path.join(DISK, 'QBCR.COM'))
 shutil.copy(os.path.join(BUILD, 'rt.bin'), os.path.join(DISK, 'RT.BIN'))
 shutil.copy(os.path.join(BUILD, 'rtrom.bin'), os.path.join(DISK, 'RTROM.BIN'))

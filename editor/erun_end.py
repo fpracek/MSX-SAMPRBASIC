@@ -27,15 +27,15 @@ def main():
         sys.exit(2)
     shutil.copy(os.path.join(ONMSX, 'build', 'qbc.com'), os.path.join(DISK, 'QBC.COM'))
     shutil.copy(os.path.join(ONMSX, 'build', 'rt.bin'), os.path.join(DISK, 'RT.BIN'))
-    shutil.copy(os.path.join(HERE, 'ed.com'), os.path.join(DISK, 'QB.COM'))
+    shutil.copy(os.path.join(HERE, 'ed.com'), os.path.join(DISK, 'SAMPRBAS.COM'))
     new = ['cls', 'print "inizio"', 'gosub stampaValore', 'end', '', 'stampaValore:', '  print "valore"', '  return']
     err = ['PRINT "one"', 'PRINT "two"', 'x = 5', 'PRINT 1 +', 'PRINT "never"']
-    open(os.path.join(DISK, 'NEW.BAS'), 'wb').write((CRLF.join(new) + CRLF).encode())
-    open(os.path.join(DISK, 'ERR.BAS'), 'wb').write((CRLF.join(err) + CRLF).encode())
+    open(os.path.join(DISK, 'NEW.SPB'), 'wb').write((CRLF.join(new) + CRLF).encode())
+    open(os.path.join(DISK, 'ERR.SPB'), 'wb').write((CRLF.join(err) + CRLF).encode())
 
     sc = Scenario(syms)
     sc.t = 20.0
-    sc.text('QB NEW.BAS' + BS + 'r', 30.0)
+    sc.text('SAMPRBAS NEW.SPB' + BS + 'r', 30.0)
     sc.dump('r0b_typed')
     sc.tap(7, 0x02, 1, 0.5)                          # F5
     sc.t += 70.0                                     # salvataggio + QBC + compilazione + scrittura + avvio
