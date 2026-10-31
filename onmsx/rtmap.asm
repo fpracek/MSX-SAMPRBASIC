@@ -487,3 +487,27 @@ rt_maput:                       ; HL = valore, DE = indice, BC = descrittore
         call mp_rest
         ei
         ret
+
+rt_mki:                         ; MKI$(HL) -> stringa di 2 byte (little endian)
+        push hl
+        ld a,2
+        call rt_alloc
+        pop de
+        push hl
+        inc hl
+        ld (hl),e
+        inc hl
+        ld (hl),d
+        pop hl
+        ret
+
+rt_cvi:                         ; CVI(HL = stringa di almeno 2 byte) -> intero
+        ld a,(hl)
+        cp 2
+        jp c,rt_eifc
+        inc hl
+        ld e,(hl)
+        inc hl
+        ld d,(hl)
+        ex de,hl
+        ret

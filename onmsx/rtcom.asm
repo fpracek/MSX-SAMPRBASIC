@@ -148,6 +148,13 @@ inbuf   equ RTRAM+20
         jp rt_maput
         jp rt_bload
         jp rt_bsave
+        jp rt_field
+        jp rt_fget
+        jp rt_fput
+        jp rt_flof
+        jp rt_mki
+        jp rt_cvi
+        jp rt_rset
         ASSERT $ == RT_EMPTY
 rt_empty: db 0
         ASSERT $ == RT_NAME

@@ -11,7 +11,11 @@ FS_EOF  equ 40
 FS_COL  equ 41
 FS_REC  equ 42
 FS_BUF  equ 48
-FS_SIZE equ 176
+FS_RLEN equ 44                  ; lunghezza del record (accesso casuale)
+FS_NFLD equ 45                  ; campi FIELD definiti
+FS_FOFS equ 46                  ; scostamento del prossimo campo
+FS_FLD  equ 176                 ; tabella dei campi: 8 x (variabile, scostamento, larghezza)
+FS_SIZE equ 208
 FS_POOL equ 3*FS_SIZE
 
 msg_fnf: db msg_fnf_e-msg_fnf-1,"Error: File not found"
@@ -263,15 +267,17 @@ rt_open:                        ; OPEN HL = nome, GX1 = numero, GY1 = modo (1 le
         ld (ix+FS_REC+1),a
         ld a,(GY1)
         cp 1
-        jr z,.in
+        jp z,.in
         cp 2
-        jr z,.out
+        jp z,.out
+        cp 4
+        jp z,.rnd
         cp 3
         jp nz,e_bfm
         call fcbde              ; aggiunta: apre, altrimenti crea
         ld c,0Fh
         call bdos
-        jr nz,.mk
+        jp nz,.mk
         call fcbde
         ld c,23h                ; dimensione in record
         call bdos
@@ -307,6 +313,32 @@ rt_open:                        ; OPEN HL = nome, GX1 = numero, GY1 = modo (1 le
 .apdone:
         ld (ix+FS_MODE),3
         ret
+.rnd:   ld hl,(GX2)             ; accesso casuale: lunghezza del record 1-128; si apre il file o lo si crea
+        ld a,h
+        or a
+        jp nz,rt_eifc
+        ld a,l
+        or a
+        jp z,rt_eifc
+        cp 129
+        jp nc,rt_eifc
+        ld (ix+FS_RLEN),a
+        ld (ix+FS_NFLD),0
+        ld (ix+FS_FOFS),0
+        call fcbde
+        ld c,0Fh
+        call bdos
+        jr z,.ro
+        call fcbde
+        ld c,16h
+        call bdos
+        jp nz,e_dio
+.ro:    call bfcb_rec
+        ld hl,1                 ; prossimo record (da 1)
+        ld (ix+FS_REC),l
+        ld (ix+FS_REC+1),h
+        ld (ix+FS_MODE),4
+        ret
 .out:   call fcbde
         ld c,13h                ; cancella l'eventuale file precedente
         call bdos
@@ -330,6 +362,8 @@ close_slot:                     ; IX = descrittore
         ret z
         cp 1
         jr z,.cl
+        cp 4
+        jr z,.cl                ; accesso casuale: niente da scaricare
         ld a,(ix+FS_POS)        ; scritture: riempie il resto con ^Z e scrive
         or a
         jr z,.cl
@@ -865,3 +899,364 @@ rt_bload:                       ; BLOAD HL = nome, GX1 = scostamento, GY1 = 1 se
         call bdos
         pop ix
         ret
+
+; --- accesso casuale: record di 1-128 byte; i campi FIELD si copiano nelle variabili stringa dopo GET e dalle variabili
+; nel buffer prima di PUT (LSET e' un semplice assegnamento: PUT completa con spazi)
+rt_field:                       ; HL = variabile stringa, GX1 = file, GY1 = larghezza, GX2 = 1 per il primo campo
+        push hl
+        ld hl,(GX1)
+        call slot_open
+        ld a,(ix+FS_MODE)
+        cp 4
+        jp nz,e_bfm
+        ld a,(GX2)
+        or a
+        jr z,.nr
+        xor a
+        ld (ix+FS_NFLD),a
+        ld (ix+FS_FOFS),a
+.nr:    ld a,(ix+FS_NFLD)
+        cp 8
+        jp nc,rt_eifc
+        ld e,a
+        ld d,0
+        sla e
+        rl d
+        sla e
+        rl d
+        push ix
+        pop hl
+        ld bc,FS_FLD
+        add hl,bc
+        add hl,de
+        pop de
+        ld (hl),e
+        inc hl
+        ld (hl),d
+        inc hl
+        ld a,(ix+FS_FOFS)
+        ld (hl),a
+        inc hl
+        ld a,(GY1)
+        ld (hl),a
+        add a,(ix+FS_FOFS)
+        jp c,rt_eifc
+        cp 129
+        jp nc,rt_eifc
+        ld b,(ix+FS_RLEN)
+        inc b
+        cp b
+        jp nc,rt_eifc           ; i campi non possono superare il record
+        ld (ix+FS_FOFS),a
+        inc (ix+FS_NFLD)
+        ret
+
+rec_pos:                        ; -> FCB: posizione in byte di GY1 (0 = prossimo record); HL = lunghezza del record
+        ld l,(ix+FS_REC)
+        ld h,(ix+FS_REC+1)
+        ld de,(GY1)
+        ld a,d
+        or e
+        jr z,.nx
+        ex de,hl
+.nx:    ld a,h
+        or l
+        jp z,rt_eifc            ; i record partono da 1
+        push hl
+        inc hl
+        ld (ix+FS_REC),l
+        ld (ix+FS_REC+1),h
+        pop hl
+        dec hl
+        ex de,hl                ; DE = record - 1
+        ld c,0
+        ld hl,0
+        ld a,(ix+FS_RLEN)
+        ld b,8
+.m:     add hl,hl
+        rl c
+        rlca
+        jr nc,.n
+        add hl,de
+        jr nc,.n
+        inc c
+.n:     djnz .m
+        ld (ix+33),l
+        ld (ix+34),h
+        ld (ix+35),c
+        ld l,(ix+FS_RLEN)
+        ld h,0
+        ret
+
+fld_ptr:                        ; B = indice del campo -> HL = voce
+        ld a,b
+        ld e,a
+        ld d,0
+        sla e
+        rl d
+        sla e
+        rl d
+        push ix
+        pop hl
+        ld bc,FS_FLD
+        add hl,bc
+        add hl,de
+        ret
+
+rt_fget:                        ; GET #n [, record]
+        ld hl,(GX1)
+        call slot_open
+        ld a,(ix+FS_MODE)
+        cp 4
+        jp nz,e_bfm
+        call rec_pos            ; HL = lunghezza del record
+        push hl
+        push ix
+        pop hl
+        ld de,FS_BUF
+        add hl,de
+        ld d,h
+        ld e,l
+        inc de
+        ld (hl),0
+        ld bc,127
+        ldir                    ; il buffer si azzera (record oltre la fine del file)
+        push ix
+        pop hl
+        ld de,FS_BUF
+        add hl,de
+        ex de,hl
+        ld c,1Ah
+        call bdos
+        pop hl
+        call fcbde
+        ld c,27h
+        call bdos
+        ld a,(ix+FS_NFLD)       ; buffer -> variabili dei campi
+        or a
+        ret z
+        ld b,a
+        ld c,0
+.f:     push bc
+        ld b,c
+        call fld_ptr
+        ld e,(hl)
+        inc hl
+        ld d,(hl)               ; DE = variabile
+        inc hl
+        ld a,(hl)               ; scostamento
+        inc hl
+        ld c,(hl)               ; larghezza
+        push de
+        push ix
+        pop hl
+        ld de,FS_BUF
+        add hl,de
+        ld e,a
+        ld d,0
+        add hl,de               ; HL = origine nel buffer
+        pop de
+        ld a,c
+        ld (de),a               ; lunghezza = larghezza
+        inc de
+        ld b,0
+        ldir
+        pop bc
+        inc c
+        djnz .f
+        ret
+
+rt_fput:                        ; PUT #n [, record]
+        ld hl,(GX1)
+        call slot_open
+        ld a,(ix+FS_MODE)
+        cp 4
+        jp nz,e_bfm
+        ld a,(ix+FS_NFLD)       ; variabili dei campi -> buffer (con spazi in coda)
+        or a
+        jr z,.go
+        ld b,a
+        ld c,0
+.f:     push bc
+        ld b,c
+        call fld_ptr
+        ld e,(hl)
+        inc hl
+        ld d,(hl)               ; DE = variabile
+        inc hl
+        ld a,(hl)               ; scostamento
+        inc hl
+        ld c,(hl)               ; larghezza
+        push de
+        push ix
+        pop hl
+        ld de,FS_BUF
+        add hl,de
+        ld e,a
+        ld d,0
+        add hl,de
+        ex de,hl                ; DE = destinazione
+        pop hl                  ; HL = variabile (lunghezza, testo)
+        ld a,(hl)
+        inc hl
+        cp c
+        jr c,.sh
+        ld a,c
+.sh:    ld b,a                  ; B = byte da copiare
+        ld a,c
+        sub b
+        ld c,a                  ; C = spazi in coda
+        ld a,b
+        or a
+        jr z,.pad
+        ld b,0
+        push bc
+        ld c,a
+        ldir
+        pop bc
+.pad:   ld a,c
+        or a
+        jr z,.nx
+        ld b,a
+.sp:    ld a,' '
+        ld (de),a
+        inc de
+        djnz .sp
+.nx:    pop bc
+        inc c
+        djnz .f
+.go:    call rec_pos
+        push hl
+        push ix
+        pop hl
+        ld de,FS_BUF
+        add hl,de
+        ex de,hl
+        ld c,1Ah
+        call bdos
+        pop hl
+        call fcbde
+        ld c,26h
+        call bdos
+        jp nz,e_dio
+        ret
+
+rt_flof:                        ; LOF(n) -> HL = numero di record (dimensione nell'FCB / lunghezza del record, per eccesso)
+        call slot_open
+        ld a,(ix+FS_MODE)
+        cp 4
+        jp nz,e_bfm
+        ld c,(ix+FS_RLEN)
+        xor a
+        ld d,(ix+18)
+        call div8
+        ld d,(ix+17)
+        call div8
+        ld h,e
+        ld d,(ix+16)
+        call div8
+        ld l,e
+        or a
+        ret z                   ; nessun resto
+        inc hl
+        ret
+
+div8:                           ; A = resto, D = byte seguente, C = divisore (< 129) -> A = nuovo resto, E = quoziente
+        ld b,8
+        ld e,0
+.l:     sla d
+        rla
+        cp c
+        jr c,.z
+        sub c
+        sla e
+        inc e
+        jr .nx
+.z:     sla e
+.nx:    djnz .l
+        ret
+
+rt_rset:                        ; RSET: HL = stringa, DE = variabile: allineata a destra nella larghezza del suo campo FIELD
+        ld (S1),de
+        push hl
+        ld hl,0
+        ld (S2),hl
+        ld de,(FILEP)
+        ld a,d
+        or e
+        jr z,.go
+        ld b,3
+.sl:    push bc
+        push de
+        push de
+        pop ix
+        ld a,(ix+FS_MODE)
+        cp 4
+        jr nz,.nx
+        ld a,(ix+FS_NFLD)
+        or a
+        jr z,.nx
+        ld b,a
+        push ix
+        pop hl
+        ld de,FS_FLD
+        add hl,de
+.fl:    ld e,(hl)
+        inc hl
+        ld d,(hl)
+        inc hl
+        push hl
+        ld hl,(S1)
+        or a
+        sbc hl,de
+        pop hl
+        jr nz,.ne
+        inc hl
+        ld a,(hl)
+        ld (S2),a
+        pop de
+        pop bc
+        jr .go
+.ne:    inc hl
+        inc hl
+        djnz .fl
+.nx:    pop de
+        ld hl,FS_SIZE
+        add hl,de
+        ex de,hl
+        pop bc
+        djnz .sl
+.go:    pop hl
+        ld a,(S2)
+        or a
+        jr nz,.pad
+        ld de,(S1)
+        jp rt_scopy
+.pad:   ld c,a
+        ld a,(hl)
+        inc hl
+        cp c
+        jr c,.sh
+        ld a,c
+.sh:    ld b,a
+        ld a,c
+        ld (inbuf),a
+        sub b
+        ld de,inbuf+1
+        jr z,.cp
+        push bc
+        ld b,a
+.sp:    ld a,' '
+        ld (de),a
+        inc de
+        djnz .sp
+        pop bc
+.cp:    ld a,b
+        or a
+        jr z,.fin
+        ld c,b
+        ld b,0
+        ldir
+.fin:   ld hl,inbuf
+        ld de,(S1)
+        jp rt_scopy

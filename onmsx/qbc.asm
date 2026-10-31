@@ -4,7 +4,7 @@
 ; Una passata, emissione diretta; HL = accumulatore, operando sinistro sullo stack.
 ; Input: riga di comando " NOME.BAS"  ->  scrive NOME.COM e lo avvia.
 ; Errore: ricarica l'editor con " NOME.BAS E<riga> <codice>".
-; Memoria: codice 0100h-38FFh, tabelle 3900h-48FFh, sorgente 4900h-7FFFh,
+; Memoria: codice 0100h-39FFh, tabelle 3A00h-49FFh, sorgente 4A00h-7FFFh,
 ;          output 8000h-BEFFh (indirizzi virtuali da 0100h: virt = fisico - 7F00h).
 ; =====================================================================
         INCLUDE "rtabi.inc"
@@ -21,8 +21,8 @@ F_BRD   equ 27h
 SRC     equ 4400h               ; il compilatore per cartucce non ha OPTION NUMBERED: le tabelle stanno nella RAM alta
 SRCMAX  equ 3BFEh
         ELSE
-SRC     equ 4900h
-SRCMAX  equ 36FEh
+SRC     equ 4A00h
+SRCMAX  equ 35FEh
         ENDIF
 OUT0    equ 8000h
         IFDEF ROMMODE
@@ -47,21 +47,21 @@ LDR     equ 0C000h
         IFDEF ROMMODE
 LABT    equ 0CA00h
         ELSE
-LABT    equ 3900h               ; etichette: 96 x 20 byte
+LABT    equ 3A00h               ; etichette: 96 x 20 byte
         ENDIF
 LABREC  equ 20
 MAXLAB  equ 96
         IFDEF ROMMODE
 VART    equ 0D180h
         ELSE
-VART    equ 4080h               ; variabili/array: 100 x 16 byte
+VART    equ 4180h               ; variabili/array: 100 x 16 byte
         ENDIF
 VARREC  equ 16
 MAXVAR  equ 100
         IFDEF ROMMODE
 BLKS    equ 0D7C0h
         ELSE
-BLKS    equ 46C0h               ; stack dei blocchi: 24 x 10 byte
+BLKS    equ 47C0h               ; stack dei blocchi: 24 x 10 byte
         ENDIF
 BLKREC  equ 10
 MAXBLK  equ 24
@@ -117,10 +117,10 @@ SEGT    equ 3C80h
 FCBSV   equ 3CA8h
 FARX    equ 3C94h
         ELSE
-FARTABC equ 47C0h               ; FARTAB in costruzione: 32 x 4 byte (banco, 0, indirizzo)
-SEGT    equ 4840h               ; segmento di ogni SUB/FUNCTION (indice nel record)
-FCBSV   equ 4868h               ; copia dell'FCB di uscita durante INCBIN
-FARX    equ 4854h               ; indice FARTAB di ogni SUB/FUNCTION (FFh = nessuno)
+FARTABC equ 48C0h               ; FARTAB in costruzione: 32 x 4 byte (banco, 0, indirizzo)
+SEGT    equ 4940h               ; segmento di ogni SUB/FUNCTION (indice nel record)
+FCBSV   equ 4968h               ; copia dell'FCB di uscita durante INCBIN
+FARX    equ 4954h               ; indice FARTAB di ogni SUB/FUNCTION (FFh = nessuno)
         ENDIF
 usewin  equ ST+216              ; b  il sorgente usa WINDOW: le coordinate grafiche vengono convertite
 nfunc   equ ST+192              ; b
@@ -241,6 +241,9 @@ K_MWRITE equ 80
 K_MFREE equ 81
 K_BLOAD equ 82
 K_BSAVE equ 83
+K_FIELD equ 84
+K_LSET equ 85
+K_RSET equ 86
 
 B_IF    equ 1
 B_FOR   equ 2
@@ -1340,6 +1343,125 @@ st_bsave:                       ; BSAVE nome$, inizio, lunghezza [, S]
         EM3 0CDh,low RT_BSAVE,high RT_BSAVE
         ret
 
+st_fget:
+        ld hl,RT_FGET
+        jr fio
+st_fput:
+        ld hl,RT_FPUT
+fio:    push hl
+        call next_tok
+        call expr
+        call want_int
+        ld hl,GX1
+        call emit_st
+        call emit_i             ; record = 0 (il successivo)
+        db 6,21h,0,0,22h,low GY1,high GY1
+        ld a,','
+        call is_p
+        jr nz,.go
+        call next_tok
+        call expr
+        call want_int
+        ld hl,GY1
+        call emit_st
+.go:    pop hl
+        ld a,0CDh
+        jp emit_jabs
+
+st_field:                       ; FIELD [#]n, larghezza AS variabile$ [, larghezza AS variabile$ ...]
+        ld a,'#'
+        call is_p
+        jr nz,.n
+        call next_tok
+.n:     call expr
+        call want_int
+        ld hl,GX1
+        call emit_st
+        ld a,1
+        ld (mapf),a             ; primo campo: azzera la tabella
+.l:     ld a,','
+        call expect_p
+        call expr
+        call want_int
+        ld hl,GY1
+        call emit_st
+        ld a,(ttype)
+        cp T_ID
+        jp nz,err_syntax
+        ld hl,tbuf
+        ld de,s_as
+        call str_eq
+        jp nz,err_syntax
+        call next_tok
+        ld a,(ttype)
+        cp T_ID
+        jp nz,err_syntax
+        call resolve_var
+        cp 1
+        jp nz,err_type          ; solo variabili stringa globali
+        push hl
+        ld a,21h                ; ld hl,primo ; ld (GX2),hl
+        call emit_a
+        ld a,(mapf)
+        ld l,a
+        ld h,0
+        call emit_w
+        ld hl,GX2
+        call emit_st
+        xor a
+        ld (mapf),a
+        pop hl
+        push hl
+        ld a,21h                ; ld hl,variabile ; call RT_FIELD
+        call emit_a
+        pop hl
+        call emit_w
+        EM3 0CDh,low RT_FIELD,high RT_FIELD
+        call next_tok
+        ld a,','
+        call is_p
+        jr z,.l
+        ret
+
+st_lset:                        ; LSET v$ = espressione: come un assegnamento (PUT completa con spazi)
+        jp st_let
+
+st_rset:                        ; RSET v$ = espressione: allineata a destra nella larghezza del campo
+        ld a,(ttype)
+        cp T_ID
+        jp nz,err_syntax
+        call resolve_var
+        cp 1
+        jp nz,err_type
+        push hl
+        call next_tok
+        ld a,'='
+        call expect_p
+        call expr
+        call want_str
+        pop hl
+        ld a,11h                ; ld de,variabile ; call RT_RSET
+        push hl
+        call emit_a
+        pop hl
+        call emit_w
+        EM3 0CDh,low RT_RSET,high RT_RSET
+        ret
+
+bi_lof:                         ; LOF(n)
+        call bi_arg_int
+        EM3 0CDh,low RT_FLOF,high RT_FLOF
+        ret
+
+bi_mki:                         ; MKI$(n): intero in 2 byte
+        ld hl,RT_MKI
+        ld c,1
+        jp bi1i
+
+bi_cvi:                         ; CVI(s$)
+        ld hl,RT_CVI
+        jp bi1s
+
 bi_datawin:                     ; DATAWIN: indirizzo della finestra dati
         call next_tok
         EM3 0CDh,low RT_DATAWIN,high RT_DATAWIN
@@ -1867,7 +1989,7 @@ kwtab:  db "PRINT",0,"IF",0,"THEN",0,"ELSE",0,"ELSEIF",0,"END",0,"FOR",0,"TO",0
         db "EXIT",0,"DO",0,"LOOP",0,"UNTIL",0,"SELECT",0,"CASE",0,"IS",0,"CONST",0,"COLOR",0,"RANDOMIZE",0,"VPOKE",0,"OUT",0,"SLEEP",0,"STOP",0,"SCREEN",0,"PSET",0,"PRESET",0,"LINE",0,"CIRCLE",0
         db "PALETTE",0,"PAINT",0,"PUT",0,"SPRITE",0,"GET",0,"DRAW",0,"VIEW",0,"WINDOW",0,"VBANK",0,"VFILL",0,"VWRITE",0,"SET",0,"COPY",0,"DATA",0,"READ",0,"RESTORE",0,"BEEP",0,"SOUND",0,"PLAY",0
         db "OPEN",0,"CLOSE",0,"KILL",0,"WRITE",0,"SEGMENT",0,"INCBIN",0
-        db "SETBANK",0,"VCOPY",0,"MPUT",0,"MREAD",0,"MWRITE",0,"MFREE",0,"BLOAD",0,"BSAVE",0,0
+        db "SETBANK",0,"VCOPY",0,"MPUT",0,"MREAD",0,"MWRITE",0,"MFREE",0,"BLOAD",0,"BSAVE",0,"FIELD",0,"LSET",0,"RSET",0,0
 
 ; ---------------------------------------------------------------- helper del parser
 is_p:                           ; A = carattere: Z se il token e' quella punteggiatura
@@ -3159,7 +3281,7 @@ kwjump: dw st_print, st_if, err_syntax, st_else, st_elseif, st_end, st_for, err_
         dw st_exit, st_do, st_loop, err_syntax, st_select, st_case, err_syntax
         dw st_const, st_color, st_randomize, st_vpoke, st_out, st_sleep, st_stop
         dw st_screen, st_pset, st_preset, st_line, st_circle, st_palette, st_paint, st_put, err_syntax, st_get, st_draw, st_view, st_window
-        dw st_vbank, st_vfill, st_vwrite, st_set, st_copy, st_data, st_read, st_restore, st_beep, st_sound, st_play, st_open, st_close, st_kill, st_write, st_segment, st_incbin, st_setbank, st_vcopy, st_mput, st_mread, st_mwrite, st_mfree, st_bload, st_bsave
+        dw st_vbank, st_vfill, st_vwrite, st_set, st_copy, st_data, st_read, st_restore, st_beep, st_sound, st_play, st_open, st_close, st_kill, st_write, st_segment, st_incbin, st_setbank, st_vcopy, st_mput, st_mread, st_mwrite, st_mfree, st_bload, st_bsave, st_field, st_lset, st_rset
 
 ; ---------------------------------------------------------------- espressioni
 want_int:
@@ -3543,10 +3665,11 @@ make_nbuf:                      ; tbuf -> nbuf (testo normale, "CHR$" ecc.)
 ; --- funzioni predefinite (il token corrente e' il nome)
 bitab:  db "LEN",0,"ASC",0,"VAL",0,"ABS",0,"SGN",0,"RND",0,"PEEK",0,"CHR$",0,"STR$",0
         db "LEFT$",0,"RIGHT$",0,"MID$",0,"INKEY$",0,"TIMER",0,"VPEEK",0,"INP",0,"UBOUND",0,"POINT",0,"COLLISION",0,"BASE",0,"VDP",0,"STICK",0,"STRIG",0,"VREAD$",0,"EOF",0,"DATAWIN",0,"MAPPERSEGS",0,"MGET",0,"VARPTR",0
-        db "MALLOC",0,0
+        db "MALLOC",0,"LOF",0
+        db "MKI$",0,"CVI",0,0
 bijump: dw bi_len, bi_asc, bi_val, bi_abs, bi_sgn, bi_rnd, bi_peek, bi_chr, bi_str
         dw bi_left, bi_right, bi_mid, bi_inkey, bi_timer, bi_vpeek, bi_inp, bi_ubound, bi_point, bi_coll
-        dw bi_base, bi_vdp, bi_stick, bi_strig, bi_vread, bi_eof, bi_datawin, bi_mapsegs, bi_mget, bi_varptr, bi_malloc
+        dw bi_base, bi_vdp, bi_stick, bi_strig, bi_vread, bi_eof, bi_datawin, bi_mapsegs, bi_mget, bi_varptr, bi_malloc, bi_lof, bi_mki, bi_cvi
 
 open_paren:
         ld a,'('
@@ -6232,8 +6355,14 @@ st_open:                        ; OPEN nome$ FOR INPUT|OUTPUT|APPEND AS [#]n
         call expr
         call want_str
         EM1 0E5h
+        call emit_i             ; lunghezza del record = 128
+        db 6,21h,80h,0,22h,low GX2,high GX2
         ld a,K_FOR
-        call expect_kw
+        call is_kw
+        jr z,.for
+        ld c,4                  ; senza FOR: accesso casuale
+        jp .m2
+.for:   call next_tok
         ld c,1
         ld a,K_INPUT
         call is_kw
@@ -6247,6 +6376,11 @@ st_open:                        ; OPEN nome$ FOR INPUT|OUTPUT|APPEND AS [#]n
         ld c,2
         jr z,.m
         ld hl,tbuf
+        ld de,s_random
+        call str_eq
+        ld c,4
+        jr z,.m
+        ld hl,tbuf
         ld de,s_append
         call str_eq
         jp nz,err_syntax
@@ -6254,7 +6388,7 @@ st_open:                        ; OPEN nome$ FOR INPUT|OUTPUT|APPEND AS [#]n
 .m:     push bc
         call next_tok
         pop bc
-        ld a,21h                ; ld hl,modo ; ld (GY1),hl
+.m2:    ld a,21h                ; ld hl,modo ; ld (GY1),hl
         call emit_a
         ld l,c
         ld h,0
@@ -6277,9 +6411,25 @@ st_open:                        ; OPEN nome$ FOR INPUT|OUTPUT|APPEND AS [#]n
         call want_int
         ld hl,GX1
         call emit_st
-        EM1 0E1h
+        ld a,(ttype)            ; LEN = lunghezza del record
+        cp T_ID
+        jr nz,.nl
+        ld hl,tbuf
+        ld de,s_len
+        call str_eq
+        jr nz,.nl
+        call next_tok
+        ld a,'='
+        call expect_p
+        call expr
+        call want_int
+        ld hl,GX2
+        call emit_st
+.nl:    EM1 0E1h
         EM3 0CDh,low RT_OPEN,high RT_OPEN
         ret
+s_len:  db "LEN",0
+s_random: db "RANDOM",0
 s_output: db "OUTPUT",0
 s_append: db "APPEND",0
 s_as:   db "AS",0
@@ -6698,7 +6848,10 @@ arr_ref_stmt:                   ; array di interi (con o senza "()") -> ARRB, AR
         db 8,0E1h,22h,low ARRC,high ARRC,0E1h,22h,low ARRB,high ARRB
         ret
 
-st_get:                         ; GET (x1,y1)-(x2,y2), array
+st_get:                         ; GET (x1,y1)-(x2,y2), array   |   GET #n [, record]
+        ld a,'#'
+        call is_p
+        jp z,st_fget
         ld de,GX1
         ld bc,GY1
         call emit_xy
@@ -6839,7 +6992,10 @@ st_sprdef:                      ; SPRITE$(n) = pattern
         EM3 0CDh,low RT_SPRDEF,high RT_SPRDEF
         ret
 
-st_put:                         ; PUT SPRITE piano, (x,y)[, colore[, pattern]]  oppure  PUT (x,y), array[, azione]
+st_put:                         ; PUT SPRITE piano, (x,y)[, colore[, pattern]]  oppure  PUT (x,y), array[, azione]  |  PUT #n [, record]
+        ld a,'#'
+        call is_p
+        jp z,st_fput
         ld a,K_SPRITE
         call is_kw
         jp nz,st_gput

@@ -13,6 +13,11 @@ rt_feof:
 rt_kill:
 rt_bload:
 rt_bsave:
+rt_field:
+rt_fget:
+rt_fput:
+rt_flof:
+rt_rset:
         jp e_nodos
 fput_sel:
 files_close_all:
