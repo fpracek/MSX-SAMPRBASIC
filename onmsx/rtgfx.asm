@@ -37,6 +37,14 @@ rt_screen:                      ; HL = modo 0..8 (CHGMOD del BIOS), 10..12 solo 
         ld a,l
         cp 13
         jr nc,rt_eifc
+        ld b,a
+        ld a,(M2FLAG)
+        or a
+        ld a,b
+        jr nz,.mm               ; MSX1 (TMS9918): solo SCREEN 0-3
+        cp 4
+        jr nc,rt_eifc
+.mm:
         cp 9
         jr c,.ok
         cp 10
@@ -49,7 +57,12 @@ rt_screen:                      ; HL = modo 0..8 (CHGMOD del BIOS), 10..12 solo 
         pop af
 .ok:    or a
         jr nz,.go
-        ld a,80                 ; SCREEN 0: testo a 80 colonne
+        ld b,80                 ; SCREEN 0: testo a 80 colonne (a 40 su MSX1)
+        ld a,(M2FLAG)
+        or a
+        jr nz,.w0
+        ld b,40
+.w0:    ld a,b
         ld (LINL40),a
         ld (LINLEN),a
         xor a

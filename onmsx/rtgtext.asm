@@ -258,6 +258,19 @@ gdraw:                          ; A = carattere 32..: disegna il glifo nella cel
 
 vram_set:                       ; HL = indirizzo VRAM (16 bit + VA16 = A16), A = 0 lettura / 40h scrittura
         ld c,a
+        ld a,(M2FLAG)
+        or a
+        jr nz,.m2
+        di                      ; MSX1: VRAM da 16 KB, il TMS9918 non ha R#14 (il numero 14 sovrascriverebbe R#6)
+        ld a,l
+        out (VDPC),a
+        ld a,h
+        and 3Fh
+        or c
+        out (VDPC),a
+        ei
+        ret
+.m2:
         push de
         ld a,(VA16)
         add a,a

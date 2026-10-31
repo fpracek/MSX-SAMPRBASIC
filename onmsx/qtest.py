@@ -82,7 +82,9 @@ def run_cases(cases, wait_run=float(os.environ.get('QWAIT', '42'))):
             shutil.copy(os.path.join(tf, f), DISK)
     shutil.copy(os.path.join(BUILD, 'qbcr.com'), os.path.join(DISK, 'QBCR.COM'))
     lines = [TCL, 'set OUTDIR "%s"' % BUILD.replace(chr(92), '/')]
-    t = 20.0
+    if os.environ.get('GEXT'):                                              # MSX1: il DOS 1 chiede la data (non c'e' l'orologio)
+        lines.append('after time 22 {type "1-1-86" ; type "\r"}')
+    t = 32.0 if os.environ.get('GEXT') else 20.0
     for name, src in cases:
         open(os.path.join(DISK, name.upper() + '.BAS'), 'wb').write(src.replace('\n', '\r\n').encode('latin-1'))
         lines.append('after time %.1f {type "QBC %s.BAS\\r"}' % (t, name.upper()))
@@ -108,7 +110,8 @@ def run_cases(cases, wait_run=float(os.environ.get('QWAIT', '42'))):
     for f in os.listdir(BUILD):
         if f.endswith('.txt'):
             os.remove(os.path.join(BUILD, f))
-    subprocess.run([OPENMSX, '-machine', os.environ.get('GMACHINE', 'Philips_NMS_8250'), '-diska', DISK, '-script', tcl], timeout=3600)
+    ext = ['-ext', os.environ['GEXT']] if os.environ.get('GEXT') else []        # es. MSX1: GMACHINE=Sony_HB-75P GEXT=AVT_DPF-550
+    subprocess.run([OPENMSX, '-machine', os.environ.get('GMACHINE', 'Philips_NMS_8250')] + ext + ['-diska', DISK, '-script', tcl], timeout=3600)
     out = {}
     for name, _ in cases:
         for suf in ('', '_after'):
@@ -135,7 +138,9 @@ def main():
                 exps[n] = [l.rstrip() for l in open(os.path.join(QTESTS, n + '.exp')).read().rstrip('\n').split('\n')]
     if sel:
         cases = [c for c in cases if c[0] in sel]
-    res = run_cases(cases)
+    res = {}
+    for i in range(0, len(cases), 40):                  # a gruppi: i .COM riempirebbero il disco virtuale (720 KB) e gli ultimi test fallirebbero
+        res.update(run_cases(cases[i:i + 40]))
     for name, _ in cases:
         print('---', name)
         rows = res.get(name)

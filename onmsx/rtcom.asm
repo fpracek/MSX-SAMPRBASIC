@@ -191,7 +191,13 @@ rt_start:
         ld hl,(0006h)
         ENDIF
         ld sp,hl
-        ld a,80
+        ld hl,2Dh               ; versione MSX (0 = MSX1): su MSX1 il testo e' a 40 colonne, su MSX2 a 80
+        call rdrom
+        ld b,80
+        or a
+        jr nz,.wd
+        ld b,40
+.wd:    ld a,b
         ld (LINL40),a
         ld (LINLEN),a
         push ix                 ; la BIOS (CALSLT) distrugge IX: il frame delle SUB/FUNCTION va salvato
@@ -212,6 +218,9 @@ rt_start:
         ld de,RTRAM+1
         ld (hl),0
         ldir
+        ld hl,2Dh               ; MSX1 o MSX2: M2FLAG = versione MSX (0 = MSX1)
+        call rdrom
+        ld (M2FLAG),a
         ld hl,(rt_dsize)
         ld de,DATA_BASE
         add hl,de

@@ -28,14 +28,20 @@ def main():
     qtest.build_all()
     names = sys.argv[1:] or sorted(f[:-4] for f in os.listdir(RTESTS) if f.endswith('.bas'))
     cases = [(n, open(os.path.join(RTESTS, n + '.bas')).read()) for n in names]
-    qtest.run_cases(cases, wait_run=float(os.environ.get('QWAIT', '40')))
+    for i in range(0, len(cases), 6):                  # a gruppi: le ROM riempirebbero il disco virtuale (720 KB) e le ultime non si scriverebbero
+        qtest.run_cases(cases[i:i + 6], wait_run=float(os.environ.get('QWAIT', '40')))
+        for n, _ in cases[i:i + 6]:
+            rom = os.path.join(DISK, n.lower() + '.rom')
+            if os.path.exists(rom):
+                shutil.copy(rom, os.path.join(BUILD, n + '.rom'))
+            elif os.path.exists(os.path.join(BUILD, n + '.rom')):
+                os.remove(os.path.join(BUILD, n + '.rom'))
     for n, src in cases:
         print('---', n)
-        rom = os.path.join(DISK, n.lower() + '.rom')
+        rom = os.path.join(BUILD, n + '.rom')
         if not os.path.exists(rom):
             check(False, 'ROM non prodotta')
             continue
-        shutil.copy(rom, os.path.join(BUILD, n + '.rom'))
         tg = target_of(src)
         tcl = os.path.join(BUILD, 'rtest.tcl')
         open(tcl, 'w').write(qtest.TCL + '\nset OUTDIR "%s"\nafter time 16 {dump %s_rom}\nafter time 18 exit\n' % (BUILD.replace(chr(92), '/'), n))

@@ -150,7 +150,9 @@ dbg_bufp:                       ; -> HL = buffer VRAM salvata
         ret
 
 dbg_enter:
-        call vdp_wait
+        ld a,(M2FLAG)
+        or a
+        call nz,vdp_wait        ; MSX1: niente motore comandi (e R#15 non esiste)
         ld hl,(DBGP)
         ld de,D_REGS
         add hl,de
@@ -183,6 +185,9 @@ dbg_enter:
         ld a,0F4h
         ld c,7
         call dbg_wreg
+        ld a,(M2FLAG)
+        or a
+        jp z,.nv                ; MSX1: solo R#0-R#7 (i numeri maggiori si sovrapporrebbero ai primi)
         ld a,(RG8SAV+1)
         and 7Fh
         ld c,9
@@ -269,6 +274,11 @@ dbg_leave:
         ld de,D_REGS
         add hl,de
         ld c,0
+        ld b,24
+        ld a,(M2FLAG)
+        or a
+        jr nz,.r
+        ld b,8                  ; MSX1: si ripristinano solo R#0-R#7
 .r:     ld a,c
         cp 1
         jr z,.s
@@ -281,8 +291,11 @@ dbg_leave:
 .s:     inc hl
         inc c
         ld a,c
-        cp 24
+        cp b
         jr nz,.r
+        ld a,(M2FLAG)
+        or a
+        jr z,.d
         inc hl
         push hl
         ld hl,2Dh
