@@ -189,3 +189,13 @@ restano su MSX2. Il `.COM` (con il DOS) non e' ancora stato provato su MSX1: in 
 - Menu Help: Index (F7), Topic..., On word (F6), Shortcuts, About ("SamPr Basic 1.0 / 2026 Fausto Pracek"). L'aiuto legge `HELP.TXT`/`HELP.IDX`
   (generati da `../doc/gen_help.py`) con letture BDOS a blocchi nell'area del gap.
 - Collaudo: `ebrowse.py` (DOS 1; con `DOS2=1 GMACHINE=Panasonic_FS-A1ST` anche cartelle e `..`), `ehelp.py` (aiuto e About), `emenu.py`.
+
+## About con cornice, Segment (F8), directory di lavoro su DOS 2
+- About (`k_about`): finestra centrata di 24 colonne con i bordi dei menu (`mrow_*`), tasto OK in video normale; si chiude con Invio, Esc o un clic sul
+  tasto. Il flag `modal` (RAMB+0447h) devirta i clic del mouse su `modal_click` (coordinate del tasto in `hlptop`/`hlpbeg`, risultato in `hlpbeg+1`).
+- File > Segment... (F8, `k_segment` in `fileio.asm`): il nome del file corrente deve essere 5 caratteri + 3 cifre; si digita il numero (anche senza zeri),
+  il file corrente si salva se modificato e si apre `NOMEnnn.SPB` nella stessa directory (nuovo, con il nome, se manca).
+- MSX-DOS 2: `isdos2` (RAMB+045Eh); `d2_detect` (`_DOSVER`), `d2_path` (percorso `A:\DIR\NOME` sulla riga di comando: CHDIR e nome), `d2_proj` (al ritorno dal
+  compilatore o dal programma, cioe' con il marcatore `+` o `E`, CHDIR in `SPBPROJ`), `set_proj` (F5: `SPBPROJ` = directory corrente), `cd_home` (prima di
+  caricare QBC.COM: CHDIR in `SPBHOME`, che vale la directory di avvio se non e' gia' impostata). `BUF equ 3F00h` (buffer di testo da circa 24 KB).
+- Collaudo: `eseg.py`, `edir.py` (DOS 2: percorso, compilazione dagli strumenti, ritorno nella cartella), `ebrowse.py`, `emenu.py`.

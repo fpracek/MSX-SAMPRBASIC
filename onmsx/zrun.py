@@ -113,7 +113,7 @@ class Msx:
         elif c == 0x1A:
             self.dma = de
         elif c == 0x27:                                 # lettura a blocchi, record da 1
-            nm = self.open.get(de) or self.fcbname(de)
+            nm = self.fcbname(de)
             pos = self.r16(de + 33)
             cnt = m.hl
             data = self.files[nm][pos:pos + cnt]
@@ -122,7 +122,7 @@ class Msx:
             m.a = 0 if len(data) == cnt else 1
             m.hl = len(data)
         elif c == 0x26:
-            nm = self.open.get(de) or self.fcbname(de)
+            nm = self.fcbname(de)
             pos = self.r16(de + 33)
             old = self.files[nm]
             if pos > len(old):
@@ -132,7 +132,7 @@ class Msx:
             self.w(de + 33, (pos + m.hl).to_bytes(2, 'little'))
             m.a = 0
         elif c == 0x23:                                 # dimensione del file (record da 1 byte)
-            nm = self.open.get(de) or self.fcbname(de)
+            nm = self.fcbname(de)
             self.w(de + 33, len(self.files[nm]).to_bytes(3, 'little'))
             m.a = 0
         else:

@@ -427,6 +427,7 @@ rt_end:
         jp 0                    ; cartuccia: dopo un tasto si riavvia la macchina
         ELSE
         call rt_keyup           ; il tasto non deve ripetersi nell'editor che si ricarica
+        call rt_cdhome          ; DOS 2: l'editor si ricarica dalla directory degli strumenti
         ld hl,rt_name           ; riga di comando per l'editor: " NOME.BAS"
         ld de,0082h
         ld bc,16
@@ -456,6 +457,40 @@ rt_end:
         ld bc,ldr_size
         ldir
         jp 0C000h
+        ENDIF
+
+        IFNDEF ROMMODE
+rt_cdhome:                  ; DOS 2: CHDIR in SPBHOME (directory degli strumenti); DOS 1 e variabile assente: nulla
+        ld b,0
+        ld c,6Fh
+        call 5
+        or a
+        ret nz
+        ld a,b
+        cp 2
+        ret c
+        ld hl,-64
+        add hl,sp
+        ld sp,hl
+        ex de,hl
+        xor a
+        ld (de),a
+        push de
+        ld hl,s_envhome
+        ld b,60
+        ld c,6Bh                ; _GENV
+        call 5
+        pop de
+        ld a,(de)
+        or a
+        jr z,.n
+        ld c,5Ah                ; _CHDIR
+        call 5
+.n:     ld hl,64
+        add hl,sp
+        ld sp,hl
+        ret
+s_envhome: db "SPBHOME",0
         ENDIF
 
 rt_keyup:                   ; attende che nessun tasto sia premuto (al massimo ~10 s)

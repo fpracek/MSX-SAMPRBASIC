@@ -79,6 +79,7 @@ for l in open(os.path.join(HERE, 'dtests', name + '.keys')):
         lines.append('after time %.1f {dump %s_%s}' % (t, name, txt.split()[1]))
     else:
         txt = txt.replace('SPACE', ' ').replace('ENTER', chr(92) + 'r')
+        txt = txt.replace('$', chr(92) + '$')       # Tcl: "N$(1)" sarebbe una variabile
         lines.append('after time %.1f {type "%s"}' % (t, txt))
 lines.append('after time %.1f exit' % (last + 3))
 open(os.path.join(BUILD, 'dtest.tcl'), 'w').write('\n'.join(lines))

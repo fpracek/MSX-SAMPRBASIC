@@ -51,7 +51,7 @@ KWBLINK equ 010h               ; R#13
 MPAD    equ 12                  ; GTPAD: 12 = mouse porta 1 (16 = porta 2)
 
         IFDEF COM
-BUF     equ 3E00h               ; gap buffer: 3A00h-BFFFh (TPA, pagine 0-2)
+BUF     equ 3F00h               ; gap buffer: 3A00h-BFFFh (TPA, pagine 0-2)
 UNDO    equ RAMB+0460h          ; registro di annullamento: C460h-CFFFh
 UNDOSZ  equ 0BA0h
 CLIP    equ UNDO+UNDOSZ         ; clipboard: D000h fino a (0006h)-0300h
@@ -95,7 +95,9 @@ helpstr equ RAMB+0448h              ; 16 byte: argomento di help (maiuscolo, 12 
 hlptop  equ RAMB+0458h              ; w  prima riga visibile del testo di help
 hlpbeg  equ RAMB+045Ah              ; w  inizio del testo di help
 hscr    equ RAMB+045Ch              ; w  area di lavoro (nel gap) con il testo di help
+isdos2  equ RAMB+045Eh              ; b  1 = MSX-DOS 2 (directory e variabili d'ambiente)
 kutmp   equ RAMB+0445h              ; w  JIFFY d'inizio dell'attesa dei tasti
+modal   equ RAMB+0447h              ; b  1 = finestra modale (About): i clic vanno a modal_click
 kwnext  equ RAMB+0423h              ; b  prossima riga schermo (0..) da colorare nei tempi morti (VROWS = fatto)
 cur     equ RAMB+0000h              ; w  offset logico del cursore
 len     equ RAMB+0002h              ; w  lunghezza del testo
@@ -278,6 +280,7 @@ start:
         inc hl
         ld (hl),0
         call keys_up            ; il tasto premuto per uscire dal programma puo' essere ancora giu': non deve ripetersi nel testo
+        IFDEF COM
         ld hl,0F8CFh            ; F6 (Shift+F1): menu Help + "W" = aiuto sulla parola sotto il cursore
         ld (hl),0Ah
         inc hl
@@ -290,6 +293,13 @@ start:
         ld (hl),'I'
         inc hl
         ld (hl),0
+        ld hl,0F8EFh            ; F8 (Shift+F3): menu File + "G" = Segment...
+        ld (hl),02h
+        inc hl
+        ld (hl),'G'
+        inc hl
+        ld (hl),0
+        ENDIF
         BIOS KILBUF             ; scarta i tasti in attesa (ripetizioni, F5 del lancio precedente)
         call vdp_init
         call font_load
@@ -1935,7 +1945,7 @@ s_bytes: db " bytes",0
 ; menutab: per menu larghezza del riquadro, numero di voci, puntatore alle voci.
 ; voce (7 byte): etichetta, scorciatoia, gestore, tasto rapido.
 menutab:
-        db 24,5
+        db 24,6
         dw it_file
         db 26,7
         dw it_edit
@@ -1953,6 +1963,8 @@ it_file: dw l_new,s_none,k_new
         db 'S'
         dw l_saveas,s_ctw,k_saveas
         db 'A'
+        dw l_seg,s_f8,k_segment
+        db 'G'
         dw l_exit,s_ctq,k_quit
         db 'X'
 it_edit: dw l_undo,s_ctz,k_undo
@@ -1996,6 +2008,8 @@ l_open:   db "Open...",0
 l_save:   db "Save",0
 l_saveas: db "Save As...",0
 l_exit:   db "Exit",0
+l_seg:    db "Segment...",0
+s_f8:     db "F8",0
 l_undo:   db "Undo",0
 l_redo:   db "Redo",0
 l_cut:    db "Cut",0
@@ -2012,11 +2026,14 @@ l_htopic: db "Topic...",0
 l_hword:  db "On word",0
 s_f6:     db "F6",0
 s_f7:     db "F7",0
+        IFDEF COM
 s_topicp: db "Help topic: ",0
 m_nohelp: db "HELP.IDX / HELP.TXT not found",0
 m_helpmem: db "Not enough free memory for help",0
 m_nohlp1: db "No help for ",0
-about_txt: db 0,"SamPr Basic 1.0",0,"2026 Fausto Pracek",0,0
+        ENDIF
+about1:   db "SamPr Basic 1.0",0
+about2:   db "2026 Fausto Pracek",0
 l_about:  db "About",0
 s_none:   db 0
 s_cto:    db "Ctrl+O",0
@@ -2033,8 +2050,7 @@ s_del:    db "Del",0
 s_ctf:    db "Ctrl+F",0
 s_ctg:    db "Ctrl+G",0
 s_ctt:    db "Ctrl+T",0
-m_about:  db "SamPr Basic 0.2 - BASIC IDE and compiler for MSX2",0
-m_keys:   db "Esc,F1-F4=menu F5=run F6=help on word F7=help index Ctrl+S/W/O/Q file Ctrl+C/X/V clip Ctrl+Z/Y undo Ctrl+F/G/T find",0
+m_keys:   db "Esc F1-F4 menu F5 run F6/F7 help F8 seg ^S/W/O/Q file ^C/X/V ^Z/Y ^F/G/T",0
 m_nodisk: db "No disk access in this build",0
 
 k_menu: ld a,1                  ; ESC: apre il menu File
@@ -2056,50 +2072,101 @@ k_mdel: call sel_range
         jp c,ed_delete
         jp sel_delete
 
-k_about:                        ; finestra: "SamPr Basic 1.0" / "2026 Fausto Pracek"; un tasto la chiude
+k_about:                        ; finestra centrata con cornice e tasto OK (clic, Invio o Esc)
         call refresh            ; toglie il menu a tendina
         call ptr_hide
-        ld hl,about_txt
-        ld d,9
-.l:     push de
-        push hl
-        ld hl,rowbuf
-        ld de,rowbuf+1
-        ld bc,27
-        ld (hl),' '
-        ldir
-        pop hl
-        ld de,rowbuf+4
-        call strcpy
-        inc hl                  ; stringa successiva
-        push hl
-        ld hl,rowbuf
-        ld b,28
-.o:     set 7,(hl)
-        inc hl
-        djnz .o
+        ld a,24
+        ld (mw),a
         ld a,(sw)
-        sub 28
+        sub 24
         srl a
-        ld e,a
-        pop hl
-        pop de                  ; D = riga
-        push hl
-        push de
-        call cell_addr
-        call vsetw
-        ld hl,rowbuf
-        ld b,28
-        ld c,VDPD
-        otir
-        pop de
-        pop hl
-        inc d
-        ld a,d
-        cp 13
-        jr nz,.l
+        ld (mx0),a
+        ld a,88h
+        ld e,89h
+        call mrow_border
+        ld a,8
+        call mrow_put
+        call mrow_blank
+        ld a,9
+        call mrow_put
+        call mrow_blank
+        ld hl,about1
+        ld de,rowbuf+4
+        call mrow_str
+        ld a,10
+        call mrow_put
+        call mrow_blank
+        ld hl,about2
+        ld de,rowbuf+3
+        call mrow_str
+        ld a,11
+        call mrow_put
+        call mrow_blank
+        ld a,12
+        call mrow_put
+        call mrow_blank
+        ld hl,rowbuf+9          ; tasto OK in video normale
+        ld (hl),'['
+        inc hl
+        ld (hl),' '
+        inc hl
+        ld (hl),'O'
+        inc hl
+        ld (hl),'K'
+        inc hl
+        ld (hl),' '
+        inc hl
+        ld (hl),']'
+        ld a,13
+        call mrow_put
+        ld a,8Bh
+        ld e,8Ch
+        call mrow_border
+        ld a,14
+        call mrow_put
+        ld a,(mx0)
+        add a,9
+        ld (hlptop),a           ; x del tasto OK (da/a)
+        add a,5
+        ld (hlptop+1),a
+        ld a,13
+        ld (hlpbeg),a           ; riga del tasto
+        xor a
+        ld (hlpbeg+1),a         ; risultato del clic
+        inc a
+        ld (modal),a
+.wait:  call mouse_poll
+        ld a,(hlpbeg+1)
+        or a
+        jr nz,.done
+        BIOS CHSNS
+        jr z,.wait
         BIOS CHGET
+        cp 0Dh
+        jr z,.done
+        cp 1Bh
+        jr nz,.wait
+.done:  xor a
+        ld (modal),a
+        call ptr_hide
         jp mark_text
+
+modal_click:                    ; clic con una finestra aperta: vale solo sul tasto OK
+        ld a,(mcy)
+        ld hl,hlpbeg
+        cp (hl)
+        ret nz
+        ld a,(mcx)
+        ld hl,hlptop
+        cp (hl)
+        ret c
+        ld a,(hlptop+1)
+        ld hl,mcx
+        cp (hl)
+        ret c
+        ld a,1
+        ld (hlpbeg+1),a
+        ret
 
 k_help: ld hl,m_keys
         ld (msgptr),hl
@@ -2111,6 +2178,7 @@ k_open:
 k_save:
 k_saveas:
 k_run:
+k_segment:
 k_hindex:
 k_htopic:
 k_hword:
@@ -4138,6 +4206,8 @@ kw_do1:
 
 ; ---------------------------------------------------------------- mouse
 mouse_init:
+        xor a
+        ld (modal),a
         ld hl,320
         ld (mpx),hl
         ld hl,96
@@ -4342,6 +4412,9 @@ do_action:                      ; A = 1 su, 2 giu, 3 pag su, 4 pag giu, 5 sx, 6 
         jp refresh
 
 mouse_press:
+        ld a,(modal)
+        or a
+        jp nz,modal_click
         xor a                   ; un clic chiude il gruppo di annullamento
         ld (uglue),a
         ld (ukind),a

@@ -14,6 +14,7 @@ F_BWR   equ 26h
 F_BRD   equ 27h
 
 getcmd:                         ; riga di comando (0080h: lunghezza + testo) -> fname
+        call d2_detect
         ld hl,0
         ld (errline),hl
         xor a
@@ -33,7 +34,8 @@ getcmd:                         ; riga di comando (0080h: lunghezza + testo) -> 
         inc hl
         djnz .sk
         jr .none
-.go:    ld de,fname
+.go:    call d2_path            ; DOS 2: A:\DIR\NOME -> entra in DIR
+        ld de,fname
         ld c,14
 .cp:    ld a,(hl)
         cp ' '
@@ -149,6 +151,7 @@ parse_err:                      ; HL dopo il nome: " E<riga> <codice>" (ritorno 
         jr .nl
 
 startup_load:
+        call d2_proj
         ld a,(fname)
         or a
         ret z
@@ -587,6 +590,136 @@ k_saveas:
         or a
         ret z
         jp save_file
+
+; ---------------------------------------------------------------- MSX-DOS 2: SPBHOME (strumenti) e SPBPROJ (progetto)
+d2_detect:                      ; isdos2; se manca, SPBHOME = directory corrente
+        xor a
+        ld (isdos2),a
+        ld b,0
+        ld c,6Fh                ; _DOSVER: solo il DOS 2 risponde con A=0 e B>=2
+        call BDOS
+        or a
+        ret nz
+        ld a,b
+        cp 2
+        ret c
+        ld a,1
+        ld (isdos2),a
+        ld hl,s_envhome
+        call env_get
+        ld a,(iobuf)
+        or a
+        ret nz
+        call cwd_abs
+        ld hl,s_envhome
+        jr env_set
+
+cwd_abs:                        ; iobuf = "\percorso" della directory corrente
+        ld a,5Ch
+        ld (iobuf),a
+        ld de,iobuf+1
+        ld b,0
+        ld c,59h                ; _GETCD
+        jp BDOS
+
+env_get:                        ; HL = nome -> iobuf = valore (vuoto se manca)
+        ld de,iobuf
+        xor a
+        ld (de),a
+        ld b,100
+        ld c,6Bh                ; _GENV
+        jp BDOS
+
+env_set:                        ; HL = nome, iobuf = valore
+        ld de,iobuf
+        ld c,6Ch                ; _SENV
+        jp BDOS
+
+set_proj:                       ; SPBPROJ = directory corrente
+        ld a,(isdos2)
+        or a
+        ret z
+        call cwd_abs
+        ld hl,s_envproj
+        jr env_set
+
+cd_home:                        ; CHDIR in SPBHOME
+        ld a,(isdos2)
+        or a
+        ret z
+        ld hl,s_envhome
+cd_env:
+        call env_get
+        ld a,(iobuf)
+        or a
+        ret z
+        ld de,iobuf
+        ld c,5Ah                ; _CHDIR
+        jp BDOS
+
+d2_proj:                        ; ritorno dal compilatore o dal programma: si riprende il progetto (SPBPROJ)
+        ld a,(isdos2)
+        or a
+        ret z
+        ld a,(cmdok)
+        ld hl,errcode
+        or (hl)
+        ret z                   ; avvio normale: la directory e' quella corrente
+        ld hl,s_envproj
+        jr cd_env
+
+d2_path:                        ; HL = inizio del nome: con un percorso entra nella directory e HL punta al nome
+        ld a,(isdos2)
+        or a
+        ret z
+        push hl
+        ld b,0
+        ld c,0
+.sc:    ld a,(hl)
+        cp ' '
+        jr z,.sd
+        cp 0Dh
+        jr z,.sd
+        or a
+        jr z,.sd
+        inc hl
+        inc b
+        cp 5Ch
+        jr nz,.sc
+        ld c,b
+        jr .sc
+.sd:    pop hl
+        ld a,c
+        or a
+        ret z                   ; nessun percorso
+        push bc
+        push hl
+        ld de,iobuf
+        ld b,c
+        dec b
+        jr z,.root
+.cp:    ld a,(hl)
+        ld (de),a
+        inc hl
+        inc de
+        djnz .cp
+        jr .z
+.root:  ld a,5Ch
+        ld (de),a
+        inc de
+.z:     xor a
+        ld (de),a
+        ld de,iobuf
+        ld c,5Ah                ; _CHDIR
+        call BDOS
+        pop hl
+        pop bc
+        ld b,0
+        add hl,bc
+        ret
+
+s_envhome: db "SPBHOME",0
+s_envproj: db "SPBPROJ",0
 
 ; ---------------------------------------------------------------- Open: finestra dei file .SPB (e cartelle su DOS 2)
 ; Area di lavoro nel gap: [0] numero voci, [1] selezione, [2] prima voce visibile, [3] colonne, [4] DOS 2,
@@ -1108,6 +1241,118 @@ s_star:  db "*.*",0
 s_spbm:  db "*.SPB",0
 s_spb3:  db "SPB"
 
+; ---------------------------------------------------------------- Segment: cambia file in un progetto a segmenti (NOME000, NOME001...)
+seg_chk:                        ; Z se fname = 5 caratteri + 3 cifre (+ estensione)
+        ld hl,fname
+        ld b,0
+.l:     ld a,(hl)
+        or a
+        jr z,.e
+        cp '.'
+        jr z,.e
+        inc hl
+        inc b
+        jr .l
+.e:     ld a,b
+        cp 8
+        jr nz,.no
+        ld hl,fname+5
+        ld b,3
+.d:     ld a,(hl)
+        sub '0'
+        cp 10
+        jr nc,.no
+        inc hl
+        djnz .d
+        xor a
+        ret
+.no:    or 1
+        ret
+
+seg_digits:                     ; A = numero (0-255) -> 3 cifre in fname+5..7
+        ld hl,fname+5
+        ld d,'0'
+.h:     sub 100
+        jr c,.hd
+        inc d
+        jr .h
+.hd:    add a,100
+        ld (hl),d
+        inc hl
+        ld d,'0'
+.t:     sub 10
+        jr c,.td
+        inc d
+        jr .t
+.td:    add a,10
+        ld (hl),d
+        inc hl
+        add a,'0'
+        ld (hl),a
+        ret
+
+k_segment:
+        call seg_chk
+        jr z,.ok
+        ld hl,m_segname
+        ld (msgptr),hl
+        ret
+.ok:    ld hl,s_segp
+        ld de,helpstr
+        ld b,3
+        ld c,0
+        call prompt_line
+        ret c
+        ld hl,helpstr
+        ld a,(hl)
+        or a
+        ret z                   ; vuoto: annulla
+        ld de,0
+.p:     ld a,(hl)
+        or a
+        jr z,.pd
+        sub '0'
+        cp 10
+        ret nc                  ; non numerico: annulla
+        push hl
+        ld h,d
+        ld l,e
+        add hl,hl
+        ld b,h
+        ld c,l
+        add hl,hl
+        add hl,hl
+        add hl,bc
+        ld e,a
+        ld d,0
+        add hl,de
+        ex de,hl
+        pop hl
+        inc hl
+        jr .p
+.pd:    ld a,d
+        or a
+        jr nz,.big
+        ld a,e
+        push af
+        ld a,(modified)
+        or a
+        jr z,.ns
+        call save_file          ; il file corrente si salva prima di cambiare
+        jr nc,.ns
+        pop af
+        ret
+.ns:    pop af
+        call seg_digits
+        jp load_file            ; apre il segmento (se non c'e', file nuovo con quel nome)
+.big:   ld hl,m_segbig
+        ld (msgptr),hl
+        ret
+
+s_segp:    db "Segment: ",0
+m_segname: db "Name must be 5 characters + 3 digits",0
+m_segbig:  db "Segment number 0-255",0
+
 k_quit:
         ld a,11h
         call confirm_discard
@@ -1152,7 +1397,8 @@ k_run:
         ld a,(fname)
         or a
         ret z
-.ext:   ld hl,fname
+.ext:   call set_proj
+        ld hl,fname
 .f:     ld a,(hl)
         or a
         jr z,.noext
@@ -1178,6 +1424,7 @@ k_run:
 .dosave: call save_file
         ret c
 .comp:  call leave_screen
+        call cd_home            ; DOS 2: QBC.COM e RT.BIN stanno nella directory degli strumenti
         ld hl,fname
         ld de,0082h
         ld bc,16

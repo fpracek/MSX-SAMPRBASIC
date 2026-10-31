@@ -4,7 +4,7 @@
 ; Una passata, emissione diretta; HL = accumulatore, operando sinistro sullo stack.
 ; Input: riga di comando " NOME.SPB"  ->  scrive NOME.COM e lo avvia.
 ; Errore: ricarica l'editor con " NOME.SPB E<riga> <codice>".
-; Memoria: codice 0100h-3CFFh, tabelle 3D00h-4CFFh, sorgente 4D00h-7FFFh,
+; Memoria: codice 0100h-3DFFh, tabelle 3E00h-4DFFh, sorgente 4E00h-7FFFh,
 ;          output 8000h-BEFFh (indirizzi virtuali da 0100h: virt = fisico - 7F00h).
 ; =====================================================================
         INCLUDE "rtabi.inc"
@@ -21,8 +21,8 @@ F_BRD   equ 27h
 SRC     equ 4400h               ; il compilatore per cartucce non ha OPTION NUMBERED: le tabelle stanno nella RAM alta
 SRCMAX  equ 3BFEh
         ELSE
-SRC     equ 4D00h
-SRCMAX  equ 32FEh
+SRC     equ 4E00h
+SRCMAX  equ 31FEh
         ENDIF
 OUT0    equ 8000h
         IFDEF ROMMODE
@@ -49,21 +49,21 @@ LDR     equ 0C000h
         IFDEF ROMMODE
 LABT    equ 0CA00h
         ELSE
-LABT    equ 3D00h               ; etichette: 96 x 20 byte
+LABT    equ 3E00h               ; etichette: 96 x 20 byte
         ENDIF
 LABREC  equ 20
 MAXLAB  equ 96
         IFDEF ROMMODE
 VART    equ 0D180h
         ELSE
-VART    equ 4480h               ; variabili/array: 100 x 16 byte
+VART    equ 4580h               ; variabili/array: 100 x 16 byte
         ENDIF
 VARREC  equ 16
 MAXVAR  equ 100
         IFDEF ROMMODE
 BLKS    equ 0D7C0h
         ELSE
-BLKS    equ 4AC0h               ; stack dei blocchi: 24 x 10 byte
+BLKS    equ 4BC0h               ; stack dei blocchi: 24 x 10 byte
         ENDIF
 BLKREC  equ 10
 MAXBLK  equ 24
@@ -119,10 +119,10 @@ SEGT    equ 4080h
 FCBSV   equ 40A8h
 FARX    equ 4094h
         ELSE
-FARTABC equ 48C0h               ; FARTAB in costruzione: 32 x 4 byte (banco, 0, indirizzo)
-SEGT    equ 4940h               ; segmento di ogni SUB/FUNCTION (indice nel record)
-FCBSV   equ 4C68h               ; copia dell'FCB di uscita durante INCBIN
-FARX    equ 4954h               ; indice FARTAB di ogni SUB/FUNCTION (FFh = nessuno)
+FARTABC equ 49C0h               ; FARTAB in costruzione: 32 x 4 byte (banco, 0, indirizzo)
+SEGT    equ 4A40h               ; segmento di ogni SUB/FUNCTION (indice nel record)
+FCBSV   equ 4D68h               ; copia dell'FCB di uscita durante INCBIN
+FARX    equ 4A54h               ; indice FARTAB di ogni SUB/FUNCTION (FFh = nessuno)
         ENDIF
 dbgpa   equ ST+217              ; w  operando (fisico) da correggere con l'indirizzo della tabella delle variabili
 dbgf    equ ST+219              ; b  OPTION DEBUG attivo
@@ -142,6 +142,14 @@ fcur    equ ST+200              ; w  record della funzione in compilazione (0 = 
 fexit   equ ST+202              ; w  catena degli EXIT SUB/FUNCTION
 fskiph  equ ST+204              ; w  catena del salto che scavalca il corpo
 framep  equ ST+206              ; w  indirizzo fisico dell'operando del frame
+d2flag  equ 0C21Eh              ; b  1 = MSX-DOS 2 (directory, variabili d'ambiente)
+PATHBUF equ 0C0C0h              ; 64 byte: percorso letto dall'ambiente
+mfile   equ 0C218h              ; b  ROM a segmenti su piu' file (NOME000, NOME001...)
+mfcur   equ 0C219h              ; b  numero del file in compilazione
+mforig  equ 0C21Ah              ; 3 byte: cifre del nome ricevuto (se ricondotto a NOME000)
+mfred   equ 0C21Dh              ; b  1 = il nome ricevuto era un segmento diverso da 000
+dbglast equ 0C214h             ; w  OPTION DEBUG: ultimo record delle variabili locali emesso (0 = nessuno)
+dbgfs   equ 0C216h              ; w  OPTION DEBUG: prima riga del corpo della routine in compilazione
 ca_rec  equ ST+208              ; w  chiamata in corso: record
 chfail  equ ST+210              ; w  catena per CASE a TO b
 rf_rec  equ ST+212              ; w
@@ -307,6 +315,10 @@ E_RT    equ 16
 start:
         ld hl,(0006h)
         ld sp,hl
+        xor a
+        ld (mfred),a
+        call d2_detect
+        call cd_proj            ; DOS 2: si lavora nella directory del progetto
         call getname
         call read_source
         IFNDEF ROMMODE
@@ -373,6 +385,7 @@ fail:   ld de,0081h
         sbc hl,de
         ld a,l
         ld (0080h),a
+        call cd_home
         ld hl,ldr_img           ; ricarica l'editor (ldr_fn = SAMPRBAS.COM di default)
         ld de,LDR
         ld bc,ldr_size
@@ -450,8 +463,273 @@ getname:                        ; riga di comando -> fname (maiuscolo, ".SPB" se
         ldir
 .z:     xor a
         ld (de),a
-        ret
+        jp norm_seg
 s_bas:  db ".SPB"
+
+
+; ---------------------------------------------------------------- MSX-DOS 2: directory del progetto (SPBPROJ) e degli strumenti (SPBHOME)
+d2_detect:
+        xor a
+        ld (d2flag),a
+        ld b,0
+        ld c,6Fh                ; _DOSVER: solo il DOS 2 risponde con A=0 e B>=2
+        call BDOS
+        or a
+        ret nz
+        ld a,b
+        cp 2
+        ret c
+        ld a,1
+        ld (d2flag),a
+        ret
+
+cd_env:                         ; HL = nome della variabile d'ambiente: CHDIR nella directory che contiene (se c'e')
+        ld a,(d2flag)
+        or a
+        ret z
+        ld de,PATHBUF
+        xor a
+        ld (de),a
+        ld b,60
+        ld c,6Bh                ; _GENV
+        call BDOS
+        ld a,(PATHBUF)
+        or a
+        ret z
+        ld de,PATHBUF
+        ld c,5Ah                ; _CHDIR
+        jp BDOS
+
+cd_home:
+        ld hl,s_envhome
+        jr cd_env
+cd_proj:
+        ld hl,s_envproj
+        jr cd_env
+s_envhome: db "SPBHOME",0
+s_envproj: db "SPBPROJ",0
+
+open_tool:                      ; DE = FCB di un file degli strumenti (RT.BIN, QASM.OVL): con il DOS 2 si apre dalla directory di installazione
+        ld a,(d2flag)
+        or a
+        jr z,.o
+        push de
+        call cd_home
+        pop de
+        ld c,F_OPEN
+        call BDOS
+        push af
+        call cd_proj
+        pop af
+        ret
+.o:     ld c,F_OPEN
+        jp BDOS
+
+; ---------------------------------------------------------------- progetti a segmenti su piu' file
+seg_pat:                        ; Z se fname = 5 caratteri + 3 cifre (+ estensione)
+        ld hl,fname
+        ld b,0
+.l:     ld a,(hl)
+        or a
+        jr z,.e
+        cp '.'
+        jr z,.e
+        inc hl
+        inc b
+        jr .l
+.e:     ld a,b
+        cp 8
+        ret nz
+        ld hl,fname+5
+        ld b,3
+.d:     ld a,(hl)
+        sub '0'
+        cp 10
+        jr nc,.no
+        inc hl
+        djnz .d
+        xor a
+        ret
+.no:    or 1
+        ret
+
+seg_zero:                       ; fname+5..7: Z se sono "000"
+        ld hl,fname+5
+        ld a,(hl)
+        inc hl
+        or (hl)
+        inc hl
+        or (hl)
+        cp '0'
+        ret
+
+mf_setname:                     ; A = numero -> 3 cifre in fname+5..7
+        ld hl,fname+5
+        ld d,'0'
+.h:     sub 100
+        jr c,.hd
+        inc d
+        jr .h
+.hd:    add a,100
+        ld (hl),d
+        inc hl
+        ld d,'0'
+.t:     sub 10
+        jr c,.td
+        inc d
+        jr .t
+.td:    add a,10
+        ld (hl),d
+        inc hl
+        add a,'0'
+        ld (hl),a
+        ret
+
+mf_have:                        ; B = numero: Z se il file NOMEnnn esiste (l'FCB di uscita si conserva; fname resta con quel numero)
+        push bc
+        ld hl,fcb
+        ld de,FCBSV
+        ld bc,37
+        ldir
+        pop bc
+        push bc
+        ld a,b
+        call mf_setname
+        ld hl,fname
+        ld (namep),hl
+        call mk_fcb
+        ld de,fcb
+        ld c,F_OPEN
+        call BDOS
+        push af
+        or a
+        jr nz,.nf
+        ld de,fcb
+        ld c,F_CLOSE
+        call BDOS
+.nf:    ld hl,FCBSV
+        ld de,fcb
+        ld bc,37
+        ldir
+        pop af
+        or a                    ; Z se l'apertura e' riuscita (A = 0)
+        pop bc
+        ret
+
+norm_seg:                       ; fname = XXXXXddd con ddd diverso da 000: se esiste XXXXX000 si usa quello
+        call seg_pat
+        ret nz
+        call seg_zero
+        ret z
+        ld hl,fname+5
+        ld de,mforig
+        ld bc,3
+        ldir
+        ld b,0
+        call mf_have
+        jr nz,.no
+        ld a,1
+        ld (mfred),a
+        ret
+.no:    ld hl,mforig
+        ld de,fname+5
+        ld bc,3
+        ldir
+        ret
+
+        IFDEF ROMMODE
+mf_init:                        ; progetto multi-file se il nome e' XXXXX000 ed esiste XXXXX001
+        xor a
+        ld (mfile),a
+        ld (mfcur),a
+        call seg_pat
+        ret nz
+        call seg_zero
+        ret nz
+        ld b,1
+        call mf_have
+        push af
+        xor a
+        call mf_setname
+        pop af
+        ret nz
+        ld a,1
+        ld (mfile),a
+        ret
+
+mf_load:                        ; A = numero: legge NOMEnnn in SRC (l'FCB della ROM si conserva)
+        push af
+        ld hl,fcb
+        ld de,FCBSV
+        ld bc,37
+        ldir
+        pop af
+        call mf_setname
+        call read_source
+        ld hl,FCBSV
+        ld de,fcb
+        ld bc,37
+        ldir
+        ld de,OUT0              ; read_source ha lasciato il DMA sul sorgente: le scritture della ROM partono da OUT0
+        ld c,F_DMA
+        call BDOS
+        ret
+
+mf_prescan:                     ; firme di SUB/FUNCTION di tutti i file (segmento = numero del file)
+        ld a,(mfile)
+        or a
+        ret z
+        ld c,1
+.k:     push bc
+        ld b,c
+        call mf_have
+        pop bc
+        jr nz,.done
+        push bc
+        ld a,c
+        ld (pseg),a
+        call mf_load
+        call prescan
+        pop bc
+        inc c
+        jr .k
+.done:  xor a
+        ld (pseg),a
+        call mf_load            ; di nuovo il file principale
+        ret
+
+mf_advance:                     ; fine del file: se esiste il successivo si passa al segmento seguente (NZ), altrimenti Z
+        ld a,(mfile)
+        or a
+        ret z
+        ld a,(mfcur)
+        inc a
+        ld b,a
+        call mf_have
+        jr z,.go
+        xor a
+        ret
+.go:    ld a,(target)
+        cp 3
+        jp c,err_mode           ; solo ASCII8, ASCII16, KONAMI, SCC
+        ld a,b
+        ld (mfcur),a
+        push bc
+        call seg_switch
+        pop bc
+        ld a,b
+        call mf_load
+        ld hl,SRC
+        ld (lp),hl
+        ld hl,1
+        ld (lineno),hl
+        ld (tline),hl
+        xor a
+        ld (iseof),a
+        call next_tok
+        or 1
+        ret
+        ENDIF
 
 mk_fcb:                         ; (namep) -> fcb (8.3 maiuscolo, unita' opzionale "A:")
         ld hl,fcb
@@ -564,8 +842,7 @@ load_rt:                        ; RT.BIN -> OUT0 (immagine del runtime); outp = 
         ld (namep),hl
         call mk_fcb
         ld de,fcb
-        ld c,F_OPEN
-        call BDOS
+        call open_tool
         or a
         jr z,.o
         ld hl,0
@@ -594,8 +871,7 @@ load_rt:                        ; .COM: dimensione di RT.BIN (il file si copia p
         ld (namep),hl
         call mk_fcb
         ld de,fcb
-        ld c,F_OPEN
-        call BDOS
+        call open_tool
         or a
         jr z,.o
         ld hl,0
@@ -728,8 +1004,7 @@ write_output:                   ; NOME.COM <- RT.BIN + codice, con l'intestazion
         ld (namep),hl
         call mk_fcb
         ld de,fcb
-        ld c,F_OPEN
-        call BDOS
+        call open_tool
         or a
         jr nz,.err
         call fcb_rec1
@@ -800,7 +1075,13 @@ rom_create:                     ; NOME.ROM: crea il file (una volta sola)
         inc hl
         inc de
         jr .c
-.x:     ld hl,s_rom
+.x:     ld a,(mfile)
+        or a
+        jr z,.nm
+        dec de
+        dec de
+        dec de
+.nm:    ld hl,s_rom
         ld bc,5
         ldir
         ld hl,oname
@@ -1057,6 +1338,13 @@ st_segment:                     ; SEGMENT n: da qui il codice va nel segmento n 
         ld a,h
         or a
         jp nz,err_syntax
+        ld a,(mfile)
+        or a
+        jp nz,err_mode          ; con i file NOMEnnn il segmento lo decide il nome del file
+        call seg_switch
+        jp next_tok
+
+seg_switch:                     ; chiude il segmento corrente (controlli, scrittura) e apre il successivo
         ld a,(fcur)
         ld hl,(fcur)
         ld a,h
@@ -1106,7 +1394,7 @@ st_segment:                     ; SEGMENT n: da qui il codice va nel segmento n 
         ld a,(curseg)
         inc a
         ld (curseg),a
-        jp next_tok
+        ret
         ENDIF
 
         IFNDEF ROMMODE
@@ -2723,6 +3011,8 @@ compile:
         ld (etype),a
         ld (usewin),a
         ld (dbgf),a
+        ld (dbglast),a
+        ld (dbglast+1),a
         ld (target),a
         ld (curseg),a
         ld (pseg),a
@@ -2762,7 +3052,13 @@ compile:
         ld (fexit),hl
         ld (fskiph),hl
         call load_rt            ; il runtime (RT.BIN) e' l'inizio dell'output
+        IFDEF ROMMODE
+        call mf_init
+        ENDIF
         call prescan            ; firme di SUB/FUNCTION (riferimenti in avanti)
+        IFDEF ROMMODE
+        call mf_prescan
+        ENDIF
         ld hl,SRC
         ld (lp),hl
         ld hl,1
@@ -2853,6 +3149,10 @@ compile:
         jr .sl
         ENDIF
 .plain: call line_loop
+        IFDEF ROMMODE
+        call mf_advance
+        jr nz,.plain
+        ENDIF
 .finish:
         ld hl,(fcur)
         ld a,h
@@ -2933,7 +3233,7 @@ compile:
         call emit_a
         ld a,(nvar)
         or a
-        ret z
+        jr z,.nv
         ld l,a
         ld h,0
         add hl,hl
@@ -2950,6 +3250,8 @@ compile:
         ld a,b
         or c
         jr nz,.dt
+.nv:    ld hl,(dbglast)         ; poi il puntatore all'ultimo record delle variabili locali
+        call emit_w
         ENDIF
         ret
 
@@ -2989,6 +3291,19 @@ msg_romw: db 13,10,"ROM written: $"
 msg_romk: db 13,10,"Press any key...$"
 
 rom_done:                       ; messaggio, attesa di un tasto e ritorno all'editor
+        ld a,(mfile)
+        or a
+        jr z,.nm0
+        xor a
+        call mf_setname
+.nm0:   ld a,(mfred)
+        or a
+        jr z,.nr0
+        ld hl,mforig
+        ld de,fname+5
+        ld bc,3
+        ldir
+.nr0:
         ld de,msg_romw
         ld c,9
         call BDOS
@@ -3020,7 +3335,13 @@ rom_done:                       ; messaggio, attesa di un tasto e ritorno all'ed
         inc hl
         inc de
         jr .n
-.e:     ld a,0Dh
+.e:     ld a,' '                ; " +": l'editor sa che si torna dal compilatore (directory del progetto)
+        ld (de),a
+        inc de
+        ld a,'+'
+        ld (de),a
+        inc de
+        ld a,0Dh
         ld (de),a
         inc de
         ld hl,0081h
@@ -3029,6 +3350,7 @@ rom_done:                       ; messaggio, attesa di un tasto e ritorno all'ed
         sbc hl,de
         ld a,l
         ld (0080h),a
+        call cd_home
         ld hl,ldr_img
         ld de,LDR
         ld bc,ldr_size
@@ -3059,6 +3381,7 @@ chk_rom:                        ; il sorgente ha "OPTION TARGET <cartuccia>": si
         cp 'c'
         jr z,.f                 ; TARGET COM: compilazione normale
         pop hl
+        call cd_home
         ld hl,ldr_img           ; carica QBCR.COM con la stessa riga di comando
         ld de,LDR
         ld bc,ldr_size
@@ -4056,8 +4379,7 @@ chk_asm:                        ; il sorgente ha "__ASM": QASM.OVL (a 8000h) ris
         ld (namep),hl
         call mk_fcb
         ld de,fcb
-        ld c,F_OPEN
-        call BDOS
+        call open_tool
         or a
         jr z,.o
         ld de,0
@@ -4084,6 +4406,11 @@ s_asmk: db 7Fh,7Fh,"asm",0
 s_ovl:  db "QASM.OVL",0
 
 st_option:
+        IFDEF ROMMODE
+        ld a,(mfcur)
+        or a
+        jp nz,err_mode          ; le OPTION stanno solo nel file NOME000
+        ENDIF
         ld a,(ttype)
         cp T_ID
         jr nz,st_skip
@@ -5397,6 +5724,9 @@ begin_func:                     ; token = nome; C = 1 SUB / 2 FUNCTION
         ld (nloc),a
         ld (nint),a
         ld (nstr),a
+        ld hl,(lineno)
+        inc hl
+        ld (dbgfs),hl
         ld hl,fskiph            ; il flusso normale scavalca il corpo
         ld a,0C3h
         call emit_jchain
@@ -5587,6 +5917,43 @@ end_func:                       ; C = 1 SUB / 2 FUNCTION
         ld (hl),e
         inc hl
         ld (hl),d
+        IFNDEF ROMMODE
+        ld a,(dbgf)             ; OPTION DEBUG: [prec w][riga iniziale w][riga finale w][n][n record da 16 byte di LOCT]
+        or a
+        jr z,.nodbg
+        call get_pc
+        push hl
+        ld hl,(dbglast)
+        call emit_w
+        ld hl,(dbgfs)
+        call emit_w
+        ld hl,(lineno)
+        call emit_w
+        ld a,(nloc)
+        call emit_a
+        ld a,(nloc)
+        or a
+        jr z,.dn
+        ld l,a
+        ld h,0
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        ld b,h
+        ld c,l
+        ld hl,LOCT
+.dl:    ld a,(hl)
+        inc hl
+        call emit_a
+        dec bc
+        ld a,b
+        or c
+        jr nz,.dl
+.dn:    pop hl
+        ld (dbglast),hl
+.nodbg:
+        ENDIF
         ld hl,fskiph
         call patch_chain
         ld hl,0

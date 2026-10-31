@@ -47,7 +47,7 @@ def main():
         sc.dump('b3b_sub')
         sc.tap(*ENTER, 1, 1.0)               # la prima voce di GIOCHI e' ".." : si torna alla radice
         sc.dump('b3c_root')
-    sc.tap(*DOWN, 1, 0.5)                    # selezione sull'ultima voce
+    sc.text('Z', 0.5)                        # la lettera iniziale porta la selezione su ZULU.SPB
     sc.dump('b3_sel')
     sc.tap(*ENTER, 1, 3.0)
     sc.dump('b4_opened')

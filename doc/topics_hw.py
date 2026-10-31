@@ -112,7 +112,7 @@ T(['BLOAD', 'BSAVE'], C, ["BSAVE nome$, inizio, lunghezza [, S]", "BLOAD nome$ [
 # ------------------------------------------------------------------ cartucce
 C = 'Cartucce ROM, segmenti e mapper'
 T('SEGMENT', C, ["SEGMENT n"], "In una cartuccia a più banchi sposta il codice che segue nel segmento n (precedente + 1). Il segmento 0 contiene il runtime. "
-  "Una SUB/FUNCTION di un altro segmento si chiama normalmente; GOTO e GOSUB non attraversano i segmenti.",
+  "Una SUB/FUNCTION di un altro segmento si chiama normalmente; GOTO e GOSUB non attraversano i segmenti. Per progetti grandi ogni segmento puo' stare in un file NOME000, NOME001...: vedi SEGMENTI.",
   'OPTION TARGET ASCII8\nSEGMENT 1\nSUB bis()\n  PRINT "nel segmento 1"\nEND SUB', ['OPTION', 'INCBIN', 'CALL'], 'Cartucce ASCII8/ASCII16/KONAMI/SCC')
 T('INCBIN', C, ["INCBIN \"file\""], "Include i byte di un file nel segmento corrente (grafica, musica, tabelle).", 'SEGMENT 2\nINCBIN "SPRITES.BIN"', ['SETBANK', 'SEGMENT'], 'Cartucce multisegmento')
 T(['SETBANK', 'DATAWIN'], C, ["SETBANK n", "DATAWIN"], "SETBANK mappa il segmento n nella finestra dati; DATAWIN è l'indirizzo della finestra (A000h per i banchi da 8 KB, 8000h per ASCII16).",

@@ -93,15 +93,21 @@ CH("L'editor", [
     ('h', 'Salvare con nome'),
     ('p', "File &gt; Save As (Ctrl+W) chiede il nome: <b>al massimo 8 caratteri</b>; l'estensione .SPB è aggiunta dall'editor (se si digita un'estensione viene sostituita). "
           "Anche F5 su un programma senza nome chiede il nome nello stesso modo."),
+    ('img', 'menu_file.png', "Il menu File, con la voce Segment... (F8)."),
+    ('h', 'Progetti a segmenti: File > Segment (F8)'),
+    ('p', "Per le cartucce a segmenti (vedi il capitolo sulle cartucce) ogni segmento è un file <b>NOME000.SPB</b>, <b>NOME001.SPB</b>, ... "
+          "(5 caratteri più 3 cifre). File &gt; Segment... (tasto <b>F8</b>) chiede il numero del segmento, anche senza zeri davanti (<font face='Courier'>7</font> equivale a 007): "
+          "l'editor <b>salva il file corrente</b>, poi cerca e apre nella stessa directory il file con quel numero; se non esiste ne crea uno nuovo già con quel nome. "
+          "Il nome del file corrente deve essere di 5 caratteri più 3 cifre."),
     ('h', 'Il menu Help'),
     ('ul', ["<b>Index (F7)</b>: l'elenco di tutti gli argomenti.",
             "<b>Topic...</b>: chiede il nome di un argomento (PRINT, ASM, DEBUG, OPTION...).",
             "<b>On word (F6)</b>: documenta la parola sotto il cursore.",
             "<b>Shortcuts</b>: riepilogo dei tasti.",
-            "<b>About</b>: <i>SamPr Basic 1.0 — 2026 Fausto Pracek</i>."]),
+            "<b>About</b>: finestra centrata con la cornice dei menu, <i>SamPr Basic 1.0 — 2026 Fausto Pracek</i> e il tasto OK; si chiude con Invio, Esc o un clic su OK."]),
     ('img', 'menu_help.png', "Il menu Help."),
     ('img', 'help_topic.png', "L'aiuto sull'istruzione PRINT."),
-    ('img', 'about.png', "La finestra About."),
+    ('img', 'about.png', "La finestra About, con la cornice dei menu e il tasto OK."),
     ('p', "Nel visore dell'aiuto: frecce e PgUp/PgDn scorrono, Esc chiude. Il testo viene dai file HELP.TXT e HELP.IDX nella directory corrente: HELP.TXT è un normale "
           "file di testo ed è modificabile; HELP.IDX è l'indice (nome, posizione, lunghezza) rigenerato dallo strumento <font face='Courier'>doc/gen_help.py</font>."),
 ])
@@ -138,17 +144,17 @@ CH('Assembler in linea', [
 CH('Il debugger', [
     ('p', "Aggiungere <font face='Courier'>OPTION DEBUG</font> in testa al programma e premere F5. Il compilatore usa il runtime con debugger: il programma parte "
           "<b>fermo sulla prima istruzione</b> e si controlla con la tastiera. Un programma senza OPTION DEBUG non paga nulla."),
-    ('img', 'debugger.png', "Il debugger: riga corrente, variabili e breakpoint."),
+    ('img', 'debugger.png', "Il debugger fermo dentro una SUB: parametri e locali (con >), poi le globali."),
     ('table', [['Tasto', 'Azione'],
                ['Spazio, S, Invio', 'Esegue una istruzione'],
                ['R', 'Esegue fino al prossimo breakpoint'],
                ['B numero Invio', 'Mette o toglie un breakpoint (solo Invio = riga corrente; 0 = li toglie tutti)'],
                ['C', 'Toglie tutti i breakpoint'],
+               ['E', 'Chiede il nome di una variabile (anche locale, parametro, elemento di array come V(3), stringa come N$) e ne mostra il valore'],
                ['V', 'Pagina successiva delle variabili'],
                ['Q', 'Termina il programma'],
                ['Ctrl-Stop', 'Durante l\'esecuzione, rientra nel debugger']], [130, 350]),
-    ('p', "La schermata mostra la riga corrente, le variabili globali scalari (interi e stringhe) con il loro valore e l'elenco dei breakpoint. Lo schermo del "
-          "programma viene salvato e ripristinato: il debug funziona anche negli schermi grafici. Nelle cartucce il debugger gira ma non mostra le variabili."),
+    ('p', "La schermata mostra la riga corrente, le variabili con il loro valore e l'elenco dei breakpoint. Dentro una SUB o FUNCTION compaiono per prime le <b>variabili locali e i parametri</b>, contrassegnati da <font face='Courier'>&gt;</font>, poi le variabili globali scalari. Per qualsiasi altra variabile si usa il comando <b>E</b>: si digita il nome (cerca prima fra le locali, poi fra le globali); per un array si scrive l'elemento, ad esempio <font face='Courier'>V(2)</font> o <font face='Courier'>N$(1)</font>, e senza indice si ottiene il numero di elementi. Si segnalano nome inesistente, indice fuori dai limiti e array nel mapper. Lo schermo del programma viene salvato e ripristinato: il debug funziona anche negli schermi grafici. Nelle cartucce il debugger gira ma non mostra le variabili."),
 ])
 
 CH('Cartucce ROM, segmenti e mapper', [
@@ -157,8 +163,32 @@ CH('Cartucce ROM, segmenti e mapper', [
     ('p', "Con i mapper a banchi il codice può occupare più <b>segmenti</b>: <font face='Courier'>SEGMENT n</font> sposta il codice che segue nel segmento n. "
           "Le routine di altri segmenti si chiamano normalmente (il compilatore cambia banco e lo ripristina). I dati si includono con "
           "<font face='Courier'>INCBIN \"file\"</font> e si leggono con <font face='Courier'>SETBANK</font> e <font face='Courier'>DATAWIN</font>."),
+    ('h', 'Una cartuccia su più file'),
+    ('p', "Un programma grande si scrive in <b>un file per segmento</b>. Con una OPTION TARGET a segmenti (ASCII8, ASCII16, KONAMI, SCC) i file si chiamano "
+          "<font face='Courier'>NOME000.SPB</font> (segmento 0, quello fisso con il runtime) e <font face='Courier'>NOME001.SPB</font>, "
+          "<font face='Courier'>NOME002.SPB</font>, ... (5 caratteri di nome più tre cifre). Il numero parte da <b>0</b>: il segmento 0 è il primo blocco della cartuccia (la "
+          "BIOS è un'altra ROM, non c'entra), gli altri sono i blocchi commutabili."),
+    ('ul', ["Le <b>OPTION</b> (TARGET, DEBUG, LABELS...) stanno <b>solo nel file 000</b>; in un altro file danno errore 13.",
+            "<b>SEGMENT</b> non si scrive: il segmento lo decide il nome del file (con i file separati l'istruzione dà errore 13).",
+            "Il compilatore legge tutti i file in sequenza finché trova i successivi (001, 002, ...), registra le routine di ogni segmento e le <b>collega in un'unica ROM</b> NOME.ROM (senza le tre cifre).",
+            "Si può premere F5 da <b>qualunque</b> file del progetto: il compilatore parte sempre dal 000. Gli errori riportano il file e la riga giusti e l'editor apre quel file.",
+            "Una SUB o FUNCTION di un altro segmento si chiama come al solito; GOTO e GOSUB non attraversano i segmenti; ogni file arriva a circa 15 KB di sorgente.",
+            "Si passa da un file all'altro con File &gt; Segment (F8)."]),
+    ('p', "Un programma piccolo resta in un solo file e può ancora usare l'istruzione <font face='Courier'>SEGMENT n</font>. I file senza le tre cifre finali non sono segmenti."),
     ('p', "Il <b>mapper RAM</b> (se presente) offre segmenti da 16 KB: MAPPERSEGS, MALLOC, MFREE, MGET, MPUT, MREAD, MWRITE, VARPTR e gli array "
           "<font face='Courier'>DIM x(n) MAPPER</font> fino a 32768 interi."),
+])
+
+CH('Directory di lavoro (MSX-DOS 2)', [
+    ('p', "Con MSX-DOS 2 (e Nextor) i programmi stanno in cartelle. La regola è semplice: <b>la directory di lavoro è sempre quella del file aperto</b>, per i programmi "
+          "normali e per le cartucce. Il sorgente, il programma compilato (.COM, .ROM) e i file letti o scritti dal programma vivono nella cartella del progetto; gli strumenti "
+          "(SAMPRBAS.COM, QBC.COM, RT.BIN, QASM.OVL...) restano nella loro cartella e vengono trovati da soli."),
+    ('ul', ["Dalla riga di comando si può dare un percorso: <font face='Courier'>SAMPRBAS \\GIOCHI\\PROVA</font> entra in GIOCHI e apre PROVA.SPB (o lo crea).",
+            "File &gt; Open mostra le cartelle e vi si naviga; aprendo un file la directory di lavoro è quella del file.",
+            "F5 compila e fa girare il programma nella cartella del progetto, e al ritorno l'editor è ancora lì.",
+            "Le due directory sono memorizzate nelle variabili d'ambiente <b>SPBHOME</b> (strumenti) e <b>SPBPROJ</b> (progetto). SPBHOME vale la directory da cui si "
+            "avvia l'editor la prima volta: conviene avviarlo dalla cartella degli strumenti, oppure impostarla prima con <font face='Courier'>SET SPBHOME=\\STRUMENTI</font>.",
+            "Con MSX-DOS 1 non esistono cartelle e nulla di tutto questo si applica."]),
 ])
 
 CH('MSX1 e MSX2', [
@@ -184,7 +214,7 @@ CH('Errori e limiti', [
                ['17', 'Assembler: sintassi o operando'], ['18', 'Assembler: valore o salto fuori campo'],
                ['19', 'Assembler: simbolo doppio o __ENDASM mancante'], ['20', 'QASM.OVL non trovato']], [40, 440]),
     ('h', 'Limiti'),
-    ('ul', ["Sorgente: circa 13 KB. Programma compilato: 16 KB (per le cartucce, più segmenti).",
+    ('ul', ["Sorgente: circa 12,5 KB per file (15 KB per le cartucce). Programma compilato: 16 KB; per le cartucce più segmenti, ciascuno con il suo file.",
             "96 etichette; 100 variabili e array; 20 SUB/FUNCTION (8 parametri ciascuna); 24 blocchi annidati.",
             "Nomi significativi su 11 caratteri; stringhe di 255 caratteri; interi da -32768 a 32767.",
             "In OPTION NUMBERED circa 590 righe; tre file aperti contemporaneamente."]),

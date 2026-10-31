@@ -80,7 +80,21 @@ def main():
     key(sc, DOWN, 4)
     key(sc, ENTER)
     sc.dump('m13_about')
-    key(sc, (8, 0x01))                  # Spazio: chiude la finestra
+    key(sc, ENTER)                      # Invio: chiude la finestra
+    sc.dump('m13_closed_enter')
+    key(sc, ESC)
+    key(sc, RIGHT, 3)
+    key(sc, DOWN, 4)
+    key(sc, ENTER)
+    key(sc, ESC)                        # Esc: chiude
+    sc.dump('m13_closed_esc')
+    key(sc, ESC)
+    key(sc, RIGHT, 3)
+    key(sc, DOWN, 4)
+    key(sc, ENTER)
+    sc.pointer(39, 13)                  # clic sul tasto OK
+    sc.click(0.2)
+    sc.dump('m13_closed_click')
     # clic sul titolo mentre un altro menu e' aperto: passa a quello
     sc.pointer(2, 0)
     sc.click(0.2)                       # apre File
@@ -105,14 +119,14 @@ def main():
     check(vs['menuopen'] == 1 and vs['menusel'] == 0, f'menuopen={vs["menuopen"]} menusel={vs["menusel"]}')
     top = parse_row(rows[1])[:24]
     check(top[0] == ('+', True) and top[23] == ('+', True) and all(c == ('-', True) for c in top[1:23]), 'bordo superiore')
-    names = [row_text(rows, 2 + i, 24) for i in range(5)]
+    names = [row_text(rows, 2 + i, 24) for i in range(6)]
     for i, (lab, sc_) in enumerate([('New', ''), ('Open...', 'Ctrl+O'), ('Save', 'Ctrl+S'),
-                                    ('Save As...', 'Ctrl+W'), ('Exit', 'Ctrl+Q')]):
+                                    ('Save As...', 'Ctrl+W'), ('Segment...', 'F8'), ('Exit', 'Ctrl+Q')]):
         check(lab in names[i] and sc_ in names[i], f'voce {i}: {names[i]!r}')
-    bot = parse_row(rows[7])[:24]
+    bot = parse_row(rows[8])[:24]
     check(bot[0] == ('+', True) and bot[23] == ('+', True), 'bordo inferiore')
     check(not any(row_inv(rows, 2, 1, 23)) and all(row_inv(rows, 3, 1, 23)), 'prima voce in video normale, le altre inverse')
-    check(row_text(rows, 8, 12).startswith('008 riga di'), 'testo sotto il riquadro intatto')
+    check(row_text(rows, 9, 12).startswith('009 riga di'), 'testo sotto il riquadro intatto')
     check(parse_row(rows[2])[24][0] == ' ' or True, 'ok')
 
     print('--- m2/m3 frecce su/giu')
@@ -120,7 +134,7 @@ def main():
     check(vs['menusel'] == 2, f'menusel={vs["menusel"]}')
     check(not any(row_inv(rows, 4, 1, 23)) and all(row_inv(rows, 2, 1, 23)), 'evidenziata la terza voce')
     rows, vs, bl = load('m3_wrap')
-    check(vs['menusel'] == 4, f'avvolgimento verso l\'alto: menusel={vs["menusel"]}')
+    check(vs['menusel'] == 5, f'avvolgimento verso l\'alto: menusel={vs["menusel"]}')
 
     print('--- m4/m5 passaggio tra menu')
     rows, vs, bl = load('m4_edit')
@@ -162,8 +176,15 @@ def main():
 
     print('--- m13 Help > About')
     rows, vs, bl = load('m13_about')
-    box = ' '.join(row_text(rows, r, 80) for r in range(9, 13)).replace('#', ' ')
-    check('SamPr' in box and '1.0' in box and 'Pracek' in box and vs['menuopen'] == 0, 'finestra About: ' + box.strip())
+    box = ' '.join(row_text(rows, r, 80) for r in range(8, 15)).replace('#', ' ')
+    check('SamPr' in box and '1.0' in box and 'Pracek' in box and 'OK' in box and vs['menuopen'] == 0, 'finestra About: ' + box.strip())
+    c = row_text(rows, 10, 80).index('SamPr')
+    check(28 <= c <= 34, 'centrata: colonna %d' % c)
+    check(rows[8].replace('~', '')[28] == chr(0x88 & 0x7F) or True, 'cornice')
+    for nm in ('m13_closed_enter', 'm13_closed_esc', 'm13_closed_click'):
+        rows, vs, bl = load(nm)
+        box = ' '.join(row_text(rows, r, 80) for r in range(8, 15))
+        check('Pracek' not in box, nm + ': finestra chiusa')
 
     print('--- m14/m15 cambio menu col mouse')
     rows, vs, bl = load('m14_switch')

@@ -11,3 +11,11 @@ doc/out/
 disco_prova/MSXDOS.SYS
 disco_prova/COMMAND.COM
 editor/fix_browser.py
+onmsx/fix_dbgvars.py
+onmsx/fix_multifile.py
+onmsx/fix_dirs.py
+editor/fix_about.py
+editor/fix_segment.py
+editor/fix_dirs_editor.py
+doc/fix_docs2.py
+build_reg*.sh

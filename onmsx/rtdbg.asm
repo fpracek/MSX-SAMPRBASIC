@@ -21,10 +21,14 @@ D_VS    equ 25
 D_VR    equ 26
 D_IN    equ 27                  ; word
 D_ND    equ 29
+D_FR    equ 30                  ; word: IX del programma (frame della routine corrente)
+D_QX    equ 60                  ; comando E: indice dell'array (flag, word)
+D_VM    equ 63                  ; limite di riga per dbg_vline (18 = pannello, 22 = comando E)
+D_QB    equ 1600                ; comando E: testo (24 byte) e modello del nome (12 byte)
 D_REGS  equ 32                  ; R#0-R#27 (28 byte)
 D_LBUF  equ 64                  ; 40 byte: riga di testo
 D_BUF   equ 128                 ; 960 byte tabella nomi + 512 byte glifi
-DBGSIZE equ 0640h
+DBGSIZE equ 0670h
 
 rt_dbg:                         ; HL = riga sorgente; conserva tutti i registri
         push af
@@ -40,7 +44,11 @@ rt_dbg:                         ; HL = riga sorgente; conserva tutti i registri
         push hl
         call dbg_init
         pop hl
-.have:  ld ix,(DBGP)
+.have:  push ix
+        pop bc                  ; IX del programma = frame della routine corrente
+        ld ix,(DBGP)
+        ld (ix+D_FR),c
+        ld (ix+D_FR+1),b
         ld (ix+D_LINE),l
         ld (ix+D_LINE+1),h
         ld a,(ix+D_MODE)
@@ -438,8 +446,14 @@ t_title: db "SAMPR BASIC DEBUGGER   LINE ",0
 t_bp:    db "BREAKPOINTS:",0
 t_ask:   db "BREAKPOINT LINE (0=CLEAR)? ",0
 t_nov:   db "NO VARIABLE TABLE",0
-t_h1:    db "SPACE=STEP  R=RUN  B=BREAKPOINT  C=CLEAR",0
-t_h2:    db "V=NEXT VARS  Q=QUIT  CTRL-STOP=BREAK",0
+t_h1:    db "SPACE=STEP R=RUN B=BREAK C=CLEAR",0
+t_h2:    db "E=VAR V=NEXT Q=QUIT CTRL-STOP=BREAK",0
+t_qask:  db "VARIABLE? ",0
+t_qnf:   db "NOT FOUND",0
+t_qrng:  db "INDEX OUT OF RANGE",0
+t_qmap:  db "MAPPER ARRAY",0
+t_qarr:  db "ARRAY, ELEMENTS: ",0
+t_qkey:  db "PRESS A KEY",0
 
 dbg_draw:
         call dbg_lclr
@@ -538,6 +552,8 @@ dbg_vars:
         add a,a
         ld (ix+D_VS),a
         ld (ix+D_VR),2
+        ld (ix+D_VM),18
+        call dbg_vlocals
 .loop:  ld ix,(DBGP)
         ld a,(ix+D_VN)
         or a
@@ -556,15 +572,33 @@ dbg_vars:
         ld a,(iy+14)
         or (iy+15)
         jr nz,.loop             ; gli array non si mostrano
+        ld l,(iy+12)
+        ld h,(iy+13)
+        ld c,0
+        call dbg_vline
+        jr .loop
+
+dbg_vline:                      ; IY = record (nome +0, suffisso +11), HL = indirizzo del valore, C = prefisso (0 = nessuno)
+        ld ix,(DBGP)
         ld a,(ix+D_VS)
         or a
-        jr z,.show
+        jr z,.s
         dec (ix+D_VS)
-        jr .loop
-.show:  ld a,(ix+D_VR)
-        cp 18
+        ret
+.s:     ld a,(ix+D_VR)
+        cp (ix+D_VM)
         ret nc
+        push bc
+        push hl
         call dbg_lclr
+        pop hl
+        pop bc
+        ld a,c
+        or a
+        jr z,.np
+        ld (de),a
+        inc de
+.np:    push hl
         push iy
         pop hl
         ld b,11
@@ -580,11 +614,23 @@ dbg_vars:
         jr nz,.nsx
         ld (de),a
         inc de
-.nsx:   ld a,'='
+.nsx:   ld ix,(DBGP)
+        ld a,(ix+D_QX)
+        or a
+        jr z,.nq
+        ld a,'('
         ld (de),a
         inc de
-        ld l,(iy+12)
-        ld h,(iy+13)
+        ld l,(ix+D_QX+1)
+        ld h,(ix+D_QX+2)
+        call dbg_udec
+        ld a,')'
+        ld (de),a
+        inc de
+.nq:    ld a,'='
+        ld (de),a
+        inc de
+        pop hl
         ld a,(iy+11)
         cp '$'
         jr z,.str
@@ -598,15 +644,13 @@ dbg_vars:
         ld (de),a
         inc de
         call dbg_cats
-.sq:    ld a,'"'
+        ld a,'"'
         ld (de),a
         inc de
-        jr .put
 .put:   ld ix,(DBGP)
         ld a,(ix+D_VR)
         inc (ix+D_VR)
-        call dbg_row
-        jp .loop
+        jp dbg_row
 
 dbg_cats:                       ; HL = stringa [len][dati] -> (DE), al massimo 22 caratteri
         ld b,(hl)
@@ -798,7 +842,11 @@ dbg_ui:
         jr nz,.nv
         call dbg_nextpg
         jr .draw
-.nv:    cp 'Q'
+.nv:    cp 'E'
+        jr nz,.ne
+        call dbg_query
+        jp .draw
+.ne:    cp 'Q'
         jr nz,.k
         call dbg_leave
         jp rt_end
@@ -808,3 +856,5 @@ dbg_ui:
 .go:    ld ix,(DBGP)
         ld (ix+D_MODE),a
         jp dbg_leave
+
+        INCLUDE "dbgq.inc"

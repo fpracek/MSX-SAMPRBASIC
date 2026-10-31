@@ -15,14 +15,26 @@ T(['DEBUG', 'DEBUGGER'], C, ["OPTION DEBUG"],
   "Si scrive `OPTION DEBUG` nel sorgente e si preme F5: il programma parte fermo sulla prima istruzione, in una schermata testo con la riga corrente, "
   "le variabili globali scalari con il loro valore e l'elenco dei breakpoint. Tasti: SPAZIO (o S, INVIO) esegue un'istruzione; R esegue fino al prossimo "
   "breakpoint; B numero INVIO mette o toglie un breakpoint (solo INVIO = riga corrente, 0 = li toglie tutti); C toglie tutti i breakpoint; V pagina "
-  "successiva delle variabili; Q termina il programma. CTRL-STOP durante l'esecuzione rientra nel debugger. Lo schermo del programma resta intatto. "
-  "Nelle cartucce il debugger funziona ma non mostra le variabili. I programmi normali (senza OPTION DEBUG) non pagano nulla.",
+  "successiva delle variabili; E chiede il nome di una variabile (locale, parametro, globale, elemento di array come V(3) o N$) e ne mostra il valore; "
+  "Q termina il programma. Dentro una SUB le variabili locali e i parametri compaiono per primi con il prefisso >. CTRL-STOP durante l'esecuzione rientra nel debugger. "
+  "Lo schermo del programma resta intatto. Nelle cartucce il debugger funziona ma non mostra le variabili. I programmi normali (senza OPTION DEBUG) non pagano nulla.",
   "OPTION DEBUG\ns = 0\nFOR i = 1 TO 3\n  s = s + i\nNEXT i\nPRINT s", ['OPTION DEBUG'])
 T(['EDITOR', 'MENU', 'TASTI'], C, ["Esc = menu, frecce, F1-F4"],
-  "Si avvia con `SAMPRBAS nome`. Menu da tastiera: Esc apre il menu File; F1 File, F2 Edit, F3 Find, F4 Help; Run è a destra; frecce sinistra/destra cambiano menu, su/giù le voci, Invio "
-  "sceglie, una lettera evidenziata attiva la voce, Esc chiude. Scorciatoie: F5 compila ed esegue, F6 Help sulla parola sotto il cursore, F7 indice dell'aiuto. "
+  "Si avvia con `SAMPRBAS nome` (anche con un percorso, su MSX-DOS 2). Menu da tastiera: Esc apre il menu File; F1 File, F2 Edit, F3 Find, F4 Help; Run è a destra; frecce sinistra/destra cambiano menu, su/giù le voci, Invio "
+  "sceglie, una lettera evidenziata attiva la voce, Esc chiude. Scorciatoie: F5 compila ed esegue, F6 Help sulla parola sotto il cursore, F7 indice dell'aiuto, F8 File > Segment (cambia segmento). "
   "Le parole chiave sono colorate (su MSX2); su MSX1 l'editor ha 40 colonne, su MSX2 80, in automatico. Se non cambia nulla F5 rilancia subito il programma.",
   None, ['HELP'])
+T(['SEGMENTI', 'MULTIFILE', 'ROMFILE', 'NOME000'], C, ["NOME000.SPB, NOME001.SPB ...", "File > Segment... (F8)"],
+  "Una cartuccia a segmenti (ASCII8, ASCII16, KONAMI, SCC) si scrive in un file per segmento: NOME000.SPB (segmento 0, fisso, con le OPTION) e NOME001, NOME002... "
+  "(5 caratteri + 3 cifre). Il compilatore li legge in sequenza e li collega in NOME.ROM; si compila da qualunque file con F5. Le OPTION stanno solo nel file 000; "
+  "SEGMENT non si scrive. F8 (File > Segment...) salva il file corrente e apre il segmento di cui si digita il numero (anche senza zeri), creandolo se manca. "
+  "La numerazione parte da 0: e' il primo blocco della cartuccia, non la BIOS.",
+  None, ['SEGMENT', 'OPTION TARGET', 'EDITOR'])
+T(['DIRECTORY', 'SPBHOME', 'SPBPROJ', 'CARTELLE'], C, ["SAMPRBAS \\DIR\\NOME", "SET SPBHOME=\\STRUMENTI"],
+  "Con MSX-DOS 2 la directory di lavoro e' sempre quella del file aperto: sorgente, .COM/.ROM e i file del programma stanno nella cartella del progetto, gli strumenti "
+  "nella loro. Si puo' dare un percorso sulla riga di comando; File > Open naviga fra le cartelle. Variabili d'ambiente: SPBHOME (strumenti, la cartella da cui si avvia "
+  "l'editor la prima volta) e SPBPROJ (progetto). Con MSX-DOS 1 non ci sono cartelle.",
+  None, ['SPB', 'EDITOR'])
 T(['SPB', 'FILE SPB', 'SALVA', 'APRI'], C, ["SAMPRBAS nome", "File > Open, File > Save As"],
   "I programmi hanno estensione .SPB (SamPr Basic). `SAMPRBAS PROVA` apre PROVA.SPB se esiste, altrimenti parte con un file nuovo già chiamato PROVA.SPB. "
   "Open (Ctrl+O) mostra una finestra con i file .SPB (e, con MSX-DOS 2, le cartelle): frecce, Invio, una lettera per saltare, Esc per uscire. "
@@ -40,7 +52,7 @@ T(['ERRORI', 'ERRORS'], C, ["Codici di errore"],
   "17-20 assembler in linea. L'editor si riapre con il cursore sulla riga dell'errore.",
   None, ['LIMITI'])
 T(['LIMITI', 'LIMITS'], C, ["Limiti del compilatore"],
-  "Sorgente circa 13 KB; programma 16 KB; 96 etichette; 100 variabili e array; 20 SUB/FUNCTION (8 parametri ciascuna, 64 in totale); 29 interi locali e 256 byte per "
+  "Sorgente circa 12,5 KB per file (15 KB nelle cartucce); programma 16 KB; 96 etichette; 100 variabili e array; 20 SUB/FUNCTION (8 parametri ciascuna, 64 in totale); 29 interi locali e 256 byte per "
   "stringa locale; 24 blocchi annidati; nomi significativi su 11 caratteri; circa 590 righe in OPTION NUMBERED; stringhe di 255 caratteri; interi da -32768 a 32767; "
   "file aperti: 3.",
   None, ['ERRORI'])

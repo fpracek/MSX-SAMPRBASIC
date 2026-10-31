@@ -83,3 +83,15 @@ Non ancora supportati: float (l'implementazione a 32 bit esiste nel tag git `flo
 Non provato su MSX reale (disco fisico, Nextor/DOS2).
 
 Stadio 26 (documentazione e nomi): l'editor si chiama `SAMPRBAS.COM`, i sorgenti sono `.SPB` (il compilatore aggiunge `.SPB` se manca l'estensione). Manuale PDF e aiuto in linea si generano da `../doc` (`gen_help.py`, `gen_pdf.py`). `zrun.py` (simulatore senza emulatore) non e' stato aggiornato dopo le modifiche MSX1 e oggi segnala 25 falliti (fase 2 senza schermo); il collaudo di riferimento e' `qtest.py` su openMSX, che passa.
+
+Stadio 27 (debugger con variabili, cartucce su piu' file, directory del progetto):
+- Debugger (`rtdbg.asm`, `dbgq.inc`): con `OPTION DEBUG` il compilatore mette dopo ogni SUB/FUNCTION un record `[prec][riga iniziale][riga finale][n][n x 16 byte di LOCT]`
+  (lista collegata, puntatore dopo la tabella delle globali). Il gancio salva IX (frame): dentro una routine il pannello mostra prima locali e parametri (prefisso `>`);
+  il comando `E` chiede un nome (`Q`, `N$`, `V(2)`, `N$(1)`, `V` = numero di elementi) e lo cerca fra locali e globali. Test: `dtest.py d6` (`dtests/d6.*`).
+- Cartucce a segmenti su piu' file (`mtest.py`): `NOME000.SPB` (segmento 0, con le OPTION) e `NOME001...`; `norm_seg` riconduce un segmento diverso da 000 al file 000 se esiste;
+  prescansione di tutti i file (`mf_prescan`), compilazione con passaggio al file successivo a fine file (`mf_advance` + `seg_switch`), ROM `NOME.ROM`, errori sul file
+  giusto, OPTION e SEGMENT fuori posto = errore 13. L'FCB della ROM si salva in `FCBSV` mentre si legge un sorgente e il DMA torna su `OUT0`.
+- MSX-DOS 2: gli strumenti si aprono dalla directory `SPBHOME` (`open_tool`), il lavoro avviene in `SPBPROJ` (`cd_proj`); `rt_cdhome` nel runtime e `cd_home` prima di
+  ricaricare l'editor o `QBCR`. Con il DOS 1 non cambia nulla.
+- Le tabelle del compilatore .COM si sono spostate di 100h (`LABT 3E00h`, `SRC 4E00h`): il sorgente massimo e' ora di circa 12,5 KB (15 KB per le cartucce).
+- `zrun.py`: l'apertura dei file ora segue il contenuto dell'FCB (come il DOS vero).
