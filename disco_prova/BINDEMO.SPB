@@ -1,0 +1,7 @@
+OPTION TARGET BIN
+REM Programma per MSX-BASIC: CLEAR 200,&H83FF e BLOAD "BINDEMO.BIN",R
+CLS
+PRINT "Ciao da MSX-BASIC!"
+FOR i = 1 TO 5
+  PRINT i; " x 7 ="; i * 7
+NEXT i

@@ -95,3 +95,9 @@ Stadio 27 (debugger con variabili, cartucce su piu' file, directory del progetto
   ricaricare l'editor o `QBCR`. Con il DOS 1 non cambia nulla.
 - Le tabelle del compilatore .COM si sono spostate di 100h (`LABT 3E00h`, `SRC 4E00h`): il sorgente massimo e' ora di circa 12,5 KB (15 KB per le cartucce).
 - `zrun.py`: l'apertura dei file ora segue il contenuto dell'FCB (come il DOS vero).
+
+Stadio 28 (segmenti .BIN, OPTION TARGET unica, target BIN):
+- `NOMEnnn.BIN` accanto ai sorgenti di una cartuccia a piu' file = segmento gia' compilato, inserito cosi' com'e' (`mf_loadbin`, `mf_have` prova .SPB poi .BIN, `mfkind`/`mfbin`); se l'ultimo segmento e' un .BIN non si emette l'epilogo. Lasciando il segmento 0 si emette `jp RT_END`. Test: `mtest.py` caso D.
+- Valori di `OPTION TARGET`: `DOS`/`COM` (predefinito), `BIN`, `ROM_16`, `ROM_32`, `ROM_ASCII8`, `ROM_ASCII16`, `ROM_KONAMI`, `ROM_KONAMISCC` (= SCC) piu' i vecchi nomi. `chk_rom` in QBC.COM inoltra a QBCR.COM (cartucce) o QBCB.COM (BIN).
+- Target BIN (`-DBINMODE`): runtime `RTBIN.BIN` (ORG 8400h, `RTRAM` a D000h, pila da F000h con la pila di BASIC salvata in F000h, niente DOS: file = errore, `rt_end` ripristina INITXT e fa `ret`), compilatore `QBCB.COM` (tabelle spostate di 100h, `IMGBASE` 8400h, uscita `NOME.BIN` in formato BLOAD con `bin_hdr`, messaggio `bin_done`). Si carica con `CLEAR 200,&H83FF` / `BLOAD"NOME.BIN",R`. Limiti: niente file, mapper RAM, debugger. Test: `btest.py` (compila sotto DOS, poi avvia MSX-BASIC senza DOS con il solo .BIN). Alias dei nomi collaudati da `rtests/r21-r24`; `qtests/dos1`.
+- Tabelle del compilatore per cartucce: `FARTABC 4100h` (spostate di 100h).

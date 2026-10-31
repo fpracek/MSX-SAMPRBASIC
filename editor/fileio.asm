@@ -1294,8 +1294,12 @@ seg_digits:                     ; A = numero (0-255) -> 3 cifre in fname+5..7
 k_segment:
         call seg_chk
         jr z,.ok
+        ld hl,m_segsave
+        ld a,(fname)
+        or a
+        jr z,.m
         ld hl,m_segname
-        ld (msgptr),hl
+.m:     ld (msgptr),hl
         ret
 .ok:    ld hl,s_segp
         ld de,helpstr
@@ -1335,6 +1339,11 @@ k_segment:
         jr nz,.big
         ld a,e
         push af
+        call seg_probe          ; il file corrente non cambia finche' il segmento non e' valido
+        or a
+        jr z,.none
+        cp 2
+        jr z,.bin
         ld a,(modified)
         or a
         jr z,.ns
@@ -1344,13 +1353,66 @@ k_segment:
         ret
 .ns:    pop af
         call seg_digits
-        jp load_file            ; apre il segmento (se non c'e', file nuovo con quel nome)
+        jp load_file
+.none:  pop af
+        ld hl,m_segnone
+        jr .mm
+.bin:   pop af
+        ld hl,m_segbin
+.mm:    ld (msgptr),hl
+        ret
 .big:   ld hl,m_segbig
         ld (msgptr),hl
         ret
 
+seg_probe:                      ; A = numero -> A = 0 non esiste, 1 .SPB, 2 .BIN (fname resta invariato)
+        push af
+        ld hl,fname+5
+        ld de,msgbuf
+        ld bc,3
+        ldir
+        pop af
+        call seg_digits
+        call mk_fcb
+        ld de,fcb
+        ld c,F_OPEN
+        call BDOS
+        ld b,1
+        or a
+        jr z,.f
+        call mk_fcb
+        ld hl,s_binx
+        ld de,fcb+9
+        ld bc,3
+        ldir
+        ld de,fcb
+        ld c,F_OPEN
+        call BDOS
+        ld b,2
+        or a
+        jr z,.f
+        jr .nn
+.f:     ld a,b
+        ld (tmpb),a             ; BDOS e ldir distruggono BC
+        ld de,fcb
+        ld c,F_CLOSE
+        call BDOS
+        jr .r
+.nn:    xor a
+        ld (tmpb),a
+.r:     ld hl,msgbuf
+        ld de,fname+5
+        ld bc,3
+        ldir
+        ld a,(tmpb)
+        ret
+
+s_binx:    db "BIN"
 s_segp:    db "Segment: ",0
-m_segname: db "Name must be 5 characters + 3 digits",0
+m_segname: db "Not a segment file (5 chars+3 digits)",0
+m_segsave: db "Save the file first",0
+m_segnone: db "Segment file does not exist",0
+m_segbin:  db "BIN segments cannot be opened",0
 m_segbig:  db "Segment number 0-255",0
 
 k_quit:

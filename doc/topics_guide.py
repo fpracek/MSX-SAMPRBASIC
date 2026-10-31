@@ -27,7 +27,8 @@ T(['EDITOR', 'MENU', 'TASTI'], C, ["Esc = menu, frecce, F1-F4"],
 T(['SEGMENTI', 'MULTIFILE', 'ROMFILE', 'NOME000'], C, ["NOME000.SPB, NOME001.SPB ...", "File > Segment... (F8)"],
   "Una cartuccia a segmenti (ASCII8, ASCII16, KONAMI, SCC) si scrive in un file per segmento: NOME000.SPB (segmento 0, fisso, con le OPTION) e NOME001, NOME002... "
   "(5 caratteri + 3 cifre). Il compilatore li legge in sequenza e li collega in NOME.ROM; si compila da qualunque file con F5. Le OPTION stanno solo nel file 000; "
-  "SEGMENT non si scrive. F8 (File > Segment...) salva il file corrente e apre il segmento di cui si digita il numero (anche senza zeri), creandolo se manca. "
+  "SEGMENT non si scrive. Un file NOMEnnn.BIN (assembler, sprite, font, dati) e' un segmento gia' compilato: viene inserito cosi' com'e'. "
+  "F8 (File > Segment...) salva il file corrente e apre il segmento di cui si digita il numero (anche senza zeri); se il file non esiste, o e' un .BIN, dice perche' e il file attivo non cambia. "
   "La numerazione parte da 0: e' il primo blocco della cartuccia, non la BIOS.",
   None, ['SEGMENT', 'OPTION TARGET', 'EDITOR'])
 T(['DIRECTORY', 'SPBHOME', 'SPBPROJ', 'CARTELLE'], C, ["SAMPRBAS \\DIR\\NOME", "SET SPBHOME=\\STRUMENTI"],

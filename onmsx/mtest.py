@@ -10,6 +10,7 @@ import qtest
 
 HERE, BUILD, DISK = qtest.HERE, qtest.BUILD, qtest.DISK
 FAILS = 0
+nl = chr(10)
 
 
 def check(c, m):
@@ -58,8 +59,10 @@ def make_disk(files):
         open(os.path.join(DISK, n), 'wb').write(src.replace('\n', '\r\n').encode('latin-1'))
 
 
-def compile_case(tag, files, cmd, wait=40.0):
+def compile_case(tag, files, cmd, wait=40.0, binfiles=None):
     make_disk(files)
+    for n, b in (binfiles or {}).items():
+        open(os.path.join(DISK, n), 'wb').write(b)
     bs = chr(92)
     tcl = [qtest.TCL, 'set OUTDIR "%s"' % BUILD.replace(bs, '/'),
            'after time 20 {type "QBC %s%sr"}' % (cmd, bs),
@@ -100,6 +103,26 @@ def main():
                 print('   exp %-24r got %r' % (e, got[i] if i < len(got) else '<->'))
     txt = ''.join(after + end)
     check('FAUST002.SPB' in txt, "ritorno all'editor con il nome ricevuto: " + txt[-60:])
+
+    print('--- D: segmento 002 come .BIN gia compilato (dati) in coda al progetto')
+    mainD = nl.join(['OPTION TARGET SCC', 'SETBANK 2', 'PRINT PEEK(DATAWIN); PEEK(DATAWIN + 1); PEEK(DATAWIN + 2)', 'CALL FAR uno()', 'END', ''])
+    s1D = nl.join(['SUB uno()', '  PRINT "uno"', 'END SUB', ''])
+    files = {'FAUST000.SPB': mainD, 'FAUST001.SPB': s1D}
+    make_files = dict(files)
+    end, after = compile_case('md', make_files, 'FAUST001.SPB', wait=30.0, binfiles={'FAUST002.BIN': bytes([65, 66, 67]) + bytes(5)})
+    rom = os.path.join(DISK, 'faust.rom')
+    check(os.path.exists(rom) and os.path.getsize(rom) == 32768, 'ROM di 32768 byte con il segmento .BIN in coda')
+    if os.path.exists(rom):
+        data = open(rom, 'rb').read()
+        check(data[0x6000:0x6003] == bytes([65, 66, 67]), 'i byte del .BIN sono nel segmento 2: %r' % data[0x6000:0x6004])
+        check(data[0x6003:0x6008] == bytes(5), 'il resto del segmento e a zero')
+        shutil.copy(rom, os.path.join(BUILD, 'faust.rom'))
+        tcl = qtest.TCL + nl + 'set OUTDIR "%s"' % BUILD.replace(chr(92), '/') + nl + 'after time 16 {dump mrom}' + nl + 'after time 18 exit' + nl
+        open(os.path.join(BUILD, 'mtest2.tcl'), 'w').write(tcl)
+        subprocess.run([qtest.OPENMSX, '-machine', os.environ.get('GMACHINE', 'Philips_NMS_8250'), '-cart', os.path.join(BUILD, 'faust.rom'),
+                        '-romtype', 'KonamiSCC', '-script', os.path.join(BUILD, 'mtest2.tcl')], timeout=300)
+        got = [l.rstrip() for l in open(os.path.join(BUILD, 'mrom.txt'))]
+        check(got[0].split() == ['65', '66', '67'] and got[1] == 'uno', 'il programma legge i dati del .BIN: %r %r' % (got[0], got[1]))
 
     print('--- B: errore di sintassi nel file 001 (riga 3)')
     bad = S1.replace('  CALL inner(n)', '  CALL inner(n) +')

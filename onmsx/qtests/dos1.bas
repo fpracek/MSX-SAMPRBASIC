@@ -1,0 +1,2 @@
+OPTION TARGET DOS
+PRINT "dos ok"

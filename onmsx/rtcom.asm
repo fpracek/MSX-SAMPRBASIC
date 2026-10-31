@@ -184,11 +184,17 @@ rt_bios:
         ei
         ret
 
+BINTOP  equ 0F000h              ; BIN: cima della pila; sopra si salva la pila di BASIC
 rt_start:
+        IFDEF BINMODE
+        ld (BINTOP),sp          ; la pila di BASIC si ripristina a fine programma
+        ld hl,BINTOP
+        ELSE
         IFDEF ROMMODE
         ld hl,(0FC4Ah)          ; HIMEM
         ELSE
         ld hl,(0006h)
+        ENDIF
         ENDIF
         ld sp,hl
         ld hl,2Dh               ; versione MSX (0 = MSX1): su MSX1 il testo e' a 40 colonne, su MSX2 a 80
@@ -226,10 +232,14 @@ rt_start:
         add hl,de
         ld (heapp),hl
         ld (heap0),hl
+        IFDEF BINMODE
+        ld hl,BINTOP-0400h
+        ELSE
         IFDEF ROMMODE
         ld hl,(0FC4Ah)
         ELSE
         ld hl,(0006h)
+        ENDIF
         ENDIF
         ld de,-0400h
         add hl,de
@@ -423,6 +433,15 @@ rt_end:
         ld ix,CHGET
         call rt_bios
         pop ix
+        IFDEF BINMODE
+        push ix
+        ld ix,INITXT            ; schermo di testo per il BASIC
+        call rt_bios
+        pop ix
+        ld sp,(BINTOP)
+        ei
+        ret                     ; BIN: si torna a MSX-BASIC
+        ELSE
         IFDEF ROMMODE
         jp 0                    ; cartuccia: dopo un tasto si riavvia la macchina
         ELSE
@@ -458,8 +477,10 @@ rt_end:
         ldir
         jp 0C000h
         ENDIF
+        ENDIF
 
         IFNDEF ROMMODE
+        IFNDEF BINMODE
 rt_cdhome:                  ; DOS 2: CHDIR in SPBHOME (directory degli strumenti); DOS 1 e variabile assente: nulla
         ld b,0
         ld c,6Fh
@@ -491,6 +512,7 @@ rt_cdhome:                  ; DOS 2: CHDIR in SPBHOME (directory degli strumenti
         ld sp,hl
         ret
 s_envhome: db "SPBHOME",0
+        ENDIF
         ENDIF
 
 rt_keyup:                   ; attende che nessun tasto sia premuto (al massimo ~10 s)
@@ -1179,6 +1201,9 @@ rt_datawin: ld hl,0
         ELSE
 rt_dbg: ret
         ENDIF
+        IFDEF BINMODE
+        INCLUDE "rtbin.asm"
+        ELSE
         IFDEF ROMMODE
         INCLUDE "rtrom.asm"
         ELSE
@@ -1186,5 +1211,6 @@ rt_dbg: ret
 
 ldr_img: INCBIN "build/ldr.bin"
 ldr_size equ $-ldr_img
+        ENDIF
         ENDIF
 rt_prog:

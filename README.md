@@ -1,44 +1,107 @@
-# MSXQB — prototipo cross (Python → Z80)
+# SamPr Basic
 
-Ambiente stile QuickBASIC per MSX2: questo è il prototipo che fissa linguaggio, runtime
-e convenzioni di codegen. Il compilatore è one-pass con emissione diretta (niente AST),
-così da poter essere riscritto in Z80 per l'IDE vero.
+**Un ambiente di sviluppo BASIC completo che gira sull'MSX: editor a schermo intero, compilatore che produce vero codice Z80, assembler in linea e debugger — senza bisogno di un PC.**
 
-    python build.py tests\t1.bas      # compila, assembla, esegue in openMSX (NMS-8250), confronta con t1.exp
+Scrivi il programma, premi **F5**: in pochi secondi il programma gira alla velocità della macchina. Nato per i videogiochi (grafica bitmap, sprite, suono a 3 voci, joystick, mapper, cartucce), funziona su **MSX1** (editor a 40 colonne) e **MSX2** (80 colonne) con **MSX-DOS 1 e 2**.
 
-File: `qbc.py` (compilatore), `runtime.asm` (runtime ~1 KB, ROM 16K a 4000h), `build.py` (harness),
-`tests/t1..t5` (.bas + .exp, t5 usa `.keys` per digitare l'input).
+*SamPr Basic 1.0 — © 2026 Fausto Pracek*
 
-## Linguaggio v0
-- Tipi: INTEGER 16 bit con segno (default), STRING (`$`, max 255). Niente float: `/` è divisione intera.
-- `PRINT` (`;` `,`, numeri con spazio/segno iniziale e spazio finale come QB), `INPUT ["p";] v`, `CLS`, `LOCATE r,c`, `COLOR f,b`
-- `IF/ELSEIF/ELSE/END IF` (a blocchi e su riga singola), `FOR/NEXT` (STEP costante), `WHILE/WEND`,
-  `DO [WHILE|UNTIL]/LOOP [WHILE|UNTIL]`, `SELECT CASE` (valori, `a TO b`, `IS op x`, `ELSE`), `EXIT FOR/DO/SUB/FUNCTION`
-- `GOTO/GOSUB/RETURN` con label o numeri di riga, `END`, `STOP`
-- `SUB/FUNCTION` con parametri per valore, locali, ricorsione, `SHARED`, `CALL`, `DECLARE` (ignorata: firme prescansionate)
-- `DIM a(n)` (array globali di interi, con controllo dei limiti), `CONST`
-- Operatori: `+ - * / \ MOD AND OR XOR NOT = <> < > <= >=` e concatenazione/confronto stringhe
-- Funzioni: `LEN ASC VAL ABS SGN RND(n) CHR$ STR$ LEFT$ RIGHT$ MID$ INKEY$ TIMER PEEK VPEEK INP`
-- Istruzioni MSX: `POKE VPOKE OUT SLEEP(frame) RANDOMIZE`
+| Editor con parole chiave colorate | Aiuto in linea (F6 / F7) |
+|:--:|:--:|
+| ![Editor](doc/img/editor.png) | ![Aiuto](doc/img/help_topic.png) |
 
-## Modalità di indirizzamento (scelta dell'utente)
-Prima riga del sorgente (o impostazione dell'IDE, `qbc.py in out [mode]`):
-- `OPTION NUMBERED` — stile BASIC classico: ogni riga ha il numero, le righe vengono ordinate per numero
-  (duplicati = errore), `GOTO/GOSUB/THEN` solo con numeri, niente etichette.
-- `OPTION LABELS` — stile QuickBASIC: `nome:` e `GOTO nome`; i numeri di riga sono errore.
-- `OPTION MIXED` (default) — entrambi. In tutte le modalità un salto a una riga/etichetta inesistente è un errore di compilazione
-  con la riga sorgente. `IF x THEN etichetta` è ammesso come in QB.
-Test: `tests/t6` (numbered, righe fuori ordine), `tests/t7` (labels), `tests/negative.py` (9 errori attesi).
+| Apertura file con cartelle | Debugger con variabili locali |
+|:--:|:--:|
+| ![Apertura file](doc/img/browser.png) | ![Debugger](doc/img/debugger.png) |
 
-## Convenzioni di codegen
-- Accumulatore HL; operando sinistro sullo stack, destro in HL, `pop de`. Booleani -1/0.
-- Stringa = puntatore a `[len][dati]`. Variabili stringa = buffer fisso da 256 byte (globali in RAM, locali nel frame).
-  Temporanei sullo heap a bump; ogni statement che ne crea salva/ripristina `heapp` (nessun GC necessario).
-  Una FUNCTION stringa copia il risultato sullo heap in uscita.
-- SUB/FUNCTION: argomenti sullo stack (primo più profondo), frame IX, 64 byte per i locali interi
-  (max 30) + 256 per ogni locale stringa; pulizia a carico del chiamante.
-- FOR: il limite resta sullo stack per tutto il ciclo; test in testa.
+## Perché
 
-## Limiti noti v0
-Niente float, array di stringhe, STEP variabile, parametri stringa modificabili, GOTO fuori da FOR/SELECT
-lascia roba sullo stack, locali interi non azzerati all'ingresso, programma ≤ 16 KB (ROM).
+- **Compilatore vero, sull'MSX.** Ogni istruzione BASIC diventa codice macchina: niente interprete. Il compilatore stesso è un programma Z80 di 15 KB che gira sotto MSX-DOS.
+- **Un linguaggio moderno ma piccolo.** Interi a 16 bit e stringhe; `SUB`/`FUNCTION` con parametri, variabili locali e ricorsione; `IF/ELSEIF`, `SELECT CASE`, `DO/LOOP`; etichette **o** numeri di riga (a scelta con `OPTION`); maiuscole e minuscole equivalenti. Niente virgola mobile: per un gioco costerebbe solo velocità e memoria.
+- **Tutto ciò che serve a un gioco è un'istruzione:** `SCREEN 5-8` (anche 10-12), `PSET/LINE/CIRCLE/PAINT/DRAW`, `COPY`, pagine e scroll hardware, `PALETTE`, sprite 8x8/16x16 con colori per riga, `PLAY` MML a tre voci, `SOUND`, `STICK/STRIG`, accesso diretto alla VRAM a 17 bit.
+- **Assembler Z80 in linea** con `__ASM … __ENDASM` (tutte le istruzioni documentate, variabili e etichette BASIC visibili dal blocco).
+- **Debugger passo-passo** (`OPTION DEBUG`): breakpoint, variabili globali e **locali/parametri** (`>`), comando **E** per interrogare qualsiasi variabile (`V(3)`, `N$`…).
+- **Tre uscite con una sola opzione** (`OPTION TARGET`), senza impostazioni in conflitto.
+- **Cartucce ROM da 16 KB a 2 MB** (ASCII8, ASCII16, Konami, SCC) con il codice su più **segmenti**, uno per file, e segmenti già compilati `.BIN` per assembler e dati.
+- **File su disco** (testo e ad accesso casuale), **mapper RAM**, `BLOAD/BSAVE`, cartelle di MSX-DOS 2.
+- **Manuale PDF** di oltre 40 pagine e aiuto in linea con tutte le istruzioni.
+
+## Esempio
+
+```basic
+OPTION LABELS
+CLS
+FOR i = 1 TO 10
+  PRINT "7 x"; i; "="; 7 * i
+NEXT i
+CALL saluta("MSX")
+
+SUB saluta(n$)
+  PRINT "Ciao, "; n$
+END SUB
+```
+
+## Avvio rapido
+
+1. Copia sul disco MSX-DOS i file della cartella [`dist/`](dist): `SAMPRBAS.COM` (editor), `QBC.COM` (compilatore), `RT.BIN` (runtime) e, se servono, `RTD.BIN` (debug), `QASM.OVL` (assembler), `QBCR.COM`+`RTROM.BIN` (cartucce), `QBCB.COM`+`RTBIN.BIN` (BIN), `HELP.TXT`+`HELP.IDX` (aiuto).
+2. Avvia `SAMPRBAS PROVA` (apre `PROVA.SPB`, o lo crea con quel nome). Con MSX-DOS 2 si può dare un percorso: `SAMPRBAS \GIOCHI\PROVA`.
+3. Scrivi il programma e premi **F5**. Alla fine del programma l'editor si riapre; se c'è un errore il cursore è sulla riga sbagliata.
+
+Per provare tutto sul PC con [openMSX](https://openmsx.org): `avvia_nms8250.bat` (MSX2, 80 colonne) o `avvia_hb75p.bat` (Sony HB-75P, MSX1, 40 colonne) montano il disco di prova [`disco_prova/`](disco_prova) (con i programmi d'esempio `.SPB`; servono anche `MSXDOS.SYS` e `COMMAND.COM`, che non sono inclusi).
+
+## Che cosa produce: `OPTION TARGET`
+
+| Valore | Risultato |
+|---|---|
+| `DOS` (predefinito) | `NOME.COM` per MSX-DOS, con i file su disco |
+| `BIN` | `NOME.BIN` per MSX-BASIC: `CLEAR 200,&H83FF` e `BLOAD "NOME.BIN",R`, senza DOS |
+| `ROM_16`, `ROM_32` | cartuccia semplice da 16 o 32 KB |
+| `ROM_ASCII8`, `ROM_ASCII16` | cartuccia a banchi ASCII |
+| `ROM_KONAMI`, `ROM_KONAMISCC` | cartuccia a banchi Konami (senza o con SCC) |
+
+### Cartucce su più file
+
+Un programma grande si scrive in un file per segmento, `NOME000.SPB` (principale, con le `OPTION`) e `NOME001.SPB`, `NOME002.SPB`… (5 caratteri + 3 cifre). Il compilatore li legge tutti e li collega in un'unica `NOME.ROM`; si preme F5 da qualunque file. Un `NOMEnnn.BIN` è un segmento già compilato (assembler, sprite, font) e viene inserito così com'è. In editor, **File ▸ Segment… (F8)** salva il file corrente e passa al segmento indicato.
+
+## Editor
+
+Menu a tendina da tastiera (**Esc**, **F1–F4**) e col mouse; selezione, copia/incolla, annulla/ripeti, cerca/sostituisci; finestra di apertura con le cartelle (DOS 2) e salto con la lettera iniziale; **F5** compila ed esegue; **F6** aiuto sulla parola sotto il cursore; **F7** indice dell'aiuto; **F8** cambia segmento. I sorgenti hanno estensione **`.SPB`** (*SamPr Basic*); in *Save As* si digitano al massimo 8 caratteri.
+
+## Documentazione
+
+- **[Manuale d'uso e riferimento (PDF)](dist/SamPrBasic-Manuale.pdf)**: copertina, installazione, editor, linguaggio, ogni istruzione con sintassi ed esempio, assembler, debugger, cartucce, BIN, errori e limiti.
+- Aiuto in linea nell'editor (menu Help).
+- Dettagli di realizzazione: [`onmsx/README.md`](onmsx/README.md) (compilatore e runtime, stadi 1–27), [`editor/README.md`](editor/README.md) (editor), [`DESIGN-ONMSX.md`](DESIGN-ONMSX.md) (progetto).
+- Il PDF e `HELP.TXT`/`HELP.IDX` si generano dalla stessa sorgente: [`doc/`](doc) (`gen_pdf.py`, `gen_help.py`).
+
+## Compatibilità e collaudo
+
+MSX1 e MSX2/2+/turbo R; MSX-DOS 1.03 e 2 (Nextor). Collaudato su [openMSX](https://openmsx.org) con Philips NMS 8250, Sony HB-75P (+ interfaccia disco), Panasonic FS-A1ST: centinaia di controlli automatici sugli schermi, i pixel della VRAM, i registri del PSG e i byte delle ROM prodotte. **Non è stato provato su un MSX reale.**
+
+Suite principali (richiedono openMSX, [sjasmplus](https://github.com/z00m128/sjasmplus) e Python 3 con `reportlab`/`Pillow` per i documenti):
+
+```
+cd onmsx  && python qtest.py        # compilatore (programmi DOS)
+cd onmsx  && python rtest.py        # cartucce ROM, tutti i mapper
+cd onmsx  && python mtest.py        # cartucce su più file, segmenti .BIN
+cd onmsx  && python btest.py        # programmi BIN (compila sotto DOS, esegue da MSX-BASIC)
+cd onmsx  && python gtest.py        # grafica, sprite, palette
+cd editor && python etest.py        # editor (e molte altre: esel, emenu, ecom, ehelp, ebrowse, eseg, edir…)
+```
+
+## Struttura
+
+| Cartella | Contenuto |
+|---|---|
+| [`onmsx/`](onmsx) | compilatore (`qbc.asm`), runtime (`rtcom.asm` e moduli), assembler in linea, debugger, test |
+| [`editor/`](editor) | editor (`editor.asm`, `fileio.asm`), aiuto, finestra dei file, test |
+| [`doc/`](doc) | manuale PDF, aiuto in linea, schermate, generatori |
+| [`dist/`](dist), [`disco_prova/`](disco_prova) | file da copiare sul disco MSX, programmi d'esempio |
+
+## Limiti noti
+
+Solo interi a 16 bit (niente virgola mobile; l'implementazione sperimentale è nel tag git `float-archive`). Sorgente di circa 12,5 KB per file (15 KB per le cartucce), programma compilato fino a 16 KB (le cartucce hanno più segmenti). I programmi BIN non hanno file, mapper RAM e debugger.
+
+---
+
+*Il progetto è nato come prototipo cross Python → Z80: il vecchio README è in [`doc/PROTOTIPO-PYTHON.md`](doc/PROTOTIPO-PYTHON.md).*

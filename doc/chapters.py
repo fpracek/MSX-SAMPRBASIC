@@ -40,6 +40,7 @@ CH('Installazione e avvio', [
                ['RTD.BIN', 'Runtime con debugger (per OPTION DEBUG)'],
                ['QASM.OVL', "L'assemblatore in linea (per __ASM)"],
                ['QBCR.COM, RTROM.BIN, RTROMD.BIN', 'Per produrre cartucce ROM'],
+               ['QBCB.COM, RTBIN.BIN', 'Per produrre programmi BIN per MSX-BASIC'],
                ['HELP.TXT, HELP.IDX', "L'aiuto in linea (facoltativi)"]], [150, 330]),
     ('p', "Avviare l'editor con <font face='Courier'>SAMPRBAS</font> (programma nuovo) oppure <font face='Courier'>SAMPRBAS PROVA.SPB</font>. Sull'MSX1 il DOS chiede la data all'avvio: "
           "premere Invio. Sul PC si può provare tutto con l'emulatore openMSX: nella cartella del progetto ci sono "
@@ -97,8 +98,7 @@ CH("L'editor", [
     ('h', 'Progetti a segmenti: File > Segment (F8)'),
     ('p', "Per le cartucce a segmenti (vedi il capitolo sulle cartucce) ogni segmento è un file <b>NOME000.SPB</b>, <b>NOME001.SPB</b>, ... "
           "(5 caratteri più 3 cifre). File &gt; Segment... (tasto <b>F8</b>) chiede il numero del segmento, anche senza zeri davanti (<font face='Courier'>7</font> equivale a 007): "
-          "l'editor <b>salva il file corrente</b>, poi cerca e apre nella stessa directory il file con quel numero; se non esiste ne crea uno nuovo già con quel nome. "
-          "Il nome del file corrente deve essere di 5 caratteri più 3 cifre."),
+          "l'editor <b>salva il file corrente</b>, poi cerca e apre nella stessa directory il file con quel numero. Se il file non esiste, oppure è un segmento <b>.BIN</b> (che non si può aprire), l'editor lo dice con un messaggio e il file attivo resta quello di prima. La voce non è utilizzabile se il file corrente non ha ancora un nome o se il nome non è di 5 caratteri più 3 cifre: in quel caso non si sta lavorando a segmenti. Un segmento nuovo si crea con File &gt; New e Save As (NOME005, ...)."),
     ('h', 'Il menu Help'),
     ('ul', ["<b>Index (F7)</b>: l'elenco di tutti gli argomenti.",
             "<b>Topic...</b>: chiede il nome di un argomento (PRINT, ASM, DEBUG, OPTION...).",
@@ -158,8 +158,14 @@ CH('Il debugger', [
 ])
 
 CH('Cartucce ROM, segmenti e mapper', [
-    ('p', "Con <font face='Courier'>OPTION TARGET</font> come prima riga il compilatore produce una cartuccia <b>NOME.ROM</b> al posto del .COM: ROM16, ROM32, ASCII8, "
-          "ASCII16, KONAMI, SCC. A fine programma si attende un tasto e la macchina si riavvia. Nelle cartucce non ci sono file né BLOAD/BSAVE."),
+    ('p', "Con <font face='Courier'>OPTION TARGET</font> come prima riga si sceglie che cosa produce il compilatore. Un'unica opzione, per non avere impostazioni in conflitto:"),
+    ('table', [['Valore', 'Risultato'],
+               ['DOS (predefinito)', 'NOME.COM per MSX-DOS, con i file su disco'],
+               ['BIN', 'NOME.BIN per MSX-BASIC (BLOAD), senza DOS'],
+               ['ROM_16, ROM_32', 'cartuccia semplice di 16 o 32 KB'],
+               ['ROM_ASCII8, ROM_ASCII16', 'cartuccia a banchi ASCII da 8 o 16 KB'],
+               ['ROM_KONAMI, ROM_KONAMISCC', 'cartuccia a banchi Konami (senza o con SCC)']], [150, 330]),
+    ('p', "Restano validi i vecchi nomi ROM16, ROM32, ASCII8, ASCII16, KONAMI e SCC. Le cartucce, a fine programma, attendono un tasto e riavviano la macchina; non hanno file né BLOAD/BSAVE."),
     ('p', "Con i mapper a banchi il codice può occupare più <b>segmenti</b>: <font face='Courier'>SEGMENT n</font> sposta il codice che segue nel segmento n. "
           "Le routine di altri segmenti si chiamano normalmente (il compilatore cambia banco e lo ripristina). I dati si includono con "
           "<font face='Courier'>INCBIN \"file\"</font> e si leggono con <font face='Courier'>SETBANK</font> e <font face='Courier'>DATAWIN</font>."),
@@ -174,9 +180,17 @@ CH('Cartucce ROM, segmenti e mapper', [
             "Si può premere F5 da <b>qualunque</b> file del progetto: il compilatore parte sempre dal 000. Gli errori riportano il file e la riga giusti e l'editor apre quel file.",
             "Una SUB o FUNCTION di un altro segmento si chiama come al solito; GOTO e GOSUB non attraversano i segmenti; ogni file arriva a circa 15 KB di sorgente.",
             "Si passa da un file all'altro con File &gt; Segment (F8)."]),
+    ('h', 'File .BIN: segmenti già compilati'),
+    ('p', "Nella stessa cartella e con la stessa radice possono esserci file <font face='Courier'>NOMEnnn.BIN</font>: sono segmenti <b>già compilati</b> e il compilatore li inserisce nella ROM così come sono, senza leggerli come sorgente (solo il segmento 0 deve essere un sorgente). Servono per funzioni in assembler, sprite, font, musica e altri dati. Il segmento .BIN riempie la propria finestra (8 o 16 KB, il resto è azzerato). I dati si leggono dal programma con <font face='Courier'>SETBANK n</font> e <font face='Courier'>DATAWIN</font>; il codice si chiama da un blocco <font face='Courier'>__ASM</font> dopo aver selezionato il banco. Se per lo stesso numero esistono sia .SPB sia .BIN vale il sorgente. Lo schema è lo stesso dei \"raw files\" dei progetti MSXgl: il segmento 0 è il primo blocco della cartuccia e i blocchi seguenti sono numerati di seguito."),
     ('p', "Un programma piccolo resta in un solo file e può ancora usare l'istruzione <font face='Courier'>SEGMENT n</font>. I file senza le tre cifre finali non sono segmenti."),
     ('p', "Il <b>mapper RAM</b> (se presente) offre segmenti da 16 KB: MAPPERSEGS, MALLOC, MFREE, MGET, MPUT, MREAD, MWRITE, VARPTR e gli array "
           "<font face='Courier'>DIM x(n) MAPPER</font> fino a 32768 interi."),
+])
+
+CH('Programmi per MSX-BASIC (BIN)', [
+    ('p', "Con <font face='Courier'>OPTION TARGET BIN</font> il compilatore (QBCB.COM, scelto da solo) produce <b>NOME.BIN</b>: un file nel formato di BLOAD, senza MSX-DOS, pensato per essere caricato dalla finestra di MSX-BASIC. A differenza dei programmi DOS (che partono a 0100h e possono chiamare il DOS) il BIN si carica a <b>8400h</b> e non usa mai il DOS."),
+    ('code', 'CLEAR 200,&H83FF\nBLOAD "NOME.BIN",R'),
+    ('p', "<font face='Courier'>CLEAR</font> riserva la RAM da 8400h in su. A fine programma, dopo un tasto, si torna al prompt del BASIC. Disponibili: grafica, sprite, suono, testo, stringhe, array, SUB e FUNCTION, assembler in linea, PEEK/POKE, VDP. Non disponibili: file su disco, BLOAD/BSAVE, mapper RAM e debugger (le istruzioni che richiedono il DOS danno l'errore \"Files need MSX-DOS\" a runtime). Il runtime e il codice occupano l'immagine da 8400h; la RAM dei dati e lo heap stanno da D000h; la pila parte da F000h e al termine si ripristina quella del BASIC."),
 ])
 
 CH('Directory di lavoro (MSX-DOS 2)', [

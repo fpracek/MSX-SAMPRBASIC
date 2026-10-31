@@ -71,7 +71,8 @@ SETBANK      VCOPY
 MALLOC       MGET
 
 OPZIONI (OPTION)
-OPTION       OPTION MIXED
+OPTION       BIN
+DOS          OPTION MIXED
 OPTION DEBUG
 
 GUIDE
@@ -1668,25 +1669,74 @@ DEBUG, ETICHETTE
 OPTION TARGET
 -------------
 
-OPTION TARGET ROM16 | ROM32 | ASCII8 |
-    ASCII16 | KONAMI | SCC
+OPTION TARGET DOS | BIN
+OPTION TARGET ROM_16 | ROM_32 |
+    ROM_ASCII8 | ROM_ASCII16 |
+    ROM_KONAMI | ROM_KONAMISCC
 
-Se e' la prima riga, il compilatore
-produce una cartuccia NOME.ROM invece
-di un NOME.COM. ROM16: 16 KB; ROM32:
-32 KB; ASCII8, ASCII16, KONAMI (senza
-SCC) e SCC: cartucce a banchi, con
-SEGMENT. La cartuccia al termine
-attende un tasto e riavvia la
-macchina. Nelle cartucce non ci sono
+Se e' la prima riga, sceglie che cosa
+produce il compilatore. DOS
+(predefinito, anche COM): programma
+NOME.COM per MSX-DOS. BIN: programma
+NOME.BIN per MSX-BASIC, senza DOS
+(vedi BIN). ROM_16 e ROM_32: cartuccia
+semplice da 16 o 32 KB. ROM_ASCII8,
+ROM_ASCII16, ROM_KONAMI e
+ROM_KONAMISCC (anche ROM_SCC):
+cartucce a banchi, con segmenti (vedi
+SEGMENT e SEGMENTI). Restano validi i
+vecchi nomi ROM16, ROM32, ASCII8,
+ASCII16, KONAMI, SCC. Una cartuccia al
+termine attende un tasto e riavvia la
+macchina; nelle cartucce non ci sono
 file ne' BLOAD/BSAVE ne' il debugger
 completo; l'assembler in linea
 funziona.
 
 Esempio:
-  OPTION TARGET ROM16
+  OPTION TARGET ROM_16
   PRINT "Sono una cartuccia"
-Vedi anche: SEGMENT, OPTION
+Vedi anche: BIN, DOS, SEGMENT, OPTION
+BIN
+---
+
+OPTION TARGET BIN
+
+Produce NOME.BIN, un programma in
+linguaggio macchina per MSX-BASIC,
+senza MSX-DOS. Il file e' nel formato
+di BLOAD e parte dall'indirizzo 8400h.
+Da MSX-BASIC: CLEAR 200,&H83FF e poi
+BLOAD "NOME.BIN",R. A fine programma
+si attende un tasto e si torna al
+prompt del BASIC. Non sono disponibili
+i file su disco (OPEN, BLOAD,
+BSAVE...), il mapper RAM e il
+debugger; tutto il resto (grafica,
+sprite, suono, stringhe, array,
+SUB/FUNCTION, assembler in linea)
+funziona come nei programmi DOS. Il
+codice puo' arrivare a circa 12 KB
+oltre il runtime; i dati e lo heap
+stanno da D000h in su.
+
+Esempio:
+  OPTION TARGET BIN
+  PRINT "Ciao da MSX-BASIC"
+
+Disponibile: MSX1 e MSX2, senza DOS
+Vedi anche: DOS, OPTION TARGET, ASM
+DOS
+---
+
+OPTION TARGET DOS
+
+Valore predefinito: produce NOME.COM
+per MSX-DOS (1 o 2) con l'accesso ai
+file su disco. Equivale a non scrivere
+nessuna OPTION TARGET. I programmi DOS
+partono a 0100h.
+Vedi anche: BIN, OPTION TARGET
 OPTION NUMBERED
 ---------------
 
@@ -1857,13 +1907,17 @@ cifre). Il compilatore li legge in
 sequenza e li collega in NOME.ROM; si
 compila da qualunque file con F5. Le
 OPTION stanno solo nel file 000;
-SEGMENT non si scrive. F8 (File >
-Segment...) salva il file corrente e
+SEGMENT non si scrive. Un file
+NOMEnnn.BIN (assembler, sprite, font,
+dati) e' un segmento gia' compilato:
+viene inserito cosi' com'e'. F8 (File
+> Segment...) salva il file corrente e
 apre il segmento di cui si digita il
-numero (anche senza zeri), creandolo
-se manca. La numerazione parte da 0:
-e' il primo blocco della cartuccia,
-non la BIOS.
+numero (anche senza zeri); se il file
+non esiste, o e' un .BIN, dice perche'
+e il file attivo non cambia. La
+numerazione parte da 0: e' il primo
+blocco della cartuccia, non la BIOS.
 Vedi anche: SEGMENT, OPTION TARGET,
 EDITOR
 DIRECTORY

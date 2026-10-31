@@ -2,7 +2,11 @@
         IFDEF ROMMODE
 RTB       equ 4100h
         ELSE
+        IFDEF BINMODE
+RTB       equ 8400h             ; BIN: immagine a 8400h (BASIC con CLEAR 200,&H83FF)
+        ELSE
 RTB       equ 0100h
+        ENDIF
         ENDIF
         ENDIF
 ; Punti d'ingresso del runtime (tabella di JP a indirizzi fissi, immagine a 0100h)
@@ -127,7 +131,11 @@ RT_DBG    equ RT_TARGET+1       ; jp rt_dbg: gancio del debugger (OPTION DEBUG)
 RT_STAMP  equ RT_DBG+5          ; 20 byte: data, ora e variante della costruzione (il compilatore .COM li confronta)
 RT_STAMPLEN equ 20
 RT_SIZE   equ RT_DBG+3          ; word: dimensione dell'immagine del runtime (letta dal compilatore .COM senza leggere tutto il file)
+        IFDEF BINMODE
+RTRAM     equ 0D000h            ; BIN: RAM del runtime e dati del programma sopra l'immagine
+        ELSE
 RTRAM     equ 0C090h            ; RAM del runtime (C000h-C086h: caricatore)
+        ENDIF
 HEAPP     equ RTRAM+0
 HEAP0     equ RTRAM+10
 GX1       equ RTRAM+118h        ; parametri grafici (word)
@@ -247,4 +255,8 @@ DBGP      equ RTRAM+210h        ; debugger: blocco di stato (in cima all'heap), 
 KUT       equ RTRAM+216h        ; JIFFY d'inizio dell'attesa del rilascio dei tasti
 M2FLAG    equ RTRAM+214h        ; 0 = MSX1 (TMS9918: niente R#14, niente 80 colonne), altrimenti MSX2 o superiore
 DBGT      equ RTRAM+212h        ; debugger: tabella delle variabili (scritta dal programma)
+        IFDEF BINMODE
+DATA_BASE equ RTRAM+0220h
+        ELSE
 DATA_BASE equ 0C2B0h
+        ENDIF

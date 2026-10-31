@@ -8,7 +8,8 @@ HERE = qtest.HERE
 BUILD = qtest.BUILD
 DISK = qtest.DISK
 RTESTS = os.path.join(HERE, 'rtests')
-ROMTYPE = {'ROM16': 'Normal', 'ROM32': 'Normal', 'ASCII8': 'ASCII8', 'ASCII16': 'ASCII16', 'KONAMI': 'Konami', 'SCC': 'KonamiSCC'}
+ROMTYPE = {'ROM_16': 'Normal', 'ROM_32': 'Normal', 'ROM_ASCII8': 'ASCII8', 'ROM_ASCII16': 'ASCII16', 'ROM_KONAMI': 'Konami', 'ROM_SCC': 'KonamiSCC', 'ROM_KONAMISCC': 'KonamiSCC',
+           'ROM16': 'Normal', 'ROM32': 'Normal', 'ASCII8': 'ASCII8', 'ASCII16': 'ASCII16', 'KONAMI': 'Konami', 'SCC': 'KonamiSCC'}
 FAILS = 0
 
 

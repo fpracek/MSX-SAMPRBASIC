@@ -19,3 +19,7 @@ editor/fix_segment.py
 editor/fix_dirs_editor.py
 doc/fix_docs2.py
 build_reg*.sh
+onmsx/fix_bin.py
+onmsx/fix_binseg.py
+editor/fix_segment2.py
+doc/fix_docs3.py

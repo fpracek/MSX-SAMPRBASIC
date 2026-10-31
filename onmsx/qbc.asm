@@ -21,8 +21,16 @@ F_BRD   equ 27h
 SRC     equ 4400h               ; il compilatore per cartucce non ha OPTION NUMBERED: le tabelle stanno nella RAM alta
 SRCMAX  equ 3BFEh
         ELSE
+        IFDEF BINMODE
+SRC     equ 4F00h
+        ELSE
 SRC     equ 4E00h
+        ENDIF
+        IFDEF BINMODE
+SRCMAX  equ 30FEh
+        ELSE
 SRCMAX  equ 31FEh
+        ENDIF
         ENDIF
 OUT0    equ 8000h
         IFDEF ROMMODE
@@ -41,7 +49,11 @@ rtsz    equ ST+254              ; w  dimensione di RT.BIN (.COM)
         IFDEF ROMMODE
 IMGBASE equ 4000h               ; indirizzo virtuale dell'inizio dell'immagine (cartuccia in pagina 1)
         ELSE
+        IFDEF BINMODE
+IMGBASE equ 8400h               ; BIN: immagine caricata a 8400h con BLOAD
+        ELSE
 IMGBASE equ 0100h
+        ENDIF
         ENDIF
 OUTLIM  equ 0BFh                ; alto byte: oltre BF00h il programma e' troppo grande
 LDR     equ 0C000h
@@ -49,21 +61,36 @@ LDR     equ 0C000h
         IFDEF ROMMODE
 LABT    equ 0CA00h
         ELSE
-LABT    equ 3E00h               ; etichette: 96 x 20 byte
+        IFDEF BINMODE
+LABT    equ 3F00h
+        ELSE
+LABT    equ 3E00h
+        ENDIF
+;              ; etichette: 96 x 20 byte
         ENDIF
 LABREC  equ 20
 MAXLAB  equ 96
         IFDEF ROMMODE
 VART    equ 0D180h
         ELSE
-VART    equ 4580h               ; variabili/array: 100 x 16 byte
+        IFDEF BINMODE
+VART    equ 4680h
+        ELSE
+VART    equ 4580h
+        ENDIF
+;               ; variabili/array: 100 x 16 byte
         ENDIF
 VARREC  equ 16
 MAXVAR  equ 100
         IFDEF ROMMODE
 BLKS    equ 0D7C0h
         ELSE
-BLKS    equ 4BC0h               ; stack dei blocchi: 24 x 10 byte
+        IFDEF BINMODE
+BLKS    equ 4CC0h
+        ELSE
+BLKS    equ 4BC0h
+        ENDIF
+;               ; stack dei blocchi: 24 x 10 byte
         ENDIF
 BLKREC  equ 10
 MAXBLK  equ 24
@@ -114,15 +141,35 @@ pseg    equ ST+225              ; b  segmento corrente durante la pre-scansione
 nfar    equ ST+226              ; b  voci usate in FARTAB
 romopen equ ST+227              ; b  il file ROM e' gia' stato creato
         IFDEF ROMMODE
-FARTABC equ 4000h
-SEGT    equ 4080h
-FCBSV   equ 40A8h
-FARX    equ 4094h
+FARTABC equ 4100h
+SEGT    equ 4180h
+FCBSV   equ 41A8h
+FARX    equ 4194h
         ELSE
-FARTABC equ 49C0h               ; FARTAB in costruzione: 32 x 4 byte (banco, 0, indirizzo)
-SEGT    equ 4A40h               ; segmento di ogni SUB/FUNCTION (indice nel record)
-FCBSV   equ 4D68h               ; copia dell'FCB di uscita durante INCBIN
-FARX    equ 4A54h               ; indice FARTAB di ogni SUB/FUNCTION (FFh = nessuno)
+        IFDEF BINMODE
+FARTABC equ 4AC0h
+        ELSE
+FARTABC equ 49C0h
+        ENDIF
+;               ; FARTAB in costruzione: 32 x 4 byte (banco, 0, indirizzo)
+        IFDEF BINMODE
+SEGT    equ 4B40h
+        ELSE
+SEGT    equ 4A40h
+        ENDIF
+;               ; segmento di ogni SUB/FUNCTION (indice nel record)
+        IFDEF BINMODE
+FCBSV   equ 4E68h
+        ELSE
+FCBSV   equ 4D68h
+        ENDIF
+;               ; copia dell'FCB di uscita durante INCBIN
+        IFDEF BINMODE
+FARX    equ 4B54h
+        ELSE
+FARX    equ 4A54h
+        ENDIF
+;               ; indice FARTAB di ogni SUB/FUNCTION (FFh = nessuno)
         ENDIF
 dbgpa   equ ST+217              ; w  operando (fisico) da correggere con l'indirizzo della tabella delle variabili
 dbgf    equ ST+219              ; b  OPTION DEBUG attivo
@@ -147,6 +194,8 @@ PATHBUF equ 0C0C0h              ; 64 byte: percorso letto dall'ambiente
 mfile   equ 0C218h              ; b  ROM a segmenti su piu' file (NOME000, NOME001...)
 mfcur   equ 0C219h              ; b  numero del file in compilazione
 mforig  equ 0C21Ah              ; 3 byte: cifre del nome ricevuto (se ricondotto a NOME000)
+mfkind  equ 0C21Fh              ; b  tipo del file trovato da mf_have: 0 nessuno, 1 .SPB, 2 .BIN
+mfbin   equ ST+231              ; b  1 = il segmento corrente e' un .BIN (nessun epilogo da emettere)
 mfred   equ 0C21Dh              ; b  1 = il nome ricevuto era un segmento diverso da 000
 dbglast equ 0C214h             ; w  OPTION DEBUG: ultimo record delle variabili locali emesso (0 = nessuno)
 dbgfs   equ 0C216h              ; w  OPTION DEBUG: prima riga del corpo della routine in compilazione
@@ -322,7 +371,9 @@ start:
         call getname
         call read_source
         IFNDEF ROMMODE
+        IFNDEF BINMODE
         call chk_rom
+        ENDIF
         ENDIF
         call chk_asm
         call compile
@@ -331,6 +382,9 @@ start:
         jp rom_done
         ELSE
         call write_output
+        IFDEF BINMODE
+        jp bin_done
+        ENDIF
         ENDIF
         ; avvia il programma dal disco: il caricatore (a C000h) legge NOME.COM
         ld hl,oname
@@ -471,8 +525,7 @@ s_bas:  db ".SPB"
 d2_detect:
         xor a
         ld (d2flag),a
-        ld b,0
-        ld c,6Fh                ; _DOSVER: solo il DOS 2 risponde con A=0 e B>=2
+        ld bc,6Fh               ; _DOSVER: solo il DOS 2 risponde con A=0 e B>=2
         call BDOS
         or a
         ret nz
@@ -490,8 +543,7 @@ cd_env:                         ; HL = nome della variabile d'ambiente: CHDIR ne
         ld de,PATHBUF
         xor a
         ld (de),a
-        ld b,60
-        ld c,6Bh                ; _GENV
+        ld bc,3C6Bh             ; _GENV, buffer da 60 byte
         call BDOS
         ld a,(PATHBUF)
         or a
@@ -585,7 +637,7 @@ mf_setname:                     ; A = numero -> 3 cifre in fname+5..7
         ld (hl),a
         ret
 
-mf_have:                        ; B = numero: Z se il file NOMEnnn esiste (l'FCB di uscita si conserva; fname resta con quel numero)
+mf_have:                        ; B = numero: Z se esiste NOMEnnn.SPB o NOMEnnn.BIN (mfkind = 1 / 2); l'FCB di uscita si conserva; fname resta con quel numero
         push bc
         ld hl,fcb
         ld de,FCBSV
@@ -595,15 +647,33 @@ mf_have:                        ; B = numero: Z se il file NOMEnnn esiste (l'FCB
         push bc
         ld a,b
         call mf_setname
+        xor a
+        ld (mfkind),a
         ld hl,fname
         ld (namep),hl
         call mk_fcb
         ld de,fcb
         ld c,F_OPEN
         call BDOS
-        push af
         or a
+        ld a,1
+        jr z,.ok
+        IFDEF ROMMODE
+        call mk_fcb
+        ld hl,s_binx
+        ld de,fcb+9
+        ld bc,3
+        ldir
+        ld de,fcb
+        ld c,F_OPEN
+        call BDOS
+        or a
+        ld a,2
         jr nz,.nf
+        ELSE
+        jr .nf
+        ENDIF
+.ok:    ld (mfkind),a
         ld de,fcb
         ld c,F_CLOSE
         call BDOS
@@ -611,10 +681,17 @@ mf_have:                        ; B = numero: Z se il file NOMEnnn esiste (l'FCB
         ld de,fcb
         ld bc,37
         ldir
-        pop af
-        or a                    ; Z se l'apertura e' riuscita (A = 0)
+        ld a,(mfkind)
+        or a
+        ld a,0
+        jr nz,.r
+        inc a                   ; A = 1: non esiste (NZ)
+.r:     or a
         pop bc
         ret
+        IFDEF ROMMODE
+s_binx: db "BIN"
+        ENDIF
 
 norm_seg:                       ; fname = XXXXXddd con ddd diverso da 000: se esiste XXXXX000 si usa quello
         call seg_pat
@@ -628,6 +705,9 @@ norm_seg:                       ; fname = XXXXXddd con ddd diverso da 000: se es
         ld b,0
         call mf_have
         jr nz,.no
+        ld a,(mfkind)
+        cp 1
+        jr nz,.no               ; il file principale e' sempre un sorgente .SPB
         ld a,1
         ld (mfred),a
         ret
@@ -641,6 +721,7 @@ norm_seg:                       ; fname = XXXXXddd con ddd diverso da 000: se es
 mf_init:                        ; progetto multi-file se il nome e' XXXXX000 ed esiste XXXXX001
         xor a
         ld (mfile),a
+        ld (mfbin),a
         ld (mfcur),a
         call seg_pat
         ret nz
@@ -685,24 +766,77 @@ mf_prescan:                     ; firme di SUB/FUNCTION di tutti i file (segment
         call mf_have
         pop bc
         jr nz,.done
+        ld a,(mfkind)
+        cp 2
+        jr z,.nx                ; segmento .BIN: niente firme da leggere
         push bc
         ld a,c
         ld (pseg),a
         call mf_load
         call prescan
         pop bc
-        inc c
+.nx:    inc c
         jr .k
 .done:  xor a
         ld (pseg),a
         call mf_load            ; di nuovo il file principale
         ret
 
+mf_loadbin:                     ; A = numero: legge NOMEnnn.BIN come contenuto del segmento corrente (gia' compilato)
+        push af
+        ld hl,fcb
+        ld de,FCBSV
+        ld bc,37
+        ldir
+        pop af
+        call mf_setname
+        ld hl,fname
+        ld (namep),hl
+        call mk_fcb
+        ld hl,s_binx
+        ld de,fcb+9
+        ld bc,3
+        ldir
+        ld de,fcb
+        ld c,F_OPEN
+        call BDOS
+        or a
+        jr z,.o
+        ld hl,0
+        ld (tline),hl
+        ERR E_READ
+.o:     call fcb_rec1
+        ld de,OUT0
+        ld c,F_DMA
+        call BDOS
+        call segsz              ; DE = dimensione del segmento
+        ld h,d
+        ld l,e
+        ld de,fcb
+        ld c,F_BRD
+        call BDOS
+        ld (tmpv),hl
+        ld de,fcb
+        ld c,F_CLOSE
+        call BDOS
+        ld hl,FCBSV
+        ld de,fcb
+        ld bc,37
+        ldir
+        ld de,OUT0
+        ld c,F_DMA
+        call BDOS
+        ld hl,(tmpv)
+        ld de,OUT0
+        add hl,de
+        ld (outp),hl
+        ret
+
 mf_advance:                     ; fine del file: se esiste il successivo si passa al segmento seguente (NZ), altrimenti Z
         ld a,(mfile)
         or a
         ret z
-        ld a,(mfcur)
+.next:  ld a,(mfcur)
         inc a
         ld b,a
         call mf_have
@@ -714,9 +848,22 @@ mf_advance:                     ; fine del file: se esiste il successivo si pass
         jp c,err_mode           ; solo ASCII8, ASCII16, KONAMI, SCC
         ld a,b
         ld (mfcur),a
-        push bc
+        ld a,(curseg)
+        or a
+        jr nz,.sw
+        push bc                 ; lasciando il segmento 0 il flusso principale termina
+        ld hl,RT_END
+        ld a,0C3h
+        call emit_jabs
+        pop bc
+.sw:    push bc
         call seg_switch
         pop bc
+        ld a,(mfkind)
+        cp 2
+        jr z,.bin
+        xor a
+        ld (mfbin),a
         ld a,b
         call mf_load
         ld hl,SRC
@@ -729,6 +876,11 @@ mf_advance:                     ; fine del file: se esiste il successivo si pass
         call next_tok
         or 1
         ret
+.bin:   ld a,1
+        ld (mfbin),a
+        ld a,b
+        call mf_loadbin
+        jr .next
         ENDIF
 
 mk_fcb:                         ; (namep) -> fcb (8.3 maiuscolo, unita' opzionale "A:")
@@ -909,6 +1061,10 @@ load_rt:                        ; .COM: dimensione di RT.BIN (il file si copia p
         ret
         ENDIF
 rt_name_sel:                    ; -> HL = nome del runtime: con OPTION DEBUG quello con il debugger (RTD.BIN / RTROMD.BIN)
+        IFDEF BINMODE
+        ld hl,s_rtbin           ; BIN: un solo runtime, senza debugger
+        ret
+        ENDIF
         call chk_dbg
         ld hl,s_rtbin
         ret z
@@ -918,8 +1074,13 @@ rt_name_sel:                    ; -> HL = nome del runtime: con OPTION DEBUG que
 s_rtbin: db "RTROM.BIN",0
 s_rtdbin: db "RTROMD.BIN",0
         ELSE
+        IFDEF BINMODE
+s_rtbin: db "RTBIN.BIN",0
+s_rtdbin: db "RTBIN.BIN",0
+        ELSE
 s_rtbin: db "RT.BIN",0
 s_rtdbin: db "RTD.BIN",0
+        ENDIF
         ENDIF
 
         IFNDEF ROMMODE
@@ -935,12 +1096,19 @@ write_output:                   ; NOME.COM <- RT.BIN + codice, con l'intestazion
         inc hl
         inc de
         jr .c
-.x:     ld hl,s_com
+.x:     IFDEF BINMODE
+        ld hl,s_binext
+        ELSE
+        ld hl,s_com
+        ENDIF
         ld bc,5
         ldir
         ld hl,oname
         ld (namep),hl
         call mk_fcb
+        IFDEF BINMODE
+        jr .new                 ; BIN: il file si riscrive sempre
+        ENDIF
         ld de,fcb               ; NOME.COM esiste gia' con lo stesso runtime? allora si riscrive solo il codice
         ld c,F_OPEN
         call BDOS
@@ -1000,6 +1168,9 @@ write_output:                   ; NOME.COM <- RT.BIN + codice, con l'intestazion
         ld de,FCBSV
         ld bc,37
         ldir
+        IFDEF BINMODE
+        call bin_hdr            ; intestazione BLOAD (7 byte) davanti all'immagine
+        ENDIF
         call rt_name_sel        ; si apre RT.BIN nell'FCB principale
         ld (namep),hl
         call mk_fcb
@@ -1042,7 +1213,11 @@ write_output:                   ; NOME.COM <- RT.BIN + codice, con l'intestazion
 .hd:    ld de,HDRB              ; intestazione: nome, dimensione dati, DATA, target
         ld c,F_DMA
         call BDOS
+        IFDEF BINMODE
+        ld hl,RT_EMPTY-IMGBASE+7
+        ELSE
         ld hl,RT_EMPTY-IMGBASE
+        ENDIF
         ld (FCBSV+33),hl
         xor a
         ld (FCBSV+35),a
@@ -1056,6 +1231,107 @@ write_output:                   ; NOME.COM <- RT.BIN + codice, con l'intestazion
         ld c,F_CLOSE
         call BDOS
         ret
+        ENDIF
+        IFDEF BINMODE
+s_binext: db ".BIN",0
+msg_binw: db 13,10,"BIN written: $"
+msg_bink: db 13,10,"Press any key...$"
+bin_werr:
+        ld hl,0
+        ld (tline),hl
+        ERR E_WRITE
+
+bin_hdr:                        ; BLOAD: FEh, inizio, fine, esecuzione (7 byte) -> file di uscita (FCBSV)
+        ld hl,RTCHK
+        ld (hl),0FEh
+        inc hl
+        ld de,IMGBASE
+        ld (hl),e
+        inc hl
+        ld (hl),d
+        inc hl
+        push hl
+        ld hl,(outp)
+        ld de,-OUT0
+        add hl,de
+        ld de,(rtsz)
+        add hl,de
+        ld de,IMGBASE-1
+        add hl,de               ; fine = inizio + runtime + codice - 1
+        ex de,hl
+        pop hl
+        ld (hl),e
+        inc hl
+        ld (hl),d
+        inc hl
+        ld de,IMGBASE
+        ld (hl),e
+        inc hl
+        ld (hl),d
+        ld de,RTCHK
+        ld c,F_DMA
+        call BDOS
+        ld hl,7
+        ld de,FCBSV
+        ld c,F_BWR
+        call BDOS
+        or a
+        jr nz,bin_werr
+        ret
+
+bin_done:                       ; messaggio, attesa di un tasto e ritorno all'editor
+        ld de,msg_binw
+        ld c,9
+        call BDOS
+        ld hl,oname
+.p:     ld a,(hl)
+        or a
+        jr z,.pd
+        push hl
+        ld e,a
+        ld c,2
+        call BDOS
+        pop hl
+        inc hl
+        jr .p
+.pd:    ld de,msg_bink
+        ld c,9
+        call BDOS
+        ld c,1
+        call BDOS
+        ld de,0081h
+        ld a,' '
+        ld (de),a
+        inc de
+        ld hl,fname
+.n:     ld a,(hl)
+        or a
+        jr z,.e
+        ld (de),a
+        inc hl
+        inc de
+        jr .n
+.e:     ld a,' '
+        ld (de),a
+        inc de
+        ld a,'+'
+        ld (de),a
+        inc de
+        ld a,0Dh
+        ld (de),a
+        inc de
+        ld hl,0081h
+        ex de,hl
+        or a
+        sbc hl,de
+        ld a,l
+        ld (0080h),a
+        call cd_home
+        ld hl,ldr_img
+        ld de,LDR
+        ld bc,ldr_size
+        ldir
+        jp LDR
         ENDIF
         IFDEF ROMMODE
 rom_werr:
@@ -3038,9 +3314,13 @@ compile:
         IFDEF ROMMODE
         ld hl,0DC00h
         ELSE
+        IFDEF BINMODE
+        ld hl,0E800h
+        ELSE
         ld hl,(0006h)
         ld de,-0C00h
         add hl,de
+        ENDIF
         ENDIF
         ld (dlim),hl
         ld (nfunc),a
@@ -3052,6 +3332,22 @@ compile:
         ld (fexit),hl
         ld (fskiph),hl
         call load_rt            ; il runtime (RT.BIN) e' l'inizio dell'output
+        IFDEF BINMODE
+        ld hl,(rtsz)            ; BIN: il codice non deve arrivare alla RAM del runtime
+        ld de,IMGBASE
+        add hl,de
+        ex de,hl
+        ld hl,RTRAM
+        or a
+        sbc hl,de
+        ld de,OUT0
+        add hl,de
+        ld a,h
+        cp OUTLIM
+        jr c,.ol
+        ld a,OUTLIM
+.ol:    ld (outlim),a
+        ENDIF
         IFDEF ROMMODE
         call mf_init
         ENDIF
@@ -3216,9 +3512,16 @@ compile:
         jr nz,.nods
         ENDIF
         ld (HDRDSZ),hl
-.nods:  ld hl,RT_END
+.nods:
+        IFDEF ROMMODE
+        ld a,(mfbin)
+        or a
+        jr nz,.nofin            ; ultimo segmento .BIN: non si scrive nulla dopo i suoi byte
+        ENDIF
+        ld hl,RT_END
         ld a,0C3h
         call emit_jabs
+.nofin:
         IFNDEF ROMMODE
         ld a,(dbgf)             ; OPTION DEBUG: tabella delle variabili dopo il codice: n, poi i record di VART
         or a
@@ -3258,7 +3561,8 @@ compile:
 
         IFDEF ROMMODE
 s_target: db "TARGET",0
-tgtnames: db "ROM16",0,1,"ROM32",0,2,"ASCII8",0,3,"ASCII16",0,4,"KONAMI",0,5,"SCC",0,6,0
+tgtnames: db "ROM16",0,1,"ROM32",0,2,"ASCII8",0,3,"ASCII16",0,4,"KONAMI",0,5,"SCC",0,6
+        db "ROM_16",0,1,"ROM_32",0,2,"ROM_ASCII8",0,3,"ROM_ASCII16",0,4,"ROM_KONAMI",0,5,"ROM_SCC",0,6,"ROM_KONAMISCC",0,6,0
 
 parse_target:                   ; token = nome del tipo di cartuccia
         ld a,(ttype)
@@ -3380,13 +3684,20 @@ chk_rom:                        ; il sorgente ha "OPTION TARGET <cartuccia>": si
         or 20h
         cp 'c'
         jr z,.f                 ; TARGET COM: compilazione normale
+        cp 'd'
+        jr z,.f                 ; TARGET DOS: idem
         pop hl
+        ld de,s_qbcr
+        cp 'b'
+        jr nz,.ch
+        ld de,s_qbcb            ; TARGET BIN: compilatore per MSX-BASIC
+.ch:    push de
         call cd_home
-        ld hl,ldr_img           ; carica QBCR.COM con la stessa riga di comando
+        ld hl,ldr_img           ; carica QBCR.COM / QBCB.COM con la stessa riga di comando
         ld de,LDR
         ld bc,ldr_size
         ldir
-        ld hl,s_qbcr
+        pop hl
         ld de,LDR+3
         ld bc,11
         ldir
@@ -3442,6 +3753,7 @@ chk_dbg:                        ; Z se il sorgente non ha "OPTION DEBUG"
         IFNDEF ROMMODE
 s_targetl: db "target",0
 s_qbcr: db "QBCR    COM"
+s_qbcb: db "QBCB    COM"
         ENDIF
 
 str_eq:                         ; HL = tbuf, DE = stringa 0-terminata: Z se uguali
@@ -7772,5 +8084,9 @@ comend:
         IFDEF ROMMODE
         SAVEBIN "build/qbcr.com",0100h,comend-0100h
         ELSE
+        IFDEF BINMODE
+        SAVEBIN "build/qbcb.com",0100h,comend-0100h
+        ELSE
         SAVEBIN "build/qbc.com",0100h,comend-0100h
+        ENDIF
         ENDIF

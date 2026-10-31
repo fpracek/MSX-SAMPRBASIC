@@ -34,9 +34,11 @@ def build_all():
     sj('--raw=build/rt.bin', 'rtcom.asm')
     sj('-DROMMODE', '--raw=build/rtrom.bin', 'rtcom.asm')
     sj('-DDBGRT', '--raw=build/rtd.bin', 'rtcom.asm')
+    sj('-DBINMODE', '--raw=build/rtbin.bin', 'rtcom.asm')
     sj('-DROMMODE', '-DDBGRT', '--raw=build/rtromd.bin', 'rtcom.asm')
     sj('--sym=build/qbc.sym', 'qbc.asm')
     sj('-DROMMODE', '--sym=build/qbcr.sym', 'qbc.asm')
+    sj('-DBINMODE', '--sym=build/qbcb.sym', 'qbc.asm')
     sj('--raw=build/qbstub.com', 'qbstub.asm')
 
 

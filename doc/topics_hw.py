@@ -132,11 +132,21 @@ T('OPTION', C, ["OPTION NUMBERED | LABELS | MIXED", "OPTION TARGET tipo", "OPTIO
   "Direttive di compilazione, da mettere all'inizio del sorgente. NUMBERED: il programma ha numeri di riga e nessuna etichetta; LABELS: solo etichette; "
   "MIXED (predefinita): entrambe. TARGET sceglie il formato di uscita (vedi OPTION TARGET). DEBUG attiva il debugger (vedi DEBUG).",
   'OPTION LABELS\nPRINT "ok"', ['OPTION TARGET', 'OPTION DEBUG', 'ETICHETTE'])
-T(['OPTION TARGET','TARGET'], C, ["OPTION TARGET ROM16 | ROM32 | ASCII8 | ASCII16 | KONAMI | SCC"],
-  "Se è la prima riga, il compilatore produce una cartuccia NOME.ROM invece di un NOME.COM. ROM16: 16 KB; ROM32: 32 KB; ASCII8, ASCII16, KONAMI (senza SCC) e SCC: "
-  "cartucce a banchi, con SEGMENT. La cartuccia al termine attende un tasto e riavvia la macchina. Nelle cartucce non ci sono file né BLOAD/BSAVE né il debugger "
-  "completo; l'assembler in linea funziona.",
-  'OPTION TARGET ROM16\nPRINT "Sono una cartuccia"', ['SEGMENT', 'OPTION'])
+T(['OPTION TARGET','TARGET'], C, ["OPTION TARGET DOS | BIN", "OPTION TARGET ROM_16 | ROM_32 | ROM_ASCII8 | ROM_ASCII16 | ROM_KONAMI | ROM_KONAMISCC"],
+  "Se è la prima riga, sceglie che cosa produce il compilatore. DOS (predefinito, anche COM): programma NOME.COM per MSX-DOS. BIN: programma NOME.BIN per MSX-BASIC, "
+  "senza DOS (vedi BIN). ROM_16 e ROM_32: cartuccia semplice da 16 o 32 KB. ROM_ASCII8, ROM_ASCII16, ROM_KONAMI e ROM_KONAMISCC (anche ROM_SCC): cartucce a banchi, con segmenti "
+  "(vedi SEGMENT e SEGMENTI). Restano validi i vecchi nomi ROM16, ROM32, ASCII8, ASCII16, KONAMI, SCC. Una cartuccia al termine attende un tasto e riavvia la macchina; nelle cartucce "
+  "non ci sono file né BLOAD/BSAVE né il debugger completo; l'assembler in linea funziona.",
+  'OPTION TARGET ROM_16\nPRINT "Sono una cartuccia"', ['BIN', 'DOS', 'SEGMENT', 'OPTION'])
+T(['BIN'], C, ["OPTION TARGET BIN"],
+  "Produce NOME.BIN, un programma in linguaggio macchina per MSX-BASIC, senza MSX-DOS. Il file è nel formato di BLOAD e parte dall'indirizzo 8400h. Da MSX-BASIC: "
+  "`CLEAR 200,&H83FF` e poi `BLOAD \"NOME.BIN\",R`. A fine programma si attende un tasto e si torna al prompt del BASIC. Non sono disponibili i file su disco "
+  "(OPEN, BLOAD, BSAVE...), il mapper RAM e il debugger; tutto il resto (grafica, sprite, suono, stringhe, array, SUB/FUNCTION, assembler in linea) funziona come nei programmi DOS. "
+  "Il codice può arrivare a circa 12 KB oltre il runtime; i dati e lo heap stanno da D000h in su.",
+  'OPTION TARGET BIN\nPRINT "Ciao da MSX-BASIC"', ['DOS', 'OPTION TARGET', 'ASM'], 'MSX1 e MSX2, senza DOS')
+T(['DOS', 'COM'], C, ["OPTION TARGET DOS"],
+  "Valore predefinito: produce NOME.COM per MSX-DOS (1 o 2) con l'accesso ai file su disco. Equivale a non scrivere nessuna OPTION TARGET. I programmi DOS partono a 0100h.",
+  None, ['BIN', 'OPTION TARGET'])
 T(['OPTION NUMBERED','NUMBERED'], C, ["OPTION NUMBERED"], "Righe con numero (ordinate per numero, solo numeri, niente etichette). Circa 590 righe di programma.", '10 PRINT "a"\n20 GOTO 10', ['OPTION', 'ETICHETTE'])
 T(['OPTION LABELS','OPT LABELS'], C, ["OPTION LABELS"], "Solo etichette, nessun numero di riga.", 'OPTION LABELS\nciclo:\n  PRINT "x";\n  GOTO ciclo', ['OPTION'])
 T(['OPTION MIXED','MIXED'], C, ["OPTION MIXED"], "Numeri di riga ed etichette insieme (predefinita).", 'OPTION MIXED', ['OPTION'])
