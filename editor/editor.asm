@@ -91,6 +91,7 @@ hmax1w  equ RAMB+043Dh              ; w  HMAX+1
 pattb   equ RAMB+043Fh              ; w  tabella dei pattern: 1000h (80 colonne) o 0800h (40)
 mxmax   equ RAMB+0441h              ; w  limite x del mouse = sw*8
 rbm2    equ RAMB+0443h              ; w  indirizzo di rowbuf+sw-2
+kutmp   equ RAMB+0445h              ; w  JIFFY d'inizio dell'attesa dei tasti
 kwnext  equ RAMB+0423h              ; b  prossima riga schermo (0..) da colorare nei tempi morti (VROWS = fatto)
 cur     equ RAMB+0000h              ; w  offset logico del cursore
 len     equ RAMB+0002h              ; w  lunghezza del testo
@@ -272,6 +273,7 @@ start:
         ld (hl),15h
         inc hl
         ld (hl),0
+        call keys_up            ; il tasto premuto per uscire dal programma puo' essere ancora giu': non deve ripetersi nel testo
         BIOS KILBUF             ; scarta i tasti in attesa (ripetizioni, F5 del lancio precedente)
         call vdp_init
         call font_load
@@ -1463,6 +1465,32 @@ handle_key:
         jp refresh
 
 fkcodes: db 02h,04h,05h,0Ah     ; codici di F1-F4
+
+keys_up:                        ; attende che nessun tasto sia premuto (al massimo ~10 s)
+        ld hl,(0FC9Eh)          ; JIFFY
+        ld (kutmp),hl
+.t:     ld b,0
+.r:     push bc
+        ld a,b
+        BIOS SNSMAT
+        pop bc
+        cp 0FFh
+        jr nz,.p
+        inc b
+        ld a,b
+        cp 9
+        jr nz,.r
+        ret
+.p:     ld hl,(0FC9Eh)
+        ld de,(kutmp)
+        or a
+        sbc hl,de
+        ld de,500
+        or a
+        sbc hl,de
+        ret nc                  ; tasto bloccato: si prosegue comunque
+        halt
+        jr .t
 
 keytab: db 0Dh
         dw k_enter

@@ -172,3 +172,7 @@ restano su MSX2. Il `.COM` (con il DOS) non e' ancora stato provato su MSX1: in 
   **Invio** la esegue, la lettera sottolineata di ogni voce la esegue direttamente, **Esc** chiude; F5 chiude il menu e lancia il programma.
 - All'avvio si scarta il buffer di tastiera (`KILBUF`), cosi' i tasti rimasti dal lancio precedente non fanno ripartire F5; lo stesso fa il runtime prima di attendere il
   tasto a fine programma («Press any key..»). Test: `python efk.py`.
+- **Tasto ancora premuto al ritorno**: il tasto battuto per uscire da «Press any key..» puo' essere ancora giu' mentre l'editor si ricarica (con l'emulatore a velocita'
+  massima durante il disco passano molti secondi emulati) e la tastiera MSX lo ripete: l'editor riceveva decine di Invio e `cls` scendeva alla riga 17 con il testo «modificato».
+  Ora il runtime (`rt_keyup`, dopo il tasto di fine programma) e l'editor (`keys_up`, all'avvio) attendono che nessun tasto sia premuto (SNSMAT sulle righe 0-8, al massimo
+  ~10 s) prima di proseguire.

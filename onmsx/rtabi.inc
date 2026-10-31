@@ -244,6 +244,7 @@ MJT       equ RTRAM+20Ch        ; tabella delle routine del mapper (DOS 2)
 MALN      equ RTRAM+20Eh        ; segmenti presi dall'alto (senza DOS 2)
 RAMSL     equ RTRAM+20Fh        ; ROM: slot della RAM (pagina 3 = mapper)
 DBGP      equ RTRAM+210h        ; debugger: blocco di stato (in cima all'heap), 0 = non ancora creato
+KUT       equ RTRAM+216h        ; JIFFY d'inizio dell'attesa del rilascio dei tasti
 M2FLAG    equ RTRAM+214h        ; 0 = MSX1 (TMS9918: niente R#14, niente 80 colonne), altrimenti MSX2 o superiore
 DBGT      equ RTRAM+212h        ; debugger: tabella delle variabili (scritta dal programma)
 DATA_BASE equ 0C2B0h

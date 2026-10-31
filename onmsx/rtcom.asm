@@ -426,6 +426,7 @@ rt_end:
         IFDEF ROMMODE
         jp 0                    ; cartuccia: dopo un tasto si riavvia la macchina
         ELSE
+        call rt_keyup           ; il tasto non deve ripetersi nell'editor che si ricarica
         ld hl,rt_name           ; riga di comando per l'editor: " NOME.BAS"
         ld de,0082h
         ld bc,16
@@ -456,6 +457,35 @@ rt_end:
         ldir
         jp 0C000h
         ENDIF
+
+rt_keyup:                   ; attende che nessun tasto sia premuto (al massimo ~10 s)
+        ld hl,(JIFFY)
+        ld (KUT),hl
+.t:     ld b,0
+.r:     push bc
+        ld a,b
+        push ix
+        ld ix,0141h             ; SNSMAT
+        call rt_bios
+        pop ix
+        pop bc
+        cp 0FFh
+        jr nz,.p
+        inc b
+        ld a,b
+        cp 9
+        jr nz,.r
+        ret
+.p:     ld hl,(JIFFY)
+        ld de,(KUT)
+        or a
+        sbc hl,de
+        ld de,500
+        or a
+        sbc hl,de
+        ret nc
+        halt
+        jr .t
 
 rt_zone:                    ; virgola nel PRINT: prossima zona da 14
 .l:     ld a,' '
