@@ -1,0 +1,9 @@
+build/
+__pycache__/
+*.pyc
+editor/ed.com
+editor/*.rom
+editor/demo.txt
+onmsx/patch*.py
+out.rom
+*.bak*

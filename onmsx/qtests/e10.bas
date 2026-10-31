@@ -1,0 +1,2 @@
+SUB foo
+PRINT 1

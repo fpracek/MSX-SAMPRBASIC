@@ -1,0 +1,52 @@
+# SamPr Basic su MSX — compilatore Z80 (stadi 1, 2a, 2b)
+
+Il compilatore BASIC gira **sull'MSX2** (MSX-DOS 1/2, nessun aiuto dal PC). Progetto completo e piano a stadi:
+`../DESIGN-ONMSX.md`.
+
+## Uso (su macchina)
+Copia `dist\QB.COM` (editor) e `dist\QBC.COM` (compilatore) sul disco, poi `QB PROG.BAS`, **F5** (o menu Run).
+F5 salva il sorgente, carica `QBC.COM` a catena, che genera `PROG.COM`, lo scrive su disco e lo avvia.
+Alla fine il programma attende un tasto e ricarica l'editor. Se la compilazione fallisce l'editor si riapre sul
+sorgente con il cursore sulla riga dell'errore e il messaggio nel titolo (`Line 4: Syntax error`).
+Il DOS 1 non ha EXEC: la catena usa un caricatore di 135 byte (`ldr.asm`) copiato a C000h e la riga di comando
+a 0080h come mailbox (`" NOME.BAS"`, in caso di errore `" NOME.BAS E<riga> <codice>"`).
+
+## File
+- `qbc.asm` — compilatore (4,8 KB): lexer, espressioni, istruzioni, emissione diretta di codice macchina.
+- `rtcom.asm` — runtime per .COM (immagine a 0100h con tabella di JP, `rtabi.inc`), BIOS via CALSLT.
+- `ldr.asm` — caricatore a catena. Build: `ldr.asm` → `rtcom.asm` → `qbc.asm` (`--raw`/SAVEBIN in `build/`).
+- `zrun.py` — collaudo veloce senza emulatore MSX (emulatore Z80 in Python + BDOS/BIOS finti, RAM a caso).
+- `qtest.py` — collaudo vero in openMSX/MSX-DOS 1 (compila ed esegue t1,t6,t7 di `../tests` + `qtests/`).
+- `qtests/` — q1..q3 (IF a blocchi, cicli, operatori, hex/bin, LOCATE) ed e1..e5 (codici di errore).
+- Test dell'editor con F5: `../editor/erun.py`.
+
+## Linguaggio (stadi 1, 2a e 2b)
+Interi 16 bit e stringhe (max 255). `PRINT` (`;` `,` `?`), assegnamenti (`LET` opzionale), `IF/THEN/ELSE` su riga,
+`IF/ELSEIF/ELSE/END IF`, `FOR/NEXT` (STEP costante, anche negativo), `WHILE/WEND`, `GOTO/GOSUB/RETURN`, `CLS`,
+`LOCATE r,c`, `END`, `REM` e `'`, `INPUT ["testo";|,] var` (intera o stringa), `DIM a(n), b$(m)` (array di interi e di
+stringhe, indici 0..n, controllo dei limiti), `POKE`.
+Operatori `+ - * / \ MOD AND OR XOR NOT = <> < > <= >=` (anche fra stringhe; `+` concatena), costanti `&H`/`&B`.
+Funzioni: `LEN ASC VAL ABS SGN RND PEEK TIMER CHR$ STR$ LEFT$ RIGHT$ MID$ INKEY$`.
+`SUB`/`FUNCTION` con parametri per valore (interi e stringhe), variabili locali, ricorsione, `CALL`, chiamata di SUB senza
+`CALL`, `DECLARE` (ignorata: le firme si leggono con una pre-scansione, quindi si puo' chiamare prima della definizione),
+`SHARED`, `EXIT SUB/FUNCTION`, risultato di FUNCTION assegnando al suo nome (`f = ...`, `f$ = ...`).
+`DO/LOOP` (`DO WHILE|UNTIL`, `LOOP WHILE|UNTIL`), `EXIT DO/FOR/WHILE`, `SELECT CASE` intero (`CASE 1`, `CASE 2, 3`,
+`CASE 4 TO 6`, `CASE IS >= 7`, `CASE ELSE`).
+Frame IX: parametri sullo stack (il primo piu' in profondita'), salvataggio di heapp in (ix-2), 29 interi locali, 256 byte per
+ogni stringa locale; i temporanei delle stringhe si liberano a fine istruzione fino al valore salvato all'ingresso.
+La BIOS (CALSLT) distrugge IX: il runtime lo salva attorno a ogni chiamata BIOS.
+Stringhe: ogni variabile e' un buffer fisso da 256 byte; i temporanei stanno su uno heap a bump rilasciato a fine
+istruzione (e dopo le condizioni di IF/WHILE). Nomi `A$` e `A` distinti; `A%` = `A`.
+`OPTION NUMBERED` (righe ordinate per numero, solo numeri), `OPTION LABELS` (solo etichette), `OPTION MIXED` (default).
+Limiti: sorgente 16 KB, programma 16 KB, 96 etichette, 100 variabili/array, 20 SUB/FUNCTION (max 8 parametri, 64 in totale), 24 blocchi annidati, nomi significativi su 12 caratteri, dati del programma fino a (0006h)-0C00h.
+
+## Codici di errore (tail dell'editor)
+1 sintassi · 2 etichetta/riga inesistente · 3 non ancora supportato (stringhe, array, funzioni) · 4 carattere illegale
+· 5 blocco non chiuso · 6 ELSE/END IF/NEXT/WEND senza blocco · 7 duplicato · 8 troppe variabili/etichette/blocchi
+· 9 programma troppo grande · 10 sorgente troppo grande · 11 lettura · 12 scrittura · 13 non ammesso con l'OPTION scelta · 14 tipi incompatibili o array non dichiarato · 15 dati del programma troppo grandi.
+
+## Risultati
+`zrun.py` 20/20 (anche con RAM iniziale casuale), `qtest.py` 20/20 (openMSX; INPUT con tasti battuti dal test),
+`../editor/erun.py` 12/12, `ecom.py` 25/25.
+Non ancora supportati: `CONST`, `COLOR`, `VPOKE/OUT/SLEEP`, `SELECT CASE` su stringhe, array come parametri, float.
+Non provato su MSX reale (disco fisico, Nextor/DOS2).

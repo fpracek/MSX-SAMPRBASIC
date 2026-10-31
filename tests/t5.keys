@@ -1,0 +1,2 @@
+after time 15 { type "Fausto\r" }
+after time 20 { type "42\r" }
