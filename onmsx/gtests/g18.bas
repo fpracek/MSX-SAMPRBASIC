@@ -1,0 +1,6 @@
+' CIRCLE ad arco e ellisse (SCREEN 5)
+COLOR 15, 0
+SCREEN 5
+CLS
+CIRCLE (128, 100), 40, 9, 0, 90
+CIRCLE (128, 150), 40, 10, , , 50

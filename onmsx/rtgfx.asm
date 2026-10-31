@@ -49,8 +49,14 @@ rt_screen:                      ; HL = modo 0..8 (CHGMOD del BIOS)
         call rt_bios
         pop ix
         ld a,(SCRMODE)
+        cp 2
+        jr z,.g
         cp 5
-        ret c
+        jr nc,.g
+        call rt_trpon           ; schermi 1, 3, 4: solo gli sprite
+        ret
+.g:     cp 5
+        jr c,.nr9               ; SCREEN 2: 192 righe
         ld a,(RG9SAV)           ; 212 righe
         or 80h
         ld (RG9SAV),a
@@ -59,10 +65,11 @@ rt_screen:                      ; HL = modo 0..8 (CHGMOD del BIOS)
         ld a,89h
         out (VDPC),a
         ei
-        ld hl,0
+.nr9:   ld hl,0
         ld (LASTX),hl
         ld (LASTY),hl
         call gmode_init
+        call view_reset
         ld hl,(FONTPTR)         ; il font (768 byte) si riserva una volta sola in cima allo heap
         ld a,h
         or l
@@ -91,8 +98,34 @@ rt_screen:                      ; HL = modo 0..8 (CHGMOD del BIOS)
         ld (CSRX),a
         ret
 
-chk_gfx:                        ; solo SCREEN 5-8
+chk_spr:                        ; sprite: SCREEN 1-8
         ld a,(SCRMODE)
+        or a
+        jp z,rt_egfx
+        cp 9
+        jp nc,rt_egfx
+        ret
+
+gheight:                        ; -> BC = righe dello schermo (192 in SCREEN 2, 212 in SCREEN 5-8)
+        ld a,(SCRMODE)
+        ld bc,212
+        cp 2
+        ret nz
+        ld bc,192
+        ret
+
+grows:                          ; -> A = righe di testo in grafica (24 in SCREEN 2, 26 in SCREEN 5-8)
+        ld a,(SCRMODE)
+        cp 2
+        ld a,26
+        ret nz
+        ld a,24
+        ret
+
+chk_gfx:                        ; SCREEN 2 e 5-8
+        ld a,(SCRMODE)
+        cp 2
+        ret z
         cp 5
         jp c,rt_egfx
         cp 9
@@ -109,15 +142,21 @@ gwidth:                         ; -> BC = larghezza dello schermo
         ld bc,512
 .r:     ret
 
-in_range:                       ; HL = x, DE = y: C se dentro lo schermo (confronto senza segno: i negativi sono fuori)
+in_range:                       ; HL = x, DE = y: C se dentro la finestra di ritaglio (VIEW); senza segno dopo la sottrazione del minimo
         push hl
         push de
-        call gwidth
+        ld bc,(VX1)
+        or a
+        sbc hl,bc
+        ld bc,(VXW)
         or a
         sbc hl,bc
         jr nc,.out
         ex de,hl
-        ld bc,GHEIGHT
+        ld bc,(VY1)
+        or a
+        sbc hl,bc
+        ld bc,(VYH)
         or a
         sbc hl,bc
         jr nc,.out
@@ -178,6 +217,9 @@ gprep:                          ; colore e argomento del comando in GCMD
 gplot:                          ; HL = x, DE = y: PSET ritagliato con il colore di GCMD
         call in_range
         ret nc
+        ld a,(SCRMODE)
+        cp 2
+        jp z,plot2
         ld (GCMD),hl
         ld (GCMD+2),de
         ld a,50h
@@ -211,7 +253,14 @@ rt_gpoint:                      ; (GX1,GY1) -> HL = colore, -1 fuori dallo scher
         jr c,.in
         ld hl,-1
         ret
-.in:    push hl
+.in:    ld a,(SCRMODE)
+        cp 2
+        jr nz,.v
+        call getpix2
+        ld l,a
+        ld h,0
+        ret
+.v:     push hl
         push de
         call vdp_wait
         pop de
@@ -289,35 +338,30 @@ rect_draw:                      ; S1,S2,S3,S4 = x1,y1,x2,y2: riempie il rettango
         ld hl,S2
         ld de,S4
         call sortp
-        ld hl,(S1)              ; x1 < 0 -> 0
-        bit 7,h
-        jr z,.a
-        ld hl,0
+        ld de,(S1)              ; x1 < VX1 -> VX1
+        ld hl,(VX1)
+        call rt_cmp             ; C se x1 < VX1
+        jr nc,.a
+        ld hl,(VX1)
         ld (S1),hl
-.a:     ld hl,(S2)
-        bit 7,h
-        jr z,.b
-        ld hl,0
-        ld (S2),hl
-.b:     call gwidth
-        dec bc                  ; massimo x
-        ld de,(S3)              ; x2 > max -> max (con segno)
-        ld h,b
-        ld l,c
-        push bc
-        call rt_cmp             ; DE = x2, HL = max: C se x2 < max
-        pop bc
-        jr c,.c
-        ld (S3),bc
-.c:     ld bc,GHEIGHT-1
-        ld de,(S4)
-        ld h,b
-        ld l,c
-        push bc
+.a:     ld de,(S2)
+        ld hl,(VY1)
         call rt_cmp
-        pop bc
-        jr c,.d
-        ld (S4),bc
+        jr nc,.b
+        ld hl,(VY1)
+        ld (S2),hl
+.b:     ld de,(VX2)             ; x2 > VX2 -> VX2
+        ld hl,(S3)
+        call rt_cmp             ; C se VX2 < x2
+        jr nc,.c
+        ld hl,(VX2)
+        ld (S3),hl
+.c:     ld de,(VY2)
+        ld hl,(S4)
+        call rt_cmp
+        jr nc,.d
+        ld hl,(VY2)
+        ld (S4),hl
 .d:     ld de,(S3)              ; vuoto se x2 < x1 oppure y2 < y1
         ld hl,(S1)
         call rt_cmp
@@ -326,6 +370,9 @@ rect_draw:                      ; S1,S2,S3,S4 = x1,y1,x2,y2: riempie il rettango
         ld hl,(S2)
         call rt_cmp
         ret c
+        ld a,(SCRMODE)
+        cp 2
+        jp z,rect_fill2
         ld hl,(S1)
         ld (GCMD),hl
         ld hl,(S2)
@@ -401,7 +448,10 @@ rt_gline:                       ; (GX1,GY1)-(GX2,GY2), GFLG: 0 linea, 1 riquadro
         ld hl,(GY2)
         ld (S4),hl
         jp rect_draw
-.line:  ld hl,(GX1)
+.line:  ld a,(SCRMODE)
+        cp 2
+        jp z,.soft              ; SCREEN 2: niente motore dei comandi
+        ld hl,(GX1)
         ld de,(GY1)
         call in_range
         jr nc,.soft
@@ -535,9 +585,12 @@ pl:                             ; BC = scostamento x, DE = scostamento y dal cen
         pop hl
         jp gplot
 
-rt_gcircle:                     ; centro (GX1,GY1), raggio GX2
+rt_gcircle:                     ; centro (GX1,GY1), raggio GX2 (GFLG = 1: arco/ellisse)
         call chk_gfx
         call gprep
+        ld a,(GFLG)
+        or a
+        jp nz,circ_arc
         ld hl,(GX1)
         ld (LASTX),hl
         ld hl,(GY1)
@@ -613,3 +666,231 @@ rt_gcircle:                     ; centro (GX1,GY1), raggio GX2
         add hl,de
         ld (S3),hl
         jp .l
+
+; ---------------------------------------------------------------- SCREEN 2 (grafica MSX1: pattern 8x1 con colore per gruppo)
+pix_addr2:                      ; HL = x, DE = y -> (P2OFF) = scostamento nelle tabelle, (P2MSK) = maschera del bit
+        ld a,e
+        rrca
+        rrca
+        rrca
+        and 1Fh
+        ld b,a                  ; y >> 3 (byte alto)
+        ld a,e
+        and 7
+        ld c,a
+        ld a,l
+        and 0F8h
+        or c
+        ld c,a                  ; (x & F8) | (y & 7)
+        ld a,l
+        and 7
+        ld e,a
+        ld (P2OFF),bc
+        ld a,80h
+        inc e
+.m:     dec e
+        jr z,.d
+        srl a
+        jr .m
+.d:     ld (P2MSK),a
+        ret
+
+plot2:                          ; HL = x, DE = y (dentro lo schermo): punto con il colore di GCMD+8
+        call pix_addr2
+        ld hl,(P2OFF)
+        ld bc,(GRPCOL)
+        add hl,bc
+        push hl
+        xor a
+        call vram_set
+        in a,(VDPD)
+        ld b,a                  ; B = byte dei colori (primo piano | sfondo)
+        pop hl
+        ld a,(GCMD+8)
+        and 0Fh
+        ld c,a
+        ld a,b
+        rrca
+        rrca
+        rrca
+        rrca
+        and 0Fh
+        cp c
+        jr z,.setb              ; colore = primo piano: accende il bit
+        ld a,b
+        and 0Fh
+        cp c
+        jr z,.clrb              ; colore = sfondo: spegne il bit
+        ld a,c                  ; colore nuovo: diventa il primo piano del gruppo
+        rlca
+        rlca
+        rlca
+        rlca
+        and 0F0h
+        ld d,a
+        ld a,b
+        and 0Fh
+        or d
+        ld b,a
+        ld a,40h
+        call vram_set
+        ld a,b
+        out (VDPD),a
+.setb:  ld hl,(P2OFF)
+        ld bc,(GRPCGP)
+        add hl,bc
+        push hl
+        xor a
+        call vram_set
+        in a,(VDPD)
+        ld b,a
+        pop hl
+        ld a,(P2MSK)
+        or b
+        ld b,a
+        ld a,40h
+        call vram_set
+        ld a,b
+        out (VDPD),a
+        ret
+.clrb:  ld hl,(P2OFF)
+        ld bc,(GRPCGP)
+        add hl,bc
+        push hl
+        xor a
+        call vram_set
+        in a,(VDPD)
+        ld b,a
+        pop hl
+        ld a,(P2MSK)
+        cpl
+        and b
+        ld b,a
+        ld a,40h
+        call vram_set
+        ld a,b
+        out (VDPD),a
+        ret
+
+getpix2:                        ; HL = x, DE = y -> A = colore del pixel
+        call pix_addr2
+        ld hl,(P2OFF)
+        ld bc,(GRPCGP)
+        add hl,bc
+        xor a
+        call vram_set
+        in a,(VDPD)
+        ld b,a
+        ld a,(P2MSK)
+        and b
+        ld d,a                  ; D != 0 se il bit e' acceso
+        ld hl,(P2OFF)
+        ld bc,(GRPCOL)
+        add hl,bc
+        xor a
+        call vram_set
+        in a,(VDPD)
+        ld b,a
+        ld a,d
+        or a
+        ld a,b
+        jr z,.bg
+        rrca
+        rrca
+        rrca
+        rrca
+.bg:    and 0Fh
+        ret
+
+rect_fill2:                     ; S1..S4 = rettangolo (ordinato, ritagliato): punto per punto
+        ld hl,(S2)
+        ld (S8),hl
+.row:   ld hl,(S1)
+        ld (PX),hl
+.px:    ld hl,(PX)
+        ld de,(S8)
+        call plot2
+        ld hl,(PX)
+        ld de,(S3)
+        or a
+        sbc hl,de
+        jr z,.nr
+        ld hl,(PX)
+        inc hl
+        ld (PX),hl
+        jr .px
+.nr:    ld hl,(S8)
+        ld de,(S4)
+        or a
+        sbc hl,de
+        ret z
+        ld hl,(S8)
+        inc hl
+        ld (S8),hl
+        jr .row
+
+; ---------------------------------------------------------------- VIEW
+view_reset:                     ; finestra di ritaglio = schermo intero
+        ld hl,0
+        ld (VX1),hl
+        ld (VY1),hl
+        call gwidth
+        ld (VXW),bc
+        dec bc
+        ld (VX2),bc
+        call gheight
+        ld (VYH),bc
+        dec bc
+        ld (VY2),bc
+        ret
+
+rt_viewr:
+        call chk_gfx
+        jr view_reset
+
+rt_view:                        ; VIEW (GX1,GY1)-(GX2,GY2): imposta la finestra (ritagliata allo schermo)
+        call chk_gfx
+        call view_reset         ; (l'ordinamento e il ritaglio si fanno sull'intero schermo)
+        ld hl,(GX1)
+        ld (S1),hl
+        ld hl,(GY1)
+        ld (S2),hl
+        ld hl,(GX2)
+        ld (S3),hl
+        ld hl,(GY2)
+        ld (S4),hl
+        ld hl,S1
+        ld de,S3
+        call sortp
+        ld hl,S2
+        ld de,S4
+        call sortp
+        ld hl,(S1)
+        ld de,(S2)
+        call in_range
+        jp nc,rt_eifc
+        ld hl,(S3)
+        ld de,(S4)
+        call in_range
+        jp nc,rt_eifc
+        ld hl,(S1)
+        ld (VX1),hl
+        ld hl,(S2)
+        ld (VY1),hl
+        ld hl,(S3)
+        ld (VX2),hl
+        ld hl,(S4)
+        ld (VY2),hl
+        ld hl,(S3)
+        ld de,(S1)
+        or a
+        sbc hl,de
+        inc hl
+        ld (VXW),hl
+        ld hl,(S4)
+        ld de,(S2)
+        or a
+        sbc hl,de
+        inc hl
+        ld (VYH),hl
+        ret

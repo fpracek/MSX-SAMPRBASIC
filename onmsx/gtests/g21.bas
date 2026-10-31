@@ -1,0 +1,13 @@
+' VIEW: finestra di ritaglio (SCREEN 5)
+COLOR 15, 0
+SCREEN 5
+CLS
+VIEW (50, 50)-(100, 100)
+LINE (0, 0)-(200, 200), 9
+PAINT (52, 70), 4, 9
+LINE (60, 80)-(300, 300), 5, BF
+PSET (49, 60), 7
+PSET (60, 60), 7
+CIRCLE (75, 75), 60, 3
+VIEW
+PSET (10, 10), 7

@@ -53,9 +53,11 @@ RT_GGET   equ 0199h
 RT_GPUT   equ 019Ch
 RT_DRAW   equ 019Fh
 RT_COLL   equ 01A2h
-RT_EMPTY  equ 01A5h             ; byte 0 (stringa vuota)
-RT_NAME   equ 01A6h             ; 16 byte: nome del sorgente (0-terminato)
-RT_DSIZE  equ 01B6h             ; word: byte di dati del programma (scritta dal compilatore)
+RT_VIEW   equ 01A5h
+RT_VIEWR  equ 01A8h
+RT_EMPTY  equ 01ABh             ; byte 0 (stringa vuota)
+RT_NAME   equ 01ACh             ; 16 byte: nome del sorgente (0-terminato)
+RT_DSIZE  equ 01BCh             ; word: byte di dati del programma (scritta dal compilatore)
 RTRAM     equ 0C100h            ; RAM del runtime (C000h-C086h: caricatore)
 HEAPP     equ RTRAM+0
 HEAP0     equ RTRAM+10
@@ -92,14 +94,37 @@ PTX       equ RTRAM+16Eh
 PTY       equ RTRAM+170h
 ARRB      equ RTRAM+172h        ; array di GET/PUT: base e numero di elementi
 ARRC      equ RTRAM+174h
-COLFLAG   equ RTRAM+176h        ; collisione sprite accumulata dal gancio di H.TIMI
-HOOKED    equ RTRAM+177h
-OLDHK     equ RTRAM+178h        ; copia dei 5 byte originali di H.TIMI + RET
+CCX       equ RTRAM+176h        ; CIRCLE ad arco/ellisse: centro, ultimo punto
+CCY       equ RTRAM+178h
+CPX       equ RTRAM+17Ah
+CPY       equ RTRAM+17Ch
 DCOL      equ RTRAM+17Eh        ; DRAW: colore, scala, prefissi B e N, lunghezza e puntatore
 DSC       equ RTRAM+17Fh
 DB        equ RTRAM+180h
 DN        equ RTRAM+181h
 DLEN      equ RTRAM+182h
 DPOS      equ RTRAM+183h
-TIMIC     equ RTRAM+185h        ; copia in RAM alta del gancio di H.TIMI (16 byte)
-DATA_BASE equ 0C2A0h
+CRX       equ RTRAM+185h        ; CIRCLE: raggi, angolo corrente, gradi rimasti, primo punto
+CRY       equ RTRAM+187h
+CANG      equ RTRAM+189h
+CK        equ RTRAM+18Bh
+CFIRST    equ RTRAM+18Dh
+CEND      equ ARRB              ; CIRCLE: angolo finale (gradi) e aspetto (percentuale) riusano ARRB/ARRC
+CASP      equ ARRC
+GRPCOL    equ 0F3C9h            ; tabelle del BIOS (colori e pattern dello schermo 2, sprite degli schermi 1-3)
+GRPCGP    equ 0F3CBh
+GRPATR    equ 0F3CDh
+GRPPAT    equ 0F3CFh
+T32ATR    equ 0F3C3h
+T32PAT    equ 0F3C5h
+MLTATR    equ 0F3D7h
+MLTPAT    equ 0F3D9h
+P2OFF     equ RTRAM+18Eh        ; SCREEN 2: scostamento e maschera del pixel (non usare S1..S8: servono ai chiamanti)
+P2MSK     equ RTRAM+190h
+VX1       equ RTRAM+192h        ; VIEW: finestra di ritaglio (limiti inclusi) e sue dimensioni
+VY1       equ RTRAM+194h
+VX2       equ RTRAM+196h
+VY2       equ RTRAM+198h
+VXW       equ RTRAM+19Ah
+VYH       equ RTRAM+19Ch
+DATA_BASE equ 0C2B0h

@@ -161,6 +161,7 @@ K_PUT   equ 53
 K_SPRITE equ 54
 K_GET   equ 55
 K_DRAW  equ 56
+K_VIEW  equ 57
 
 B_IF    equ 1
 B_FOR   equ 2
@@ -974,7 +975,7 @@ kwtab:  db "PRINT",0,"IF",0,"THEN",0,"ELSE",0,"ELSEIF",0,"END",0,"FOR",0,"TO",0
         db "CLS",0,"LOCATE",0,"AND",0,"OR",0,"XOR",0,"NOT",0,"MOD",0,"LET",0
         db "OPTION",0,"INPUT",0,"DIM",0,"POKE",0,"SUB",0,"FUNCTION",0,"CALL",0,"DECLARE",0,"SHARED",0
         db "EXIT",0,"DO",0,"LOOP",0,"UNTIL",0,"SELECT",0,"CASE",0,"IS",0,"CONST",0,"COLOR",0,"RANDOMIZE",0,"VPOKE",0,"OUT",0,"SLEEP",0,"STOP",0,"SCREEN",0,"PSET",0,"PRESET",0,"LINE",0,"CIRCLE",0
-        db "PALETTE",0,"PAINT",0,"PUT",0,"SPRITE",0,"GET",0,"DRAW",0,0
+        db "PALETTE",0,"PAINT",0,"PUT",0,"SPRITE",0,"GET",0,"DRAW",0,"VIEW",0,0
 
 ; ---------------------------------------------------------------- helper del parser
 is_p:                           ; A = carattere: Z se il token e' quella punteggiatura
@@ -2053,7 +2054,7 @@ kwjump: dw st_print, st_if, err_syntax, st_else, st_elseif, st_end, st_for, err_
         dw st_input, st_dim, st_poke, st_sub, st_function, st_call, st_skip, st_shared
         dw st_exit, st_do, st_loop, err_syntax, st_select, st_case, err_syntax
         dw st_const, st_color, st_randomize, st_vpoke, st_out, st_sleep, st_stop
-        dw st_screen, st_pset, st_preset, st_line, st_circle, st_palette, st_paint, st_put, err_syntax, st_get, st_draw
+        dw st_screen, st_pset, st_preset, st_line, st_circle, st_palette, st_paint, st_put, err_syntax, st_get, st_draw, st_view
 
 ; ---------------------------------------------------------------- espressioni
 want_int:
@@ -4544,7 +4545,7 @@ pset_common:
         ld a,0CDh
         jp emit_jabs
 
-st_circle:
+st_circle:                      ; CIRCLE (x,y), r[, colore[, inizio[, fine[, aspetto]]]]  (gradi, aspetto in %)
         ld de,GX1
         ld bc,GY1
         call emit_xy
@@ -4555,8 +4556,52 @@ st_circle:
         ld hl,GX2
         call emit_st
         call emit_defcol
-        call emit_optcol
-        EM3 0CDh,low RT_GCIRCLE,high RT_GCIRCLE
+        call emit_i             ; inizio = 0, fine = 360, aspetto = 100, GFLG = 0
+        db 22,21h,0,0,22h,low GY2,high GY2,21h,68h,1,22h,low CEND,high CEND,21h,64h,0,22h,low CASP,high CASP,0AFh,32h,low GFLG,high GFLG
+        ld a,','
+        call is_p
+        jp nz,.go
+        call next_tok
+        ld a,','
+        call is_p
+        jr z,.arc               ; colore omesso
+        call expr
+        call want_int
+        ld hl,GCOL
+        call emit_st
+        ld a,','
+        call is_p
+        jp nz,.go
+.arc:   call emit_i             ; GFLG = 1 (arco/ellisse)
+        db 5,3Eh,1,32h,low GFLG,high GFLG
+        call next_tok
+        ld a,','
+        call is_p
+        jr z,.end               ; inizio omesso
+        call expr
+        call want_int
+        ld hl,GY2
+        call emit_st
+        ld a,','
+        call is_p
+        jr nz,.go
+.end:   call next_tok
+        ld a,','
+        call is_p
+        jr z,.asp               ; fine omessa
+        call expr
+        call want_int
+        ld hl,CEND
+        call emit_st
+        ld a,','
+        call is_p
+        jr nz,.go
+.asp:   call next_tok
+        call expr
+        call want_int
+        ld hl,CASP
+        call emit_st
+.go:    EM3 0CDh,low RT_GCIRCLE,high RT_GCIRCLE
         ret
 
 st_line:                        ; LINE [(x1,y1)]-(x2,y2)[, colore[, B|BF]]
@@ -4710,6 +4755,22 @@ st_gput:                        ; PUT (x,y), array[, PSET|PRESET|AND|OR|XOR]
         call emit_w
         call next_tok
 .go:    EM3 0CDh,low RT_GPUT,high RT_GPUT
+        ret
+
+st_view:                        ; VIEW (x1,y1)-(x2,y2)  oppure  VIEW (finestra = schermo intero)
+        call at_send
+        jr nz,.args
+        EM3 0CDh,low RT_VIEWR,high RT_VIEWR
+        ret
+.args:  ld de,GX1
+        ld bc,GY1
+        call emit_xy
+        ld a,'-'
+        call expect_p
+        ld de,GX2
+        ld bc,GY2
+        call emit_xy
+        EM3 0CDh,low RT_VIEW,high RT_VIEW
         ret
 
 st_draw:                        ; DRAW "comandi"

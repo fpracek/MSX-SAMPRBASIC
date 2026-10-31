@@ -87,6 +87,8 @@ inbuf   equ RTRAM+20
         jp rt_gput
         jp rt_draw
         jp rt_coll
+        jp rt_view
+        jp rt_viewr
         ASSERT $ == RT_EMPTY
 rt_empty: db 0
         ASSERT $ == RT_NAME
@@ -140,13 +142,20 @@ rt_start:
 
 rt_locate:                  ; DE = riga, HL = colonna
         ld a,(SCRMODE)
+        cp 2
+        jr z,.gl
         cp 5
         jr c,.txt
-        ld a,e                  ; grafica: cursore di testo su celle 8x8
+.gl:    ld a,e                  ; grafica: cursore di testo su celle 8x8
         dec a
-        cp 26
+        ld b,a
+        call grows
+        ld c,a
+        ld a,b
+        cp c
         jr c,.r
-        ld a,25
+        ld a,c
+        dec a
 .r:     ld (TCY),a
         ld a,l
         dec a
@@ -177,9 +186,11 @@ rt_cls:
         call rt_bios
         pop ix
         ld a,(SCRMODE)
+        cp 2
+        jr z,.g
         cp 5
         ret c
-        xor a                   ; grafica: cursore di testo in alto a sinistra
+.g:     xor a                   ; grafica: cursore di testo in alto a sinistra
         ld (TCX),a
         ld (TCY),a
         inc a
@@ -192,14 +203,17 @@ rt_putc:
         push bc
         ld b,a
         ld a,(SCRMODE)
+        cp 2
+        jr z,.g
         cp 5
-        ld a,b
-        jr c,.txt
+        jr c,.t
+.g:     ld a,b
         call gputc              ; schermi grafici: disegna il carattere
         pop bc
         pop de
         pop hl
         ret
+.t:     ld a,b
 .txt:
         push ix                 ; la BIOS (CALSLT) distrugge IX: il frame delle SUB/FUNCTION va salvato
         ld ix,CHPUT
@@ -252,6 +266,8 @@ rt_end:
         xor a                   ; niente eventi sprite quando si torna all'editor
         ld (0FC6Dh),a
         ld a,(SCRMODE)
+        cp 2
+        jr z,.nomsg
         cp 5
         jr nc,.nomsg            ; in grafica il testo non si vede: si attende solo un tasto
         call rt_pnl
@@ -944,6 +960,7 @@ rt_vpoke:                   ; DE = indirizzo VRAM (0-16383), HL = valore
         INCLUDE "rtgtext.asm"
         INCLUDE "rtspr.asm"
         INCLUDE "rtgx.asm"
+        INCLUDE "rtcirc.asm"
 
 ldr_img: INCBIN "build/ldr.bin"
 ldr_size equ $-ldr_img

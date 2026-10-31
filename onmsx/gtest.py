@@ -60,6 +60,10 @@ def pixel(v, mode, x, y):
         return b >> 4 if x % 2 == 0 else b & 15
     if mode == 8:
         return v[y * 256 + x]
+    if mode == 2:
+        off = ((y >> 3) << 8) + (x & 0xF8) + (y & 7)
+        col = v[0x2000 + off]
+        return (col >> 4) if v[off] & (0x80 >> (x & 7)) else (col & 15)
     raise ValueError(mode)
 
 
@@ -116,6 +120,16 @@ def main():
                 i, r, g, b = (int(z) for z in w[1:5])
                 gr, rb = pal[2 * i + 1] & 7, pal[2 * i]
                 check(((rb >> 4) & 7, gr, rb & 7) == (r, g, b), f'palette {i} = {((rb >> 4) & 7, gr, rb & 7)} (atteso {(r, g, b)})')
+            elif w[0] == 'sppat1':                      # schermi 1-3: generatore a 3800h
+                pn, size = int(w[1]), int(w[2])
+                want = [int(z) for z in w[3:]]
+                got = list(v[0x3800 + pn * size: 0x3800 + pn * size + len(want)])
+                check(got == want, f'pattern {pn} (schermo 1-3): {got} (atteso {want})')
+            elif w[0] == 'sp1':                         # schermi 1-3: attributi a 1B00h: Y X pattern colore
+                pl = int(w[1])
+                want = [int(z) for z in w[2:6]]
+                got = list(v[0x1B00 + pl * 4: 0x1B00 + pl * 4 + 4])
+                check(got == want, f'sprite {pl} (schermo 1-3): {got} (atteso {want})')
             elif w[0] in ('sppat', 'spat', 'spcol'):
                 rg = open(os.path.join(BUILD, n + '.reg'), 'rb').read()
                 attr = ((rg[11] & 1) << 15) | ((rg[5] & 0xFC) << 7)

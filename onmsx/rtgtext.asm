@@ -43,6 +43,8 @@ load_font:                      ; ASCII 32-127 dalla tabella del BIOS (puntatore
 
 gmode_init:                     ; bit per pixel, pixel per byte, maschera del colore, in base a SCRMODE
         ld a,(SCRMODE)
+        cp 2
+        jr z,.m2
         cp 6
         jr z,.m6
         cp 8
@@ -50,6 +52,13 @@ gmode_init:                     ; bit per pixel, pixel per byte, maschera del co
         ld a,4
         ld (GBPP),a
         ld a,2
+        ld (GPPB),a
+        ld a,0Fh
+        ld (GONES),a
+        ret
+.m2:    ld a,8                  ; SCREEN 2: righe lette come un byte per pixel (colore)
+        ld (GBPP),a
+        ld a,1
         ld (GPPB),a
         ld a,0Fh
         ld (GONES),a
@@ -117,9 +126,14 @@ gputc:                          ; A = carattere (modo grafico): disegna o interp
 .lf:    ld a,(TCY)
         inc a
         ld (TCY),a
-        cp 26
-        jr c,.csr
-        ld a,25
+        ld b,a
+        call grows
+        cp b
+        jr z,.sc
+        jr c,.sc
+        jr .csr
+.sc:    call grows
+        dec a
         ld (TCY),a
         call gscroll
         jr .csr
@@ -176,6 +190,9 @@ gdraw:                          ; A = carattere 32..: disegna il glifo nella cel
         ld de,(FONTPTR)
         add hl,de
         push hl                 ; puntatore al glifo
+        ld a,(SCRMODE)
+        cp 2
+        jp z,gdraw2
         ld a,(FORCLR)
         call gpack
         ld (GFGP),a
@@ -311,6 +328,9 @@ vdp_setsrc:                     ; HL = SX, DE = SY (registri R#32-35)
         ret
 
 gscroll:                        ; scorre lo schermo di una riga di testo (8 pixel)
+        ld a,(SCRMODE)
+        cp 2
+        jp z,gscroll2
         call vdp_wait
         ld hl,0
         ld de,8
@@ -454,6 +474,9 @@ ppop:                           ; -> HL = x, DE = y
         ret
 
 rowread:                        ; HL = y: legge la riga di pixel in ROWBUF
+        ld a,(SCRMODE)
+        cp 2
+        jp z,rowread2
         push hl
         call vdp_wait
         pop hl
@@ -623,9 +646,11 @@ rt_paint:                       ; PAINT (GX1,GY1), colore GCOL, bordo GX2 (< 0 =
         ld hl,(PXS)             ; estremo sinistro
         ld (PXL),hl
 .lf:    ld hl,(PXL)
-        ld a,h
-        or l
+        ld de,(VX1)
+        or a
+        sbc hl,de
         jr z,.lr
+        ld hl,(PXL)
         dec hl
         call rb_ok
         jr nc,.lr
@@ -635,8 +660,7 @@ rt_paint:                       ; PAINT (GX1,GY1), colore GCOL, bordo GX2 (< 0 =
         jr .lf
 .lr:    ld hl,(PXS)             ; estremo destro
         ld (PXR),hl
-.rf:    call gwidth
-        dec bc
+.rf:    ld bc,(VX2)
         ld hl,(PXR)
         or a
         sbc hl,bc
@@ -657,19 +681,149 @@ rt_paint:                       ; PAINT (GX1,GY1), colore GCOL, bordo GX2 (< 0 =
         ld hl,(PXR)
         ld (S3),hl
         call rect_draw
-        ld hl,(PY)              ; semi sopra e sotto
-        ld a,h
-        or l
+        ld hl,(PY)              ; semi sopra e sotto (dentro la finestra)
+        ld de,(VY1)
+        or a
+        sbc hl,de
         jr z,.dn
+        ld hl,(PY)
         dec hl
         call scanrow
 .dn:    ld hl,(PY)
         inc hl
         push hl
-        ld de,GHEIGHT
+        ld de,(VY2)
         or a
         sbc hl,de
         pop hl
+        jr z,.dnok
         jp nc,.loop
-        call scanrow
+.dnok:  call scanrow
         jp .loop
+
+; ---------------------------------------------------------------- SCREEN 2: testo, scorrimento, lettura di una riga
+gdraw2:                         ; (SP) = glifo: scrive pattern e colori nella cella (TCX,TCY)
+        pop de
+        ld a,(TCY)
+        ld h,a
+        ld l,0
+        ld a,(TCX)
+        add a,a
+        add a,a
+        add a,a
+        ld c,a
+        ld b,0
+        add hl,bc               ; scostamento = TCY*256 + TCX*8
+        push hl
+        ld bc,(GRPCGP)
+        add hl,bc
+        ld a,40h
+        call vram_set
+        ld b,8
+.p:     ld a,(de)
+        out (VDPD),a
+        inc de
+        djnz .p
+        pop hl
+        ld bc,(GRPCOL)
+        add hl,bc
+        ld a,40h
+        call vram_set
+        ld a,(FORCLR)
+        and 0Fh
+        rlca
+        rlca
+        rlca
+        rlca
+        ld b,a
+        ld a,(BAKCLR)
+        and 0Fh
+        or b
+        ld b,8
+.c:     out (VDPD),a
+        djnz .c
+        ret
+
+gscroll2:                       ; SCREEN 2: scorre di una riga le tabelle dei pattern e dei colori
+        call ensure_rowbuf
+        ld hl,(GRPCGP)
+        ld (S1),hl
+        call scr2tbl
+        ld hl,(GRPCOL)
+        ld (S1),hl
+        call scr2tbl
+        ld hl,(GRPCGP)          ; ultima riga: pattern vuoti
+        ld de,23*256
+        add hl,de
+        ld a,40h
+        call vram_set
+        ld b,0
+        xor a
+.z:     out (VDPD),a
+        djnz .z
+        ld hl,(GRPCOL)          ; colori = primo piano / sfondo correnti
+        ld de,23*256
+        add hl,de
+        ld a,40h
+        call vram_set
+        ld a,(FORCLR)
+        and 0Fh
+        rlca
+        rlca
+        rlca
+        rlca
+        ld b,a
+        ld a,(BAKCLR)
+        and 0Fh
+        or b
+        ld b,0
+.c:     out (VDPD),a
+        djnz .c
+        ret
+
+scr2tbl:                        ; (S1) = base della tabella: copia 23 righe da 256 byte verso l'alto
+        ld a,23
+        ld (S2),a
+.l:     ld hl,(S1)
+        inc h
+        xor a
+        call vram_set
+        ld hl,(ROWPTR)
+        ld c,VDPD
+        ld b,0
+        inir
+        ld hl,(S1)
+        ld a,40h
+        call vram_set
+        ld hl,(ROWPTR)
+        ld c,VDPD
+        ld b,0
+        otir
+        ld hl,(S1)
+        inc h
+        ld (S1),hl
+        ld hl,S2
+        dec (hl)
+        jr nz,.l
+        ret
+
+rowread2:                       ; SCREEN 2, HL = y: ROWBUF[x] = colore del pixel (x, y)
+        ld (S1),hl
+        ld hl,(ROWPTR)
+        ld (S2),hl
+        ld hl,0
+        ld (S3),hl
+.l:     ld hl,(S3)
+        ld de,(S1)
+        call getpix2
+        ld hl,(S2)
+        ld (hl),a
+        inc hl
+        ld (S2),hl
+        ld hl,(S3)
+        inc hl
+        ld (S3),hl
+        ld a,h
+        or a
+        jr z,.l
+        ret

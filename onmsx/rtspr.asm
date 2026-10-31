@@ -7,8 +7,19 @@ RG5SAV  equ 0F3E4h
 RG6SAV  equ 0F3E5h
 RG11SAV equ 0FFEAh
 
-spr_attr:                       ; -> HL = tabella degli attributi (la tabella dei colori sta 200h prima)
-        ld a,(RG5SAV)
+spr_attr:                       ; -> HL = tabella degli attributi (negli schermi 5-8 la tabella dei colori sta 200h prima)
+        ld a,(SCRMODE)
+        cp 4
+        jr nc,.reg
+        cp 2
+        ld hl,(GRPATR)
+        ret z
+        cp 3
+        ld hl,(MLTATR)
+        ret z
+        ld hl,(T32ATR)
+        ret
+.reg:   ld a,(RG5SAV)
         and 0FCh
         ld h,a
         ld l,0
@@ -21,13 +32,34 @@ spr_attr:                       ; -> HL = tabella degli attributi (la tabella de
         ld h,a
         ret
 
+spr_gen:                        ; -> DE = generatore dei pattern
+        ld a,(SCRMODE)
+        cp 4
+        jr nc,.reg
+        cp 2
+        ld de,(GRPPAT)
+        ret z
+        cp 3
+        ld de,(MLTPAT)
+        ret z
+        ld de,(T32PAT)
+        ret
+.reg:   ld a,(RG6SAV)           ; (R#6 & 1Fh) << 11
+        and 1Fh
+        ld d,a
+        ld e,0
+        sla d
+        sla d
+        sla d
+        ret
+
 spr_big:                        ; Z se i sprite sono 8x8, NZ se 16x16
         ld a,(RG1SAV)
         and 2
         ret
 
 rt_sprsize:                     ; HL = 0..3: bit 1 = 16x16, bit 0 = ingrandimento (registro R#1)
-        call chk_gfx
+        call chk_spr
         ld a,l
         and 3
         ld b,a
@@ -44,7 +76,7 @@ rt_sprsize:                     ; HL = 0..3: bit 1 = 16x16, bit 0 = ingrandiment
 
 rt_sprdef:                      ; HL = stringa del pattern (8 o 32 byte), GX1 = numero del pattern
         push hl
-        call chk_gfx
+        call chk_spr
         ld b,3                  ; 8x8: n * 8
         ld c,8
         call spr_big
@@ -63,13 +95,9 @@ rt_sprdef:                      ; HL = stringa del pattern (8 o 32 byte), GX1 = 
         jp nc,rt_eifc
 .n8:    add hl,hl
         djnz .n8
-        ld a,(RG6SAV)           ; generatore dei pattern = (R#6 & 1Fh) << 11
-        and 1Fh
-        ld d,a
-        ld e,0
-        sla d
-        sla d
-        sla d
+        push hl
+        call spr_gen
+        pop hl
         add hl,de
         push bc
         ld a,40h
@@ -102,7 +130,7 @@ rt_sprdef:                      ; HL = stringa del pattern (8 o 32 byte), GX1 = 
         ret
 
 rt_sprput:                      ; GX1 = piano (0-31), GX2 = x, GY2 = y, GCOL = colore (< 0: FORCLR), GY1 = pattern (< 0: = piano)
-        call chk_gfx
+        call chk_spr
         ld hl,(GX1)
         ld a,h
         or a
@@ -172,7 +200,16 @@ rt_sprput:                      ; GX1 = piano (0-31), GX2 = x, GY2 = y, GCOL = c
         out (VDPD),a
         ld a,(S2)
         out (VDPD),a
-        xor a
+        ld a,(SCRMODE)
+        cp 4
+        jr nc,.m2
+        ld a,(S3)               ; modo sprite 1: il colore (con EC) e' nell'attributo
+        ld hl,S6
+        or (hl)
+        out (VDPD),a
+        pop hl
+        ret
+.m2:    xor a
         out (VDPD),a
         pop hl                  ; tabella dei colori: attributi - 200h + piano * 16
         ld de,-200h

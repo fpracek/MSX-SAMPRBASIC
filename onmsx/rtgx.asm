@@ -177,6 +177,9 @@ rt_gget:                        ; GET: GX1,GY1,GX2,GY2 e array (ARRB, ARRC)
         ld (hl),d
         inc hl
         ld (S7),hl              ; puntatore ai pixel
+        ld a,(SCRMODE)
+        cp 2
+        jp z,gget2
         call ensure_rowbuf
         ld hl,(S2)
         ld (S8),hl
@@ -255,6 +258,9 @@ rt_gput:                        ; PUT: (GX1,GY1) = angolo in alto a sinistra, ar
         ld de,(S4)
         call in_range
         jp nc,rt_eifc
+        ld a,(SCRMODE)
+        cp 2
+        jp z,gput2
         call ensure_rowbuf
         ld hl,(GY1)
         ld (S8),hl
@@ -593,3 +599,96 @@ rt_coll:                        ; COLLISION -> -1 se due sprite si sono toccati 
         ld (TRPSPR),a
         dec hl
         ret
+
+; ---------------------------------------------------------------- GET/PUT in SCREEN 2 (punto per punto)
+gget2:
+        ld hl,(S2)
+        ld (S8),hl
+.row:   ld hl,(S1)
+        ld (PX),hl
+.px:    ld hl,(PX)
+        ld de,(S8)
+        call getpix2
+        ld hl,(S7)
+        ld (hl),a
+        inc hl
+        ld (S7),hl
+        ld hl,(PX)
+        ld de,(S3)
+        or a
+        sbc hl,de
+        jr z,.nr
+        ld hl,(PX)
+        inc hl
+        ld (PX),hl
+        jr .px
+.nr:    ld hl,(S8)
+        ld de,(S4)
+        or a
+        sbc hl,de
+        ret z
+        ld hl,(S8)
+        inc hl
+        ld (S8),hl
+        jr .row
+
+gput2:
+        ld hl,(GY1)
+        ld (S8),hl
+.row:   ld hl,(GX1)
+        ld (PX),hl
+.px:    ld hl,(S7)
+        ld b,(hl)               ; B = pixel sorgente
+        inc hl
+        ld (S7),hl
+        ld hl,(PX)
+        ld de,(S8)
+        push bc
+        call getpix2            ; A = pixel di destinazione
+        pop bc
+        ld c,a
+        ld a,(GFLG)
+        or a
+        ld a,b                  ; 0 PSET
+        jr z,.res
+        ld a,(GFLG)
+        cp 1
+        jr nz,.n1
+        ld a,b                  ; 1 PRESET
+        cpl
+        jr .res
+.n1:    cp 2
+        jr nz,.n2
+        ld a,b                  ; 2 AND
+        and c
+        jr .res
+.n2:    cp 3
+        jr nz,.n3
+        ld a,b                  ; 3 OR
+        or c
+        jr .res
+.n3:    ld a,b                  ; 4 XOR
+        xor c
+.res:   and 0Fh
+        ld (GCMD+8),a
+        ld hl,(PX)
+        ld de,(S8)
+        call plot2
+        ld hl,(PX)
+        ld de,(S3)
+        or a
+        sbc hl,de
+        jr z,.nr
+        ld hl,(PX)
+        inc hl
+        ld (PX),hl
+        jr .px
+.nr:    ld hl,(S8)
+        ld de,(S4)
+        or a
+        sbc hl,de
+        ret z
+        ld hl,(S8)
+        inc hl
+        ld (S8),hl
+        jp .row
