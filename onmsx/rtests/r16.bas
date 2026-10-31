@@ -1,0 +1,24 @@
+OPTION TARGET ASCII16
+DIM b(7)
+PRINT MAPPERSEGS >= 4
+s = MALLOC
+t = MALLOC
+PRINT s <> t
+FOR i = 0 TO 7
+  b(i) = i * 11
+NEXT i
+MWRITE s, 100, VARPTR(b(0)), 16
+MPUT t, 5, 77
+PRINT MGET(t, 5)
+FOR i = 0 TO 7
+  b(i) = 0
+NEXT i
+MREAD s, 100, VARPTR(b(0)), 16
+FOR i = 0 TO 7
+  PRINT b(i);
+NEXT i
+PRINT
+PRINT MGET(s, 102); MGET(s, 103)
+MFREE t
+MFREE s
+PRINT "done"

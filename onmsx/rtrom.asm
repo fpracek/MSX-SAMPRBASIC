@@ -99,6 +99,31 @@ far_ret:
         ret
 
 rom_vars:                       ; dopo l'azzeramento della RAM: pila delle chiamate, registro della finestra di codice
+        in a,(0A8h)             ; slot della pagina 3 (RAM, mapper): serve a MGET/MPUT/...
+        rlca
+        rlca
+        and 3
+        ld c,a
+        ld b,0
+        ld hl,0FCC1h
+        add hl,bc
+        ld a,(hl)
+        and 80h
+        or c
+        ld c,a
+        jp p,.ns
+        ld a,(0FFFFh)
+        cpl
+        and 0C0h
+        rrca
+        rrca
+        rrca
+        rrca
+        and 0Ch
+        or c
+        ld c,a
+.ns:    ld a,c
+        ld (RAMSL),a
         ld hl,FSTK
         ld (FARSP),hl
         ld a,(rt_target)

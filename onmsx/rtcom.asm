@@ -136,6 +136,13 @@ inbuf   equ RTRAM+20
         jp rt_setbank
         jp rt_datawin
         jp rt_vcopy
+        jp rt_mapsegs
+        jp rt_mget
+        jp rt_mput
+        jp rt_mread
+        jp rt_mwrite
+        jp rt_malloc
+        jp rt_mfree
         ASSERT $ == RT_EMPTY
 rt_empty: db 0
         ASSERT $ == RT_NAME
@@ -1058,6 +1065,7 @@ rt_datawin: ld hl,0
         INCLUDE "rtwin.asm"
         INCLUDE "rtvram.asm"
         INCLUDE "rtsnd.asm"
+        INCLUDE "rtmap.asm"
         IFDEF ROMMODE
         INCLUDE "rtrom.asm"
         ELSE

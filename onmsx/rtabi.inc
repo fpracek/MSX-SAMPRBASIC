@@ -99,11 +99,18 @@ RT_FARCALL equ RTB+(020Eh-0100h)
 RT_SETBANK equ RTB+(0211h-0100h)
 RT_DATAWIN equ RTB+(0214h-0100h)
 RT_VCOPY  equ RTB+(0217h-0100h)
-RT_EMPTY  equ RTB+(021Ah-0100h)             ; byte 0 (stringa vuota)
-RT_NAME   equ RTB+(021Bh-0100h)             ; 16 byte: nome del sorgente (0-terminato)
-RT_DSIZE  equ RTB+(022Bh-0100h)             ; word: byte di dati del programma (scritta dal compilatore)
-RT_DATA0  equ RTB+(022Dh-0100h)             ; word: primo elemento DATA (0 = nessun DATA)
-RT_TARGET equ RTB+(022Fh-0100h)             ; byte: tipo di cartuccia (1 ROM16, 2 ROM32, 3 ASCII8, 4 ASCII16, 5 KONAMI, 6 SCC)
+RT_MAPSEGS equ RTB+(021Ah-0100h)
+RT_MGET   equ RTB+(021Dh-0100h)
+RT_MPUT   equ RTB+(0220h-0100h)
+RT_MREAD  equ RTB+(0223h-0100h)
+RT_MWRITE equ RTB+(0226h-0100h)
+RT_MALLOC equ RTB+(0229h-0100h)
+RT_MFREE  equ RTB+(022Ch-0100h)
+RT_EMPTY  equ RTB+(022Fh-0100h)             ; byte 0 (stringa vuota)
+RT_NAME   equ RTB+(0230h-0100h)             ; 16 byte: nome del sorgente (0-terminato)
+RT_DSIZE  equ RTB+(0240h-0100h)             ; word: byte di dati del programma (scritta dal compilatore)
+RT_DATA0  equ RTB+(0242h-0100h)             ; word: primo elemento DATA (0 = nessun DATA)
+RT_TARGET equ RTB+(0244h-0100h)             ; byte: tipo di cartuccia (1 ROM16, 2 ROM32, 3 ASCII8, 4 ASCII16, 5 KONAMI, 6 SCC)
 RTRAM     equ 0C090h            ; RAM del runtime (C000h-C086h: caricatore)
 HEAPP     equ RTRAM+0
 HEAP0     equ RTRAM+10
@@ -211,4 +218,13 @@ FARSP     equ RTRAM+1FEh        ; ROM: pila software delle chiamate fra segmenti
 CURBANK   equ RTRAM+200h        ; ROM: banco nella finestra di codice
 CWREG     equ RTRAM+201h        ; ROM: registro di banco della finestra di codice
 DWREG     equ RTRAM+203h        ; ROM: registro di banco della finestra dati (A000h per i banchi da 8 KB)
+MSAVE     equ RTRAM+205h        ; mapper: segmento della pagina 2 da ripristinare
+MAPN      equ RTRAM+206h        ; numero di segmenti (word), valido se MAPK <> 0
+MAPK      equ RTRAM+208h
+MT0       equ RTRAM+209h        ; scratch del rilevamento
+MTN       equ RTRAM+20Ah
+MTB       equ RTRAM+20Bh
+MJT       equ RTRAM+20Ch        ; tabella delle routine del mapper (DOS 2)
+MALN      equ RTRAM+20Eh        ; segmenti presi dall'alto (senza DOS 2)
+RAMSL     equ RTRAM+20Fh        ; ROM: slot della RAM (pagina 3 = mapper)
 DATA_BASE equ 0C2A0h

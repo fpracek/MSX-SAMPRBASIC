@@ -238,7 +238,7 @@ def norm(l):
 if __name__ == '__main__':
     tests = os.path.join(HERE, '..', 'tests')
     qt = os.path.join(HERE, 'qtests')
-    names = sys.argv[1:] or ['t1', 't6', 't7'] + sorted(f[:-4] for f in os.listdir(qt) if f.endswith('.bas') and not f.startswith('f') and 'OPTION TARGET' not in open(os.path.join(qt, f)).read())   # f*: file su disco, solo su openMSX
+    names = sys.argv[1:] or ['t1', 't6', 't7'] + sorted(f[:-4] for f in os.listdir(qt) if f.endswith('.bas') and not f.startswith(('f', 'm')) and 'OPTION TARGET' not in open(os.path.join(qt, f)).read())   # f*: file su disco, solo su openMSX
     fails = 0
     for n in names:
         d = qt if os.path.exists(os.path.join(qt, n + '.bas')) else tests

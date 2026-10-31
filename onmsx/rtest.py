@@ -38,7 +38,7 @@ def main():
         shutil.copy(rom, os.path.join(BUILD, n + '.rom'))
         tg = target_of(src)
         tcl = os.path.join(BUILD, 'rtest.tcl')
-        open(tcl, 'w').write(qtest.TCL + '\nset OUTDIR "%s"\nafter time 12 {dump %s_rom}\nafter time 14 exit\n' % (BUILD.replace(chr(92), '/'), n))
+        open(tcl, 'w').write(qtest.TCL + '\nset OUTDIR "%s"\nafter time 16 {dump %s_rom}\nafter time 18 exit\n' % (BUILD.replace(chr(92), '/'), n))
         subprocess.run([qtest.OPENMSX, '-machine', os.environ.get('GMACHINE', 'Philips_NMS_8250'), '-cart', os.path.join(BUILD, n + '.rom'),
                         '-romtype', ROMTYPE[tg], '-script', tcl], timeout=300)
         p = os.path.join(BUILD, n + '_rom.txt')

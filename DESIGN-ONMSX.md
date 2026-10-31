@@ -58,4 +58,4 @@ Sintassi decisa ora, implementazione per stadi:
     (SCREEN 4 e WINDOW intero aggiunti dopo; fuori restano SCREEN 3 e la grafica in SCREEN 1/3).
 3f. Suono e file.
 4. **Fatto**: target ROM + `SEGMENT`/chiamate far automatiche (ASCII8/16, Konami, SCC), `INCBIN`, `SETBANK`/`DATAWIN`, `VCOPY`; compilatore dedicato QBCR.COM (stesso sorgente, `-DROMMODE`).
-5. Mapper RAM.
+5. **Fatto**: mapper RAM (MAPPERSEGS, MALLOC/MFREE, MGET/MPUT/MREAD/MWRITE, VARPTR); resta `DIM x(n) MAPPER`.
