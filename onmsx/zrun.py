@@ -18,7 +18,7 @@ class Msx:
     def __init__(self, files):
         self.files = dict(files)            # NOME.EXT -> bytes
         self.m = Z80Machine()
-        self.m.set_input_callback(lambda p: 0xFF)
+        self.m.set_input_callback(lambda p: 0x00 if (p & 0xFF) in (0x98, 0x99) else 0xFF)
         self.m.set_output_callback(lambda *a: None)
         self.m.set_get_int_vector_callback(lambda *a: 0xFF)
         self.dma = 0x80
@@ -120,7 +120,7 @@ class Msx:
         elif ix == 0x00C6:                              # POSIT: H = colonna, L = riga (1-based)
             self.col, self.row = m.h - 1, m.l - 1
             self.w(0xF3DD, bytes([m.h]))
-        elif ix == 0x0062:                              # CHGCLR
+        elif ix in (0x0062, 0x005F):                    # CHGCLR / CHGMOD
             pass
         elif ix == 0x004A:                              # RDVRM
             m.a = self.vram.get(m.hl, 0)

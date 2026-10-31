@@ -71,6 +71,12 @@ inbuf   equ RTRAM+20
         jp rt_wait
         jp rt_vpeek
         jp rt_vpoke
+        jp rt_screen
+        jp rt_gpset
+        jp rt_gpreset
+        jp rt_gpoint
+        jp rt_gline
+        jp rt_gcircle
         ASSERT $ == RT_EMPTY
 rt_empty: db 0
         ASSERT $ == RT_NAME
@@ -191,9 +197,13 @@ msg_div: db 24,"Error: Division by zero"
 msg_press: db 15,"Press any key..."
 
 rt_end:
+        ld a,(SCRMODE)
+        cp 5
+        jr nc,.nomsg            ; in grafica il testo non si vede: si attende solo un tasto
         call rt_pnl
         ld hl,msg_press
         call rt_pstr
+.nomsg:
         push ix                 ; la BIOS (CALSLT) distrugge IX: il frame delle SUB/FUNCTION va salvato
         ld ix,CHGET
         call rt_bios
@@ -875,6 +885,8 @@ rt_vpoke:                   ; DE = indirizzo VRAM (0-16383), HL = valore
         call rt_bios
         pop ix
         ret
+
+        INCLUDE "rtgfx.asm"
 
 ldr_img: INCBIN "build/ldr.bin"
 ldr_size equ $-ldr_img

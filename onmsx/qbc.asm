@@ -17,20 +17,20 @@ F_DMA   equ 1Ah
 F_BWR   equ 26h
 F_BRD   equ 27h
 
-SRC     equ 4000h
-SRCMAX  equ 3FFEh
+SRC     equ 4500h
+SRCMAX  equ 3AFEh
 OUT0    equ 8000h
 VOFF    equ 7F00h
 OUTLIM  equ 0BFh                ; alto byte: oltre BF00h il programma e' troppo grande
 LDR     equ 0C000h
 
-LABT    equ 3000h               ; etichette: 96 x 20 byte
+LABT    equ 3600h               ; etichette: 96 x 20 byte
 LABREC  equ 20
 MAXLAB  equ 96
-VART    equ 3780h               ; variabili/array: 100 x 16 byte
+VART    equ 3D80h               ; variabili/array: 100 x 16 byte
 VARREC  equ 16
 MAXVAR  equ 100
-BLKS    equ 3E10h               ; stack dei blocchi: 24 x 10 byte
+BLKS    equ 43C0h               ; stack dei blocchi: 24 x 10 byte
 BLKREC  equ 10
 MAXBLK  equ 24
 
@@ -150,6 +150,11 @@ K_VPOKE equ 42
 K_OUT   equ 43
 K_SLEEP equ 44
 K_STOP  equ 45
+K_SCREEN equ 46
+K_PSET  equ 47
+K_PRESET equ 48
+K_LINE  equ 49
+K_CIRCLE equ 50
 
 B_IF    equ 1
 B_FOR   equ 2
@@ -931,7 +936,7 @@ kwtab:  db "PRINT",0,"IF",0,"THEN",0,"ELSE",0,"ELSEIF",0,"END",0,"FOR",0,"TO",0
         db "STEP",0,"NEXT",0,"WHILE",0,"WEND",0,"GOTO",0,"GOSUB",0,"RETURN",0
         db "CLS",0,"LOCATE",0,"AND",0,"OR",0,"XOR",0,"NOT",0,"MOD",0,"LET",0
         db "OPTION",0,"INPUT",0,"DIM",0,"POKE",0,"SUB",0,"FUNCTION",0,"CALL",0,"DECLARE",0,"SHARED",0
-        db "EXIT",0,"DO",0,"LOOP",0,"UNTIL",0,"SELECT",0,"CASE",0,"IS",0,"CONST",0,"COLOR",0,"RANDOMIZE",0,"VPOKE",0,"OUT",0,"SLEEP",0,"STOP",0,0
+        db "EXIT",0,"DO",0,"LOOP",0,"UNTIL",0,"SELECT",0,"CASE",0,"IS",0,"CONST",0,"COLOR",0,"RANDOMIZE",0,"VPOKE",0,"OUT",0,"SLEEP",0,"STOP",0,"SCREEN",0,"PSET",0,"PRESET",0,"LINE",0,"CIRCLE",0,0
 
 ; ---------------------------------------------------------------- helper del parser
 is_p:                           ; A = carattere: Z se il token e' quella punteggiatura
@@ -2014,6 +2019,7 @@ kwjump: dw st_print, st_if, err_syntax, st_else, st_elseif, st_end, st_for, err_
         dw st_input, st_dim, st_poke, st_sub, st_function, st_call, st_skip, st_shared
         dw st_exit, st_do, st_loop, err_syntax, st_select, st_case, err_syntax
         dw st_const, st_color, st_randomize, st_vpoke, st_out, st_sleep, st_stop
+        dw st_screen, st_pset, st_preset, st_line, st_circle
 
 ; ---------------------------------------------------------------- espressioni
 want_int:
@@ -2394,9 +2400,9 @@ make_nbuf:                      ; tbuf -> nbuf (testo normale, "CHR$" ecc.)
 
 ; --- funzioni predefinite (il token corrente e' il nome)
 bitab:  db "LEN",0,"ASC",0,"VAL",0,"ABS",0,"SGN",0,"RND",0,"PEEK",0,"CHR$",0,"STR$",0
-        db "LEFT$",0,"RIGHT$",0,"MID$",0,"INKEY$",0,"TIMER",0,"VPEEK",0,"INP",0,"UBOUND",0,0
+        db "LEFT$",0,"RIGHT$",0,"MID$",0,"INKEY$",0,"TIMER",0,"VPEEK",0,"INP",0,"UBOUND",0,"POINT",0,0
 bijump: dw bi_len, bi_asc, bi_val, bi_abs, bi_sgn, bi_rnd, bi_peek, bi_chr, bi_str
-        dw bi_left, bi_right, bi_mid, bi_inkey, bi_timer, bi_vpeek, bi_inp, bi_ubound
+        dw bi_left, bi_right, bi_mid, bi_inkey, bi_timer, bi_vpeek, bi_inp, bi_ubound, bi_point
 
 open_paren:
         ld a,'('
@@ -4426,6 +4432,164 @@ bi_vpeek:
 bi_inp: call bi_arg_int
         call emit_i             ; ld c,l ; in a,(c) ; ld l,a ; ld h,0
         db 6,4Dh,0EDh,78h,6Fh,26h,0
+        ret
+
+; --- grafica
+emit_st:                        ; HL = indirizzo: emette ld (nn),hl
+        ld a,22h
+        push hl
+        call emit_a
+        pop hl
+        jp emit_w
+
+emit_xy:                        ; "(x, y)": valuta e memorizza in (DE) e (BC)
+        push bc
+        push de
+        ld a,'('
+        call expect_p
+        call expr
+        call want_int
+        pop hl
+        call emit_st
+        ld a,','
+        call expect_p
+        call expr
+        call want_int
+        pop hl
+        call emit_st
+        ld a,')'
+        jp expect_p
+
+emit_defcol:                    ; GCOL = -1 (colore corrente)
+        call emit_i
+        db 6,21h,0FFh,0FFh,22h,low GCOL,high GCOL
+        ret
+
+emit_optcol:                    ; ", colore" facoltativo -> GCOL
+        ld a,','
+        call is_p
+        ret nz
+        call next_tok
+        call expr
+        call want_int
+        ld hl,GCOL
+        jp emit_st
+
+st_screen:
+        call expr
+        call want_int
+        EM3 0CDh,low RT_SCREEN,high RT_SCREEN
+        ret
+
+st_pset:
+        ld hl,RT_GPSET
+        jr pset_common
+st_preset:
+        ld hl,RT_GPRESET
+pset_common:
+        push hl
+        ld de,GX1
+        ld bc,GY1
+        call emit_xy
+        call emit_defcol
+        call emit_optcol
+        pop hl
+        ld a,0CDh
+        jp emit_jabs
+
+st_circle:
+        ld de,GX1
+        ld bc,GY1
+        call emit_xy
+        ld a,','
+        call expect_p
+        call expr
+        call want_int
+        ld hl,GX2
+        call emit_st
+        call emit_defcol
+        call emit_optcol
+        EM3 0CDh,low RT_GCIRCLE,high RT_GCIRCLE
+        ret
+
+st_line:                        ; LINE [(x1,y1)]-(x2,y2)[, colore[, B|BF]]
+        ld a,'('
+        call is_p
+        jr nz,.cur
+        ld de,GX1
+        ld bc,GY1
+        call emit_xy
+        jr .dash
+.cur:   call emit_i             ; senza primo punto: dall'ultimo punto grafico
+        db 12,2Ah,low LASTX,high LASTX,22h,low GX1,high GX1,2Ah,low LASTY,high LASTY,22h,low GY1,high GY1
+.dash:  ld a,'-'
+        call expect_p
+        ld de,GX2
+        ld bc,GY2
+        call emit_xy
+        call emit_defcol
+        call emit_i             ; GFLG = 0
+        db 4,0AFh,32h,low GFLG,high GFLG
+        ld a,','
+        call is_p
+        jr nz,.go
+        call next_tok
+        ld a,','
+        call is_p
+        jr z,.flag              ; colore omesso: ", , B"
+        call expr
+        call want_int
+        ld hl,GCOL
+        call emit_st
+        ld a,','
+        call is_p
+        jr nz,.go
+.flag:  call next_tok
+        ld a,(ttype)
+        cp T_ID
+        jp nz,err_syntax
+        ld a,(tbuf)
+        cp 'B'
+        jp nz,err_syntax
+        ld c,1                  ; B
+        ld a,(tbuf+1)
+        or a
+        jr z,.setf
+        cp 'F'
+        jp nz,err_syntax
+        ld a,(tbuf+2)
+        or a
+        jp nz,err_syntax
+        ld c,2                  ; BF
+.setf:  ld a,3Eh                ; ld a,n ; ld (GFLG),a
+        call emit_a
+        ld a,c
+        call emit_a
+        ld a,32h
+        call emit_a
+        ld hl,GFLG
+        call emit_w
+        call next_tok
+.go:    EM3 0CDh,low RT_GLINE,high RT_GLINE
+        ret
+
+bi_point:                       ; POINT(x, y) -> colore (-1 fuori dallo schermo)
+        call next_tok
+        call open_paren
+        call expr
+        call want_int
+        ld hl,GX1
+        call emit_st
+        ld a,','
+        call expect_p
+        call expr
+        call want_int
+        ld hl,GY1
+        call emit_st
+        call close_paren
+        EM3 0CDh,low RT_GPOINT,high RT_GPOINT
+        xor a
+        ld (etype),a
         ret
 
 st_wend:

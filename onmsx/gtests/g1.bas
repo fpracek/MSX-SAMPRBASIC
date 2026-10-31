@@ -1,0 +1,22 @@
+' grafica SCREEN 5: PSET, PRESET, POINT, LINE (hardware e ritagliata), box, circle
+COLOR 15, 1
+SCREEN 5
+CLS
+PSET (10, 20), 7
+PSET (11, 20), 3
+PRESET (10, 20)
+LINE (0, 0)-(100, 0), 5
+LINE (0, 2)-(10, 12), 6, B
+LINE (20, 2)-(30, 12), 9, BF
+CIRCLE (128, 100), 20, 10
+PSET (300, 5), 2
+x = POINT(11, 20)
+IF x = 3 THEN PSET (5, 50), 12
+IF POINT(300, 5) = -1 THEN PSET (6, 50), 12
+PSET (100, 100), 8
+LINE -(250, 200), 13
+LINE (-20, 60)-(40, 60), 14
+LINE (10, 200)-(10, 230), 15
+LINE (50, 50)-(60, 40), 4
+LINE (70, 40)-(60, 50), 4
+CIRCLE (5, 5), 10, 2

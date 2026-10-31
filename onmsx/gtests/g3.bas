@@ -1,0 +1,6 @@
+COLOR 3, 0
+SCREEN 6
+CLS
+PSET (300, 10), 2
+PSET (301, 10), 1
+LINE (0, 0)-(400, 0), 3

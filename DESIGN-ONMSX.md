@@ -50,6 +50,7 @@ Sintassi decisa ora, implementazione per stadi:
 2c. **Fatto**: CONST, COLOR, RANDOMIZE, VPOKE/VPEEK, OUT/INP, SLEEP, STOP.
 2d. **Fatto**: array come parametri (per riferimento) e UBOUND.
 2e. **Fatto**: SELECT CASE su stringhe.
-2f. Grafica/suono/file (da decidere).
-3. Target ROM + `SEGMENT`/`CALL FAR` (ASCII8/16, Konami, SCC).
-4. Mapper RAM.
+3a. **Fatto**: grafica bitmap SCREEN 5-8 (PSET/PRESET/POINT/LINE/CIRCLE).
+3b. PAINT, testo in grafica, sprite, PALETTE; poi suono e file.
+4. Target ROM + `SEGMENT`/`CALL FAR` (ASCII8/16, Konami, SCC).
+5. Mapper RAM.

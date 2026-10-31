@@ -37,10 +37,25 @@ RT_COLOR  equ 0169h
 RT_WAIT   equ 016Ch
 RT_VPEEK  equ 016Fh
 RT_VPOKE  equ 0172h
-RT_EMPTY  equ 0175h             ; byte 0 (stringa vuota)
-RT_NAME   equ 0176h             ; 16 byte: nome del sorgente (0-terminato)
-RT_DSIZE  equ 0186h             ; word: byte di dati del programma (scritta dal compilatore)
+RT_SCREEN equ 0175h
+RT_GPSET  equ 0178h
+RT_GPRESET equ 017Bh
+RT_GPOINT equ 017Eh
+RT_GLINE  equ 0181h
+RT_GCIRCLE equ 0184h
+RT_EMPTY  equ 0187h             ; byte 0 (stringa vuota)
+RT_NAME   equ 0188h             ; 16 byte: nome del sorgente (0-terminato)
+RT_DSIZE  equ 0198h             ; word: byte di dati del programma (scritta dal compilatore)
 RTRAM     equ 0C100h            ; RAM del runtime (C000h-C086h: caricatore)
 HEAPP     equ RTRAM+0
 HEAP0     equ RTRAM+10
-DATA_BASE equ 0C220h            ; variabili e array del programma
+GX1       equ RTRAM+118h        ; parametri grafici (word)
+GY1       equ RTRAM+11Ah
+GX2       equ RTRAM+11Ch
+GY2       equ RTRAM+11Eh
+GCOL      equ RTRAM+120h        ; colore (< 0 = colore corrente)
+GFLG      equ RTRAM+122h        ; byte: 0 linea, 1 riquadro, 2 riquadro pieno
+SCRMODE   equ RTRAM+123h        ; byte: modo SCREEN corrente
+LASTX     equ RTRAM+124h        ; ultimo punto grafico
+LASTY     equ RTRAM+126h
+DATA_BASE equ 0C250h            ; variabili e array del programma
