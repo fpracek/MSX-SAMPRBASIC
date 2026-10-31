@@ -591,23 +591,15 @@ load_rt:                        ; .COM: dimensione di RT.BIN (il file si copia p
         ld (tline),hl
         ERR E_RT
 .o:     call fcb_rec1
-        ld de,PART              ; la dimensione si ottiene leggendo il file a blocchi (F_SIZE dipende dalla versione del DOS)
+        ld de,PART              ; la dimensione e' una parola dell'intestazione (RT_SIZE): basta il primo blocco
         ld c,F_DMA
         call BDOS
-        ld hl,0
-        ld (rtsz),hl
-.sz:    ld de,fcb
+        ld de,fcb
         ld hl,1024
         ld c,F_BRD
         call BDOS
-        ld a,h
-        or l
-        jr z,.sd
-        ld de,(rtsz)
-        add hl,de
+        ld hl,(PART+RT_SIZE-IMGBASE)
         ld (rtsz),hl
-        jr .sz
-.sd:
         ld de,fcb
         ld c,F_CLOSE
         call BDOS
@@ -684,11 +676,11 @@ write_output:                   ; NOME.COM <- RT.BIN + codice, con l'intestazion
         or a
         jr nz,.err
         call fcb_rec1
-        ld de,PART              ; buffer di copia da 1 KB (la tabella dei parametri non serve piu')
+        ld de,PART              ; buffer di copia da 4 KB (la tabella dei parametri non serve piu'): pochi blocchi grandi
         ld c,F_DMA
         call BDOS
 .cp:    ld de,fcb
-        ld hl,1024
+        ld hl,4096
         ld c,F_BRD
         call BDOS
         ld a,h

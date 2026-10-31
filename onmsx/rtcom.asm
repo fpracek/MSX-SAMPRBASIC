@@ -167,6 +167,8 @@ rt_data0: dw 0
 rt_target: db 0
         ASSERT $ == RT_DBG
         jp rt_dbg
+        ASSERT $ == RT_SIZE
+        dw rt_prog-RTB
 
 rt_bios:
         ld iy,(EXPTBL-1)
