@@ -161,6 +161,9 @@ def main():
             elif w[0] == 'vb':                          # byte di VRAM (anche 64K-128K)
                 a, want = int(w[1], 0), int(w[2], 0)
                 check(v[a] == want, f'VRAM[{a:05X}] = {v[a]} (atteso {want})')
+            elif w[0] == 'vnz':                         # almeno un byte diverso da zero in [ADDR, ADDR+LEN)
+                a, ln = int(w[1], 0), int(w[2], 0)
+                check(any(v[a:a + ln]), f'VRAM[{a:05X}..+{ln}] contiene dati: {list(v[a:a + ln])}')
             elif w[0] == 'reg':                         # registro del VDP
                 rg = open(os.path.join(BUILD, n + '.reg'), 'rb').read()
                 r_, want = int(w[1]), int(w[2], 0)

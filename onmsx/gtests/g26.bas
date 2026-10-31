@@ -1,0 +1,26 @@
+' operatori logici, COPY, pagine, SET SCROLL (SCREEN 5)
+COLOR 15, 0
+SCREEN 5
+CLS
+PSET (10, 10), 5
+PSET (10, 10), 3, OR
+PSET (11, 10), 6
+PSET (11, 10), 3, XOR
+PSET (12, 10), 9
+PSET (12, 10), 12, AND
+PSET (13, 10), 2
+PSET (13, 10), 7, TPSET
+PSET (14, 10), 2
+PSET (14, 10), 0, TPSET
+LINE (20, 20)-(29, 29), 4, BF
+LINE (20, 20)-(29, 29), 15, B, XOR
+COPY (20, 20)-(29, 29) TO (50, 60)
+COPY (20, 20)-(24, 24) TO (22, 22)
+SET PAGE 0, 1
+CLS
+PSET (5, 5), 8
+LINE (0, 100)-(50, 150), 6, BF
+COPY (0, 100)-(50, 150), 1 TO (100, 100), 0
+SET PAGE 0, 0
+COPY (0, 0)-(20, 20), 1 TO (150, 0), 0
+SET SCROLL 0, 3

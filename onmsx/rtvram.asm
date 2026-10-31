@@ -12,8 +12,8 @@ ubank_on:                       ; i comandi utente usano il banco scelto con VBA
         ld a,(UBANK)
         ld (VA16),a
         ret
-ubank_off:
-        xor a
+ubank_off:                      ; torna alla pagina attiva (A16 per i comandi di grafica)
+        ld a,(APHI)
         ld (VA16),a
         ret
 
@@ -351,4 +351,251 @@ rt_sprcols:                     ; COLOR SPRITE$(n) = stringa: GX1 = piano, HL = 
         inc hl
         ld c,VDPD
         otir
+        ret
+
+; ---------------------------------------------------------------- pagine, COPY, scorrimento
+pgy:                            ; HL = pagina (< 0 = attiva) -> HL = pagina * 256
+        bit 7,h
+        jr z,.p
+        ld a,(APAGE)
+        ld l,a
+.p:     ld h,l
+        ld l,0
+        ret
+
+rt_setpage:                     ; SET PAGE GX1 = pagina visibile, GY1 = pagina attiva (schermi 5-8)
+        ld a,(SCRMODE)
+        cp 5
+        jp c,rt_egfx
+        ld c,4                  ; pagine: 4 (schermi 5-6), 2 (schermi 7-8)
+        cp 7
+        jr c,.n
+        ld c,2
+.n:     ld hl,(GX1)
+        ld de,(GY1)
+        ld a,h
+        or d
+        jp nz,rt_eifc
+        ld a,l
+        cp c
+        jp nc,rt_eifc
+        ld a,e
+        cp c
+        jp nc,rt_eifc
+        ld a,l                  ; R#2 = pagina << 5 (schermi 5-6) o << 6 (7-8), | 1Fh
+        rrca
+        rrca
+        ld b,a
+        ld a,(SCRMODE)
+        cp 7
+        ld a,b
+        jr nc,.r2
+        rrca
+.r2:    or 1Fh
+        ld (0F3E1h),a
+        di
+        out (VDPC),a
+        ld a,82h
+        out (VDPC),a
+        ei
+        ld a,e
+        ld (APAGE),a
+        ld h,a                  ; APY = pagina * 256
+        ld l,0
+        ld (APY),hl
+        ld a,(SCRMODE)
+        cp 7
+        ld a,e
+        jr nc,.hi
+        and 1                   ; schermi 5-6: 32 KB per pagina
+        rrca
+        ld h,a
+        ld l,0
+        ld (APLO),hl
+        ld a,e
+        srl a
+        jr .set
+.hi:    ld hl,0                 ; schermi 7-8: 64 KB per pagina
+        ld (APLO),hl
+.set:   ld (APHI),a
+        ld (VA16),a
+        ret
+
+rt_copy:                        ; COPY (GX1,GY1)-(GX2,GY2),CSP TO (CDX,CDY),CDP con operatore GOP
+        ld a,(SCRMODE)
+        cp 5
+        jp c,rt_egfx
+        ld hl,GX1
+        ld de,GX2
+        call sortp
+        ld hl,GY1
+        ld de,GY2
+        call sortp
+        ld hl,(GX2)
+        ld de,(GX1)
+        or a
+        sbc hl,de
+        inc hl
+        ld (GCMD+4),hl
+        ld hl,(GY2)
+        ld de,(GY1)
+        or a
+        sbc hl,de
+        inc hl
+        ld (GCMD+6),hl
+        ld hl,(CSP)
+        call pgy
+        ld de,(GY1)
+        add hl,de
+        ld (S2),hl              ; SY assoluto
+        ld hl,(CDP)
+        call pgy
+        ld de,(CDY)
+        add hl,de
+        ld (S4),hl              ; DY assoluto
+        ld de,(APY)
+        or a
+        sbc hl,de
+        ld (GCMD+2),hl          ; DY relativo (vdp_cmd riaggiunge la pagina attiva)
+        ld hl,(GX1)
+        ld (S1),hl
+        ld hl,(CDX)
+        ld (GCMD),hl
+        xor a
+        ld (GCMD+8),a
+        ld (GCMD+9),a
+        ld hl,(S4)
+        ld de,(S2)
+        or a
+        sbc hl,de
+        jr z,.same
+        jr c,.go                ; destinazione piu' in alto: dall'alto
+        ld a,8                  ; piu' in basso: dal basso (DIY)
+        ld (GCMD+9),a
+        ld hl,(GCMD+6)
+        dec hl
+        ld de,(S2)
+        add hl,de
+        ld (S2),hl
+        ld hl,(GCMD+6)
+        dec hl
+        ld de,(GCMD+2)
+        add hl,de
+        ld (GCMD+2),hl
+        jr .go
+.same:  ld hl,(CDX)             ; stesse righe: se la destinazione e' a destra, dalla destra (DIX)
+        ld de,(S1)
+        or a
+        sbc hl,de
+        jr z,.go
+        jr c,.go
+        ld a,4
+        ld (GCMD+9),a
+        ld hl,(GCMD+4)
+        dec hl
+        ld de,(S1)
+        add hl,de
+        ld (S1),hl
+        ld hl,(GCMD+4)
+        dec hl
+        ld de,(GCMD)
+        add hl,de
+        ld (GCMD),hl
+.go:    call vdp_wait
+        ld hl,(S1)
+        ld de,(S2)
+        call vdp_setsrc_raw
+        ld a,90h                ; LMMM
+        ld (GCMD+10),a
+        jp vdp_cmd
+
+rt_scroll:                      ; SET SCROLL GX1 = x, GY1 = y: R#23 (verticale), R#26/R#27 (orizzontale, V9958)
+        ld hl,(GX1)
+        ld a,(GY1)
+        di
+        out (VDPC),a
+        ld a,80h+23
+        out (VDPC),a
+        ld a,l
+        and 7
+        neg
+        and 7                   ; R#27 = (8 - x mod 8) mod 8
+        ld b,a
+        ld de,7
+        add hl,de
+        srl h
+        rr l
+        srl h
+        rr l
+        srl h
+        rr l
+        ld a,l
+        and 3Fh                 ; R#26 = (x + 7) / 8
+        out (VDPC),a
+        ld a,80h+26
+        out (VDPC),a
+        ld a,b
+        out (VDPC),a
+        ld a,80h+27
+        out (VDPC),a
+        ei
+        ret
+
+; ---------------------------------------------------------------- DATA / READ / RESTORE
+; Blocchi nel codice: jp oltre, poi elementi (0,word = intero | 1,len,testo = stringa), 2, word = prossimo blocco (0 = ultimo)
+rt_read:                        ; A = 0 intero / 1 stringa -> HL = valore (o puntatore alla stringa)
+        ld c,a
+        ld hl,(DPTR)
+.f:     ld a,h
+        or l
+        jr z,.eod
+        ld a,(hl)
+        cp 2
+        jr nz,.it
+        inc hl                  ; fine blocco: segue il collegamento
+        ld e,(hl)
+        inc hl
+        ld d,(hl)
+        ex de,hl
+        jr .f
+.it:    cp c
+        jr nz,.tm
+        inc hl
+        or a
+        jr nz,.s
+        ld e,(hl)
+        inc hl
+        ld d,(hl)
+        inc hl
+        ld (DPTR),hl
+        ex de,hl
+        ret
+.s:     push hl
+        ld a,(hl)
+        inc a
+        ld e,a
+        ld d,0
+        add hl,de
+        ld (DPTR),hl
+        pop hl
+        ret
+.eod:   ld hl,msg_eod
+        jp rt_fatal
+.tm:    ld hl,msg_tmm
+        jp rt_fatal
+
+rt_restore:                     ; HL = 0: dall'inizio; altrimenti indirizzo di un'etichetta posta subito prima di un DATA
+        ld a,h
+        or l
+        jr nz,.l
+        ld hl,(rt_data0)
+        ld (DPTR),hl
+        ret
+.l:     ld a,(hl)
+        cp 0C3h
+        jp nz,rt_eifc
+        inc hl
+        inc hl
+        inc hl
+        ld (DPTR),hl
         ret

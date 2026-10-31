@@ -20,10 +20,12 @@ rowaddr:                        ; HL = y -> HL = indirizzo VRAM della riga, B = 
         ld h,a                  ; y * 256
         ld l,0
         ld b,0
-        ret z
+        jr z,.ap
         srl h                   ; y * 128
         rr l
         ld b,128
+.ap:    ld de,(APLO)            ; pagina attiva
+        add hl,de
         ret
 
 rowwrite:                       ; HL = y: scrive ROWBUF nella riga y
@@ -157,7 +159,7 @@ elems:                          ; larghezza S5, altezza S6 -> HL = elementi dell
         ret
 
 rt_gget:                        ; GET: GX1,GY1,GX2,GY2 e array (ARRB, ARRC)
-        call chk_gfx
+        call chk_gfx_nm
         call grect
         call elems
         ex de,hl
@@ -213,7 +215,7 @@ rt_gget:                        ; GET: GX1,GY1,GX2,GY2 e array (ARRB, ARRC)
         jr .row
 
 rt_gput:                        ; PUT: (GX1,GY1) = angolo in alto a sinistra, array (ARRB, ARRC), azione in GFLG
-        call chk_gfx
+        call chk_gfx_nm
         ld hl,(ARRB)
         ld e,(hl)
         inc hl

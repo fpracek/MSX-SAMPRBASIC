@@ -80,6 +80,7 @@ RT_LOGOP  equ 01EAh
 RT_EMPTY  equ 01EDh             ; byte 0 (stringa vuota)
 RT_NAME   equ 01EEh             ; 16 byte: nome del sorgente (0-terminato)
 RT_DSIZE  equ 01FEh             ; word: byte di dati del programma (scritta dal compilatore)
+RT_DATA0  equ 0200h             ; word: primo elemento DATA (0 = nessun DATA)
 RTRAM     equ 0C100h            ; RAM del runtime (C000h-C086h: caricatore)
 HEAPP     equ RTRAM+0
 HEAP0     equ RTRAM+10
@@ -169,4 +170,11 @@ VA16      equ RTRAM+1BAh        ; A16 usato da vram_set
 APAGE     equ RTRAM+1BBh        ; pagina attiva (SET PAGE)
 GOP       equ RTRAM+1BCh        ; operatore logico dei comandi VDP
 DPTR      equ RTRAM+1BDh        ; puntatore DATA/READ
+APY       equ RTRAM+1BFh        ; pagina attiva: scostamento Y (pagina*256) per i comandi VDP
+APLO      equ RTRAM+1C1h        ; ... scostamento dell'indirizzo VRAM (16 bit bassi)
+APHI      equ RTRAM+1C3h        ; ... A16 dell'indirizzo VRAM
+CSP       equ RTRAM+1C4h        ; COPY: pagina sorgente, destinazione (x,y), pagina destinazione (-1 = attiva)
+CDX       equ RTRAM+1C6h
+CDY       equ RTRAM+1C8h
+CDP       equ RTRAM+1CAh
 DATA_BASE equ 0C2E0h

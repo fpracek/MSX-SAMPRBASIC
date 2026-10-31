@@ -1,0 +1,6 @@
+mode 5
+vb 0x18F0A 0x70
+vnz 0x18000 4
+vb 0x19E1E 0x22
+none 0 0 255 211 7
+none 0 0 255 211 2

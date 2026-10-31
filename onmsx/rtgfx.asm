@@ -30,14 +30,24 @@ rt_egfx:
         ld hl,msg_gfx
         jp rt_fatal
 
-rt_screen:                      ; HL = modo 0..8 (CHGMOD del BIOS)
+rt_screen:                      ; HL = modo 0..8 (CHGMOD del BIOS), 10..12 solo su MSX2+ (V9958)
         ld a,h
         or a
         jr nz,rt_eifc
         ld a,l
-        cp 9
+        cp 13
         jr nc,rt_eifc
-        or a
+        cp 9
+        jr c,.ok
+        cp 10
+        jr c,rt_eifc
+        push af
+        ld hl,002Dh             ; MSXVER: 2 = MSX2+, 3 = turbo R
+        call rdrom
+        cp 2
+        jp c,rt_eifc
+        pop af
+.ok:    or a
         jr nz,.go
         ld a,80                 ; SCREEN 0: testo a 80 colonne
         ld (LINL40),a
@@ -45,14 +55,26 @@ rt_screen:                      ; HL = modo 0..8 (CHGMOD del BIOS)
         xor a
 .go:    ld (SCRMODE),a
         ld (SCRREAL),a
+        ld hl,0                 ; pagina attiva = 0
+        ld (APY),hl
+        ld (APLO),hl
+        ld (APHI),hl
+        ld (VA16),hl
         push ix
         ld ix,CHGMOD
         call rt_bios
         pop ix
         ld a,(SCRREAL)
         cp 4
-        jr nz,.nm
-        ld a,2                  ; SCREEN 4 ha lo stesso layout (pattern + colori) dello SCREEN 2
+        jr z,.m2
+        cp 3
+        jr z,.m2
+        cp 10
+        jr c,.nm
+        ld a,8                  ; SCREEN 10-12: un byte per pixel come lo SCREEN 8
+        ld (SCRMODE),a
+        jr .nm
+.m2:    ld a,2                  ; SCREEN 4 ha lo stesso layout (pattern + colori) dello SCREEN 2; SCREEN 3 (multicolore) passa da plot3
         ld (SCRMODE),a
 .nm:    ld a,(SCRMODE)
         cp 2
@@ -138,6 +160,13 @@ chk_gfx:                        ; SCREEN 2 e 5-8
         jp nc,rt_egfx
         ret
 
+chk_gfx_nm:                     ; come chk_gfx, ma non per lo SCREEN 3 (PAINT, GET, PUT non lo supportano)
+        call chk_gfx
+        ld a,(SCRREAL)
+        cp 3
+        ret nz
+        jp rt_egfx
+
 gwidth:                         ; -> BC = larghezza dello schermo
         ld a,(SCRMODE)
         ld bc,256
@@ -198,8 +227,26 @@ vdp_cmd:                        ; esegue il comando descritto in GCMD
         out (VDPC),a
         ld a,80h+17
         out (VDPC),a
+        ld a,(GOP)              ; operatore logico (solo per i comandi LINE/PSET/LMMV/LMMM)
+        ld hl,GCMD+10
+        or (hl)
+        ld (hl),a
         ld hl,GCMD
-        ld bc,0B00h+VDPR        ; B = 11 byte, C = porta dei registri indiretti
+        ld bc,0200h+VDPR        ; DX
+        otir
+        ld e,(hl)               ; DY + scostamento della pagina attiva
+        inc hl
+        ld d,(hl)
+        inc hl
+        push hl
+        ld hl,(APY)
+        add hl,de
+        ld a,l
+        out (c),a
+        ld a,h
+        out (c),a
+        pop hl
+        ld b,7                  ; NX NY CLR ARG CMD
         otir
         ei
         ret
@@ -276,6 +323,11 @@ rt_gpoint:                      ; (GX1,GY1) -> HL = colore, -1 fuori dallo scher
         out (VDPC),a
         ld a,80h+17
         out (VDPC),a
+        push hl
+        ld hl,(APY)
+        add hl,de
+        ex de,hl
+        pop hl
         ld a,l
         out (VDPR),a
         ld a,h
@@ -702,6 +754,9 @@ pix_addr2:                      ; HL = x, DE = y -> (P2OFF) = scostamento nelle 
         ret
 
 plot2:                          ; HL = x, DE = y (dentro lo schermo): punto con il colore di GCMD+8
+        ld a,(SCRREAL)
+        cp 3
+        jp z,plot3
         call pix_addr2
         ld hl,(P2OFF)
         ld bc,(GRPCOL)
@@ -779,6 +834,9 @@ plot2:                          ; HL = x, DE = y (dentro lo schermo): punto con 
         ret
 
 getpix2:                        ; HL = x, DE = y -> A = colore del pixel
+        ld a,(SCRREAL)
+        cp 3
+        jp z,getpix3
         call pix_addr2
         ld hl,(P2OFF)
         ld bc,(GRPCGP)
@@ -806,6 +864,82 @@ getpix2:                        ; HL = x, DE = y -> A = colore del pixel
         rrca
         rrca
 .bg:    and 0Fh
+        ret
+
+pix_addr3:                      ; SCREEN 3: HL = x, DE = y -> HL = byte del generatore, C bit 2 = 0 se nibble alto (pixel a sinistra)
+        ld a,l
+        and 4
+        ld c,a
+        ld a,e
+        rrca
+        rrca
+        rrca
+        rrca
+        rrca
+        and 7
+        ld h,a
+        ld a,e
+        rrca
+        rrca
+        and 7
+        ld b,a
+        ld a,l
+        and 0F8h
+        or b
+        ld l,a
+        ld de,(0F3D5h)          ; MLTCGP: generatore dei pattern del multicolore
+        add hl,de
+        ret
+
+plot3:                          ; SCREEN 3: blocco 4x4 con il colore di GCMD+8
+        call pix_addr3
+        push bc
+        push hl
+        xor a
+        call vram_set
+        in a,(VDPD)
+        ld b,a
+        pop hl
+        pop de                  ; E = C (bit 2 = nibble)
+        ld a,(GCMD+8)
+        and 0Fh
+        ld c,a
+        bit 2,e
+        jr z,.hi
+        ld a,b
+        and 0F0h
+        or c
+        jr .w
+.hi:    ld a,c
+        rlca
+        rlca
+        rlca
+        rlca
+        ld c,a
+        ld a,b
+        and 0Fh
+        or c
+.w:     ld b,a
+        ld a,40h
+        call vram_set
+        ld a,b
+        out (VDPD),a
+        ret
+
+getpix3:                        ; SCREEN 3: HL = x, DE = y -> A = colore
+        call pix_addr3
+        push bc
+        xor a
+        call vram_set
+        in a,(VDPD)
+        pop bc
+        bit 2,c
+        jr nz,.lo
+        rrca
+        rrca
+        rrca
+        rrca
+.lo:    and 0Fh
         ret
 
 rect_fill2:                     ; S1..S4 = rettangolo (ordinato, ritagliato): punto per punto

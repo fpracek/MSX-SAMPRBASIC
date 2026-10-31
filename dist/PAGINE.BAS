@@ -1,0 +1,20 @@
+' Pagine, COPY, operatori logici, DATA/READ (SCREEN 5)
+COLOR 15, 0
+SCREEN 5
+SET PAGE 0, 1
+CLS
+FOR i = 0 TO 7
+  READ x, y, c
+  LINE (x, y)-(x + 20, y + 20), c, BF
+NEXT i
+SET PAGE 1, 1
+SLEEP 60
+SET PAGE 0, 0
+CLS
+COPY (0, 0)-(100, 100), 1 TO (50, 50), 0
+LINE (60, 60)-(140, 140), 15, B, XOR
+SET SCROLL 0, 20
+SLEEP 120
+SET SCROLL 0, 0
+DATA 0, 0, 2, 25, 0, 3, 50, 0, 4, 75, 0, 5
+DATA 0, 25, 6, 25, 25, 7, 50, 25, 8, 75, 25, 9

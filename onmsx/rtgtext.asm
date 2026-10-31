@@ -227,6 +227,8 @@ gdraw:                          ; A = carattere 32..: disegna il glifo nella cel
         rl d
         djnz .sh
         add hl,de
+        ld de,(APLO)            ; pagina attiva
+        add hl,de
         pop de                  ; DE = glifo
         ld b,8                  ; 8 righe
 .row:   push bc
@@ -317,7 +319,13 @@ gline:                          ; A = riga del glifo (bit 7 = pixel a sinistra):
         jr nz,.byte
         ret
 
-vdp_setsrc:                     ; HL = SX, DE = SY (registri R#32-35)
+vdp_setsrc:                     ; HL = SX, DE = SY (registri R#32-35), SY relativo alla pagina attiva
+        push hl
+        ld hl,(APY)
+        add hl,de
+        ex de,hl
+        pop hl
+vdp_setsrc_raw:                 ; come sopra, SY assoluto
         di
         ld a,32
         out (VDPC),a
@@ -497,7 +505,9 @@ rowread:                        ; HL = y: legge la riga di pixel in ROWBUF
         srl h                   ; y * 128
         rr l
         ld b,128
-.rd:    push bc
+.rd:    ld de,(APLO)
+        add hl,de
+        push bc
         xor a
         call vram_set
         pop bc
@@ -602,7 +612,7 @@ scanrow:                        ; HL = y: semi per ogni tratto riempibile di que
         jr .l
 
 rt_paint:                       ; PAINT (GX1,GY1), colore GCOL, bordo GX2 (< 0 = come il colore di riempimento)
-        call chk_gfx
+        call chk_gfx_nm
         call gcolor
         ld b,a
         ld a,(GONES)

@@ -1,0 +1,9 @@
+' pagina 3 con SCREEN 5 (32 KB per pagina, A16 = 1)
+COLOR 15, 0
+SCREEN 5
+SET PAGE 0, 3
+CLS
+PSET (20, 30), 7
+PRINT "Z"
+LINE (60, 60)-(80, 80), 2, BF
+SET PAGE 0, 0

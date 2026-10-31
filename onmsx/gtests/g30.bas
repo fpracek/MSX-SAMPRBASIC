@@ -1,0 +1,11 @@
+' SCREEN 3 (multicolore): PSET, POINT, LINE, CIRCLE
+COLOR 15, 0
+SCREEN 3
+PSET (0, 0), 5
+PSET (4, 0), 6
+PSET (8, 4), 9
+LINE (40, 40)-(79, 79), 12, BF
+PSET (200, 150), 14
+x = POINT(4, 0)
+PSET (100, 100), x
+CIRCLE (128, 96), 30, 8

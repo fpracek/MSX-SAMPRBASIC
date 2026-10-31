@@ -105,11 +105,11 @@ inbuf   equ RTRAM+20
         jp rt_strig
         jp rt_sprcol
         jp rt_sprcols
-        jp rt_nyi
-        jp rt_nyi
-        jp rt_nyi
-        jp rt_nyi
-        jp rt_nyi
+        jp rt_copy
+        jp rt_setpage
+        jp rt_scroll
+        jp rt_read
+        jp rt_restore
         jp rt_nyi
         ASSERT $ == RT_EMPTY
 rt_empty: db 0
@@ -117,6 +117,8 @@ rt_empty: db 0
 rt_name: ds 16
         ASSERT $ == RT_DSIZE
 rt_dsize: dw 0
+        ASSERT $ == RT_DATA0
+rt_data0: dw 0
 
 rt_bios:
         ld iy,(EXPTBL-1)
@@ -160,6 +162,8 @@ rt_start:
         ld hl,(JIFFY)
         set 0,l
         ld (rndseed),hl
+        ld hl,(rt_data0)
+        ld (DPTR),hl
         jp rt_prog
 
 rt_locate:                  ; DE = riga, HL = colonna
@@ -202,7 +206,13 @@ rt_locate:                  ; DE = riga, HL = colonna
         ret
 
 rt_cls:
-        xor a
+        ld a,(SCRMODE)
+        cp 5
+        jr c,.bios
+        ld a,(APAGE)            ; pagina attiva diversa da 0: la BIOS non la cancella, si usa il VDP
+        or a
+        jr nz,.pg
+.bios:  xor a
         push ix
         ld ix,CLS
         call rt_bios
@@ -218,6 +228,24 @@ rt_cls:
         inc a
         ld (CSRX),a
         ret
+.pg:    ld a,(BAKCLR)
+        ld b,a
+        ld a,(GONES)
+        and b
+        ld (GCMD+8),a
+        ld hl,0
+        ld (GCMD),hl
+        ld (GCMD+2),hl
+        call gwidth
+        ld (GCMD+4),bc
+        ld hl,212
+        ld (GCMD+6),hl
+        xor a
+        ld (GCMD+9),a
+        ld a,80h                ; LMMV
+        ld (GCMD+10),a
+        call vdp_cmd
+        jr .g
 
 rt_putc:
         push hl
@@ -229,9 +257,12 @@ rt_putc:
         jr z,.g
         cp 5
         jr c,.t
-.g:     ld a,b
+.g:     ld a,(SCRREAL)
+        cp 3
+        ld a,b
+        jr z,.p3                ; SCREEN 3: niente testo
         call gputc              ; schermi grafici: disegna il carattere
-        pop bc
+.p3:        pop bc
         pop de
         pop hl
         ret
@@ -278,6 +309,8 @@ rt_fatal:
         call rt_pstr
         jp rt_end
 
+msg_eod: db 20,"Error: Out of DATA"
+msg_tmm: db 20,"Error: Type mismatch"
 msg_oom: db 26,"Error: Out of string space"
 msg_sub: db 29,"Error: Subscript out of range"
 

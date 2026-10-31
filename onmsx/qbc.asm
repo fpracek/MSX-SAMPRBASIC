@@ -167,6 +167,11 @@ K_WINDOW equ 58
 K_VBANK equ 59
 K_VFILL equ 60
 K_VWRITE equ 61
+K_SET equ 62
+K_COPY equ 63
+K_DATA equ 64
+K_READ equ 65
+K_RESTORE equ 66
 
 B_IF    equ 1
 B_FOR   equ 2
@@ -980,7 +985,7 @@ kwtab:  db "PRINT",0,"IF",0,"THEN",0,"ELSE",0,"ELSEIF",0,"END",0,"FOR",0,"TO",0
         db "CLS",0,"LOCATE",0,"AND",0,"OR",0,"XOR",0,"NOT",0,"MOD",0,"LET",0
         db "OPTION",0,"INPUT",0,"DIM",0,"POKE",0,"SUB",0,"FUNCTION",0,"CALL",0,"DECLARE",0,"SHARED",0
         db "EXIT",0,"DO",0,"LOOP",0,"UNTIL",0,"SELECT",0,"CASE",0,"IS",0,"CONST",0,"COLOR",0,"RANDOMIZE",0,"VPOKE",0,"OUT",0,"SLEEP",0,"STOP",0,"SCREEN",0,"PSET",0,"PRESET",0,"LINE",0,"CIRCLE",0
-        db "PALETTE",0,"PAINT",0,"PUT",0,"SPRITE",0,"GET",0,"DRAW",0,"VIEW",0,"WINDOW",0,"VBANK",0,"VFILL",0,"VWRITE",0,0
+        db "PALETTE",0,"PAINT",0,"PUT",0,"SPRITE",0,"GET",0,"DRAW",0,"VIEW",0,"WINDOW",0,"VBANK",0,"VFILL",0,"VWRITE",0,"SET",0,"COPY",0,"DATA",0,"READ",0,"RESTORE",0,0
 
 ; ---------------------------------------------------------------- helper del parser
 is_p:                           ; A = carattere: Z se il token e' quella punteggiatura
@@ -1637,6 +1642,9 @@ compile:
         ld (tmpf),a
         ld (etype),a
         ld (usewin),a
+        ld h,a
+        ld l,a
+        ld (dlast),hl
         ld hl,DATA_BASE
         ld (dptr),hl
         ld hl,(0006h)
@@ -2061,7 +2069,7 @@ kwjump: dw st_print, st_if, err_syntax, st_else, st_elseif, st_end, st_for, err_
         dw st_exit, st_do, st_loop, err_syntax, st_select, st_case, err_syntax
         dw st_const, st_color, st_randomize, st_vpoke, st_out, st_sleep, st_stop
         dw st_screen, st_pset, st_preset, st_line, st_circle, st_palette, st_paint, st_put, err_syntax, st_get, st_draw, st_view, st_window
-        dw st_vbank, st_vfill, st_vwrite
+        dw st_vbank, st_vfill, st_vwrite, st_set, st_copy, st_data, st_read, st_restore
 
 ; ---------------------------------------------------------------- espressioni
 want_int:
@@ -4710,6 +4718,322 @@ emit_optcol:                    ; ", colore" facoltativo -> GCOL
         ld hl,GCOL
         jp emit_st
 
+emit_gopclr:                    ; xor a ; ld (GOP),a
+        call emit_i
+        db 4,0AFh,32h,low GOP,high GOP
+        ret
+
+parse_op:                       ; operatore logico -> ld a,n ; ld (GOP),a  (PSET PRESET AND OR XOR e le versioni T...)
+        ld a,(ttype)
+        cp T_KW
+        jr nz,.id
+        ld a,(tval)
+        ld c,0
+        cp K_PSET
+        jr z,.ok
+        ld c,4
+        cp K_PRESET
+        jr z,.ok
+        ld c,1
+        cp K_AND
+        jr z,.ok
+        ld c,2
+        cp K_OR
+        jr z,.ok
+        ld c,3
+        cp K_XOR
+        jp nz,err_syntax
+        jr .ok
+.id:    cp T_ID
+        jp nz,err_syntax
+        ld de,opnames
+.nx:    ld a,(de)
+        or a
+        jp z,err_syntax
+        push de
+        ld hl,tbuf
+        call str_eq
+        jr z,.hit
+        pop de
+.sk:    ld a,(de)
+        inc de
+        or a
+        jr nz,.sk
+        inc de                  ; salta il codice
+        jr .nx
+.hit:   pop hl
+        inc de
+        ld a,(de)
+        ld c,a
+.ok:    ld a,3Eh
+        call emit_a
+        ld a,c
+        call emit_a
+        ld a,32h
+        call emit_a
+        ld hl,GOP
+        call emit_w
+        jp next_tok
+
+opnames: db "TPSET",0,8,"TPRESET",0,12,"TAND",0,9,"TOR",0,10,"TXOR",0,11,0
+
+st_data:                        ; DATA elementi: blocco nel codice (jp oltre, elementi, 2, collegamento)
+        call get_pc
+        push hl                 ; indirizzo del blocco
+        ld a,0C3h
+        call emit_a
+        ld hl,0
+        call emit_w
+        ld hl,(dlast)           ; collega il blocco precedente (o l'inizio dei dati per il primo)
+        ld a,h
+        or l
+        jr nz,.lk
+        pop hl
+        push hl
+        inc hl
+        inc hl
+        inc hl
+        ld (OUT0+(RT_DATA0-0100h)),hl
+        jr .it
+.lk:    pop de
+        push de
+        inc de
+        inc de
+        inc de
+        ld bc,7F00h
+        add hl,bc
+        ld (hl),e
+        inc hl
+        ld (hl),d
+.it:    ld a,(ttype)
+        cp T_STR
+        jr z,.str
+        ld a,'-'
+        call is_p
+        jr nz,.num
+        call next_tok
+        ld a,(ttype)
+        cp T_NUM
+        jp nz,err_syntax
+        xor a
+        call emit_a
+        ld hl,(tval)
+        ld a,l
+        cpl
+        ld l,a
+        ld a,h
+        cpl
+        ld h,a
+        inc hl
+        call emit_w
+        jr .nx
+.num:   ld a,(ttype)
+        cp T_NUM
+        jp nz,err_syntax
+        xor a
+        call emit_a
+        ld hl,(tval)
+        call emit_w
+        jr .nx
+.str:   ld a,1
+        call emit_a
+        ld a,(tlen)
+        call emit_a
+        ld a,(tlen)
+        ld b,a
+        ld hl,(tval)
+.cp:    ld a,b
+        or a
+        jr z,.nx
+        ld a,(hl)
+        push hl
+        push bc
+        call emit_a
+        pop bc
+        pop hl
+        inc hl
+        dec b
+        jr .cp
+.nx:    call next_tok
+        ld a,','
+        call is_p
+        jr nz,.end
+        call next_tok
+        jr .it
+.end:   ld a,2
+        call emit_a
+        call get_pc
+        ld (dlast),hl
+        ld hl,0
+        call emit_w
+        call get_pc             ; patch del jp: oltre il blocco
+        pop de
+        inc de
+        ex de,hl
+        ld bc,7F00h
+        add hl,bc
+        ld (hl),e
+        inc hl
+        ld (hl),d
+        ret
+
+st_read:                        ; READ variabile[, variabile...]
+.l:     ld a,(ttype)
+        cp T_ID
+        jp nz,err_syntax
+        call save_lex
+        call next_tok
+        ld a,'('
+        call is_p
+        jr z,.arr
+        call restore_lex
+        call resolve_var
+        ld (tmpk),a
+        ld (tmpv),hl
+        call next_tok
+        ld a,(tmpk)
+        call kind_type
+        call emit_read
+        ld a,(tmpk)
+        ld hl,(tmpv)
+        call emit_stv
+        jr .more
+.arr:   call restore_lex
+        call arr_elem
+        ld a,(etype)
+        push af
+        EM1 0E5h
+        pop af
+        push af
+        call emit_read
+        EM1 0D1h
+        pop af
+        or a
+        jr nz,.astr
+        call emit_i
+        db 5,7Dh,12h,13h,7Ch,12h
+        jr .more
+.astr:  EM3 0CDh,low RT_SCOPY,high RT_SCOPY
+.more:  ld a,','
+        call is_p
+        ret nz
+        call next_tok
+        jr .l
+
+emit_read:                      ; A = 0/1: ld a,n ; call RT_READ
+        push af
+        ld a,3Eh
+        call emit_a
+        pop af
+        call emit_a
+        EM3 0CDh,low RT_READ,high RT_READ
+        ret
+
+st_restore:                     ; RESTORE [etichetta]
+        call at_send
+        jr nz,.lab
+        call emit_i
+        db 3,21h,0,0
+        jr .go
+.lab:   ld a,21h
+        call jump_target
+        EM3 0CDh,low RT_RESTORE,high RT_RESTORE
+        ret
+.go:    EM3 0CDh,low RT_RESTORE,high RT_RESTORE
+        ret
+
+st_set:                         ; SET PAGE visibile[, attiva]  |  SET SCROLL x, y
+        ld a,(ttype)
+        cp T_ID
+        jp nz,err_syntax
+        ld hl,tbuf
+        ld de,s_page
+        call str_eq
+        jr z,.page
+        ld hl,tbuf
+        ld de,s_scroll
+        call str_eq
+        jp nz,err_syntax
+        call next_tok
+        call expr
+        call want_int
+        ld hl,GX1
+        call emit_st
+        ld a,','
+        call expect_p
+        call expr
+        call want_int
+        ld hl,GY1
+        call emit_st
+        EM3 0CDh,low RT_SCROLL,high RT_SCROLL
+        ret
+.page:  call next_tok
+        call expr
+        call want_int
+        ld hl,GX1
+        call emit_st
+        ld a,','
+        call is_p
+        jr nz,.same
+        call next_tok
+        call expr
+        call want_int
+        ld hl,GY1
+        call emit_st
+        jr .go
+.same:  call emit_i             ; pagina attiva = visibile
+        db 6,2Ah,low GX1,high GX1,22h,low GY1,high GY1
+.go:    EM3 0CDh,low RT_SETPAGE,high RT_SETPAGE
+        ret
+s_page: db "PAGE",0
+dlast:  dw 0
+s_scroll: db "SCROLL",0
+
+st_copy:                        ; COPY (x1,y1)-(x2,y2)[, pagina] TO (x3,y3)[, pagina][, operatore]
+        ld de,GX1
+        ld bc,GY1
+        call emit_xy_raw
+        ld a,'-'
+        call expect_p
+        ld de,GX2
+        ld bc,GY2
+        call emit_xy_raw
+        call emit_i             ; pagine = -1 (attiva)
+        db 9,21h,0FFh,0FFh,22h,low CSP,high CSP,22h,low CDP,high CDP
+        ld a,','
+        call is_p
+        jr nz,.to
+        call next_tok
+        call expr
+        call want_int
+        ld hl,CSP
+        call emit_st
+.to:    ld a,K_TO
+        call expect_kw
+        ld de,CDX
+        ld bc,CDY
+        call emit_xy_raw
+        ld a,','
+        call is_p
+        jr nz,.go
+        call next_tok
+        ld a,','
+        call is_p
+        jr z,.op                ; pagina omessa
+        call expr
+        call want_int
+        ld hl,CDP
+        call emit_st
+        ld a,','
+        call is_p
+        jr nz,.go
+.op:    call next_tok
+        call parse_op
+        EM3 0CDh,low RT_COPY,high RT_COPY
+        jp emit_gopclr
+.go:    EM3 0CDh,low RT_COPY,high RT_COPY
+        ret
+
 st_screen:
         call expr
         call want_int
@@ -4735,7 +5059,16 @@ pset_common:
         call emit_xy
         call emit_defcol
         call emit_optcol
+        ld a,','
+        call is_p
+        jr nz,.go
+        call next_tok
+        call parse_op
         pop hl
+        ld a,0CDh
+        call emit_jabs
+        jp emit_gopclr
+.go:    pop hl
         ld a,0CDh
         jp emit_jabs
 
@@ -4837,6 +5170,9 @@ st_line:                        ; LINE [(x1,y1)]-(x2,y2)[, colore[, B|BF]]
         call is_p
         jr nz,.go
 .flag:  call next_tok
+        ld a,','
+        call is_p
+        jr z,.op                ; ", colore, , operatore"
         ld a,(ttype)
         cp T_ID
         jp nz,err_syntax
@@ -4862,6 +5198,13 @@ st_line:                        ; LINE [(x1,y1)]-(x2,y2)[, colore[, B|BF]]
         ld hl,GFLG
         call emit_w
         call next_tok
+        ld a,','
+        call is_p
+        jr nz,.go
+.op:    call next_tok
+        call parse_op
+        EM3 0CDh,low RT_GLINE,high RT_GLINE
+        jp emit_gopclr
 .go:    EM3 0CDh,low RT_GLINE,high RT_GLINE
         ret
 
