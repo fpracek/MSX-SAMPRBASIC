@@ -33,9 +33,13 @@ RT_VAL    equ 015Dh
 RT_INKEY  equ 0160h
 RT_INPUT  equ 0163h
 RT_SDUP   equ 0166h
-RT_EMPTY  equ 0169h             ; byte 0 (stringa vuota)
-RT_NAME   equ 016Ah             ; 16 byte: nome del sorgente (0-terminato)
-RT_DSIZE  equ 017Ah             ; word: byte di dati del programma (scritta dal compilatore)
+RT_COLOR  equ 0169h
+RT_WAIT   equ 016Ch
+RT_VPEEK  equ 016Fh
+RT_VPOKE  equ 0172h
+RT_EMPTY  equ 0175h             ; byte 0 (stringa vuota)
+RT_NAME   equ 0176h             ; 16 byte: nome del sorgente (0-terminato)
+RT_DSIZE  equ 0186h             ; word: byte di dati del programma (scritta dal compilatore)
 RTRAM     equ 0C100h            ; RAM del runtime (C000h-C086h: caricatore)
 HEAPP     equ RTRAM+0
 HEAP0     equ RTRAM+10

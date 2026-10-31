@@ -47,6 +47,7 @@ Sintassi decisa ora, implementazione per stadi:
    FOR/NEXT, WHILE/WEND, GOTO/GOSUB/RETURN (etichette o numeri), CLS, LOCATE, catena F5, errori su riga.
 2a. **Fatto**: stringhe, array (interi e stringhe), INPUT, DIM, funzioni predefinite, POKE.
 2b. **Fatto**: SUB/FUNCTION (parametri, locali, ricorsione, SHARED, EXIT), CALL, DECLARE, DO/LOOP, SELECT CASE.
-2c. CONST, COLOR/VPOKE/OUT/SLEEP, array come parametri.
+2c. **Fatto**: CONST, COLOR, RANDOMIZE, VPOKE/VPEEK, OUT/INP, SLEEP, STOP.
+2d. Array come parametri, SELECT CASE su stringhe, grafica/suono/file (da decidere).
 3. Target ROM + `SEGMENT`/`CALL FAR` (ASCII8/16, Konami, SCC).
 4. Mapper RAM.

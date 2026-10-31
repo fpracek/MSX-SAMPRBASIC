@@ -16,6 +16,12 @@ EXPTBL  equ 0FCC1h
 CALSLT  equ 001Ch
 CHSNS   equ 009Ch
 JIFFY   equ 0FC9Eh
+FORCLR  equ 0F3E9h
+BAKCLR  equ 0F3EAh
+BDRCLR  equ 0F3EBh
+CHGCLR  equ 0062h
+RDVRM   equ 004Ah
+WRTVRM  equ 004Dh
 heapp   equ HEAPP
 rndseed equ RTRAM+2
 sc_a    equ RTRAM+4
@@ -61,6 +67,10 @@ inbuf   equ RTRAM+20
         jp rt_inkey
         jp rt_input
         jp rt_sdup
+        jp rt_color
+        jp rt_wait
+        jp rt_vpeek
+        jp rt_vpoke
         ASSERT $ == RT_EMPTY
 rt_empty: db 0
         ASSERT $ == RT_NAME
@@ -823,6 +833,48 @@ rt_input:                   ; legge una riga -> stringa temporanea
         call rt_pnl
         ld hl,inbuf
         jp rt_sdup
+
+rt_color:                   ; E = primo piano, L = sfondo (anche bordo)
+        ld a,e
+        ld (FORCLR),a
+        ld a,l
+        ld (BAKCLR),a
+        ld (BDRCLR),a
+        push ix
+        ld ix,CHGCLR
+        call rt_bios
+        pop ix
+        ret
+
+rt_wait:                    ; HL = frame da attendere
+.l:     ld a,h
+        or l
+        ret z
+        ld a,(JIFFY)
+        ld b,a
+.w:     ld a,(JIFFY)
+        cp b
+        jr z,.w
+        dec hl
+        jr .l
+
+rt_vpeek:                   ; HL = indirizzo VRAM (0-16383) -> HL = byte
+        push ix
+        ld ix,RDVRM
+        call rt_bios
+        pop ix
+        ld l,a
+        ld h,0
+        ret
+
+rt_vpoke:                   ; DE = indirizzo VRAM (0-16383), HL = valore
+        ld a,l
+        ex de,hl
+        push ix
+        ld ix,WRTVRM
+        call rt_bios
+        pop ix
+        ret
 
 ldr_img: INCBIN "build/ldr.bin"
 ldr_size equ $-ldr_img

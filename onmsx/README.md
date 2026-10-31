@@ -20,7 +20,7 @@ a 0080h come mailbox (`" NOME.BAS"`, in caso di errore `" NOME.BAS E<riga> <codi
 - `qtests/` — q1..q3 (IF a blocchi, cicli, operatori, hex/bin, LOCATE) ed e1..e5 (codici di errore).
 - Test dell'editor con F5: `../editor/erun.py`.
 
-## Linguaggio (stadi 1, 2a e 2b)
+## Linguaggio (stadi 1, 2a, 2b e 2c)
 Interi 16 bit e stringhe (max 255). `PRINT` (`;` `,` `?`), assegnamenti (`LET` opzionale), `IF/THEN/ELSE` su riga,
 `IF/ELSEIF/ELSE/END IF`, `FOR/NEXT` (STEP costante, anche negativo), `WHILE/WEND`, `GOTO/GOSUB/RETURN`, `CLS`,
 `LOCATE r,c`, `END`, `REM` e `'`, `INPUT ["testo";|,] var` (intera o stringa), `DIM a(n), b$(m)` (array di interi e di
@@ -34,11 +34,14 @@ Funzioni: `LEN ASC VAL ABS SGN RND PEEK TIMER CHR$ STR$ LEFT$ RIGHT$ MID$ INKEY$
 `CASE 4 TO 6`, `CASE IS >= 7`, `CASE ELSE`).
 Frame IX: parametri sullo stack (il primo piu' in profondita'), salvataggio di heapp in (ix-2), 29 interi locali, 256 byte per
 ogni stringa locale; i temporanei delle stringhe si liberano a fine istruzione fino al valore salvato all'ingresso.
+`CONST nome = [-]numero {, ...}` (usabile in espressioni e come dimensione di `DIM`; assegnarla e' un errore),
+`COLOR fg[, bg]`, `RANDOMIZE n`, `SLEEP frame`, `STOP`, `VPOKE addr, v` / `VPEEK(addr)` (VRAM 0-16383 via BIOS),
+`OUT porta, v` / `INP(porta)`.
 La BIOS (CALSLT) distrugge IX: il runtime lo salva attorno a ogni chiamata BIOS.
 Stringhe: ogni variabile e' un buffer fisso da 256 byte; i temporanei stanno su uno heap a bump rilasciato a fine
 istruzione (e dopo le condizioni di IF/WHILE). Nomi `A$` e `A` distinti; `A%` = `A`.
 `OPTION NUMBERED` (righe ordinate per numero, solo numeri), `OPTION LABELS` (solo etichette), `OPTION MIXED` (default).
-Limiti: sorgente 16 KB, programma 16 KB, 96 etichette, 100 variabili/array, 20 SUB/FUNCTION (max 8 parametri, 64 in totale), 24 blocchi annidati, nomi significativi su 12 caratteri, dati del programma fino a (0006h)-0C00h.
+Limiti: sorgente 16 KB, programma 16 KB, 96 etichette, 100 variabili/array, 20 SUB/FUNCTION (max 8 parametri, 64 in totale), 32 nomi locali per funzione, circa 590 righe in OPTION NUMBERED, 24 blocchi annidati, nomi significativi su 12 caratteri, dati del programma fino a (0006h)-0C00h.
 
 ## Codici di errore (tail dell'editor)
 1 sintassi · 2 etichetta/riga inesistente · 3 non ancora supportato (stringhe, array, funzioni) · 4 carattere illegale
@@ -46,7 +49,7 @@ Limiti: sorgente 16 KB, programma 16 KB, 96 etichette, 100 variabili/array, 20 S
 · 9 programma troppo grande · 10 sorgente troppo grande · 11 lettura · 12 scrittura · 13 non ammesso con l'OPTION scelta · 14 tipi incompatibili o array non dichiarato · 15 dati del programma troppo grandi.
 
 ## Risultati
-`zrun.py` 20/20 (anche con RAM iniziale casuale), `qtest.py` 20/20 (openMSX; INPUT con tasti battuti dal test),
+`zrun.py` 31/31 (anche con RAM iniziale casuale), `qtest.py` 31/31 (openMSX; INPUT con tasti battuti dal test),
 `../editor/erun.py` 12/12, `ecom.py` 25/25.
-Non ancora supportati: `CONST`, `COLOR`, `VPOKE/OUT/SLEEP`, `SELECT CASE` su stringhe, array come parametri, float.
+Non ancora supportati: `SELECT CASE` su stringhe, array come parametri, float, grafica (SCREEN/LINE/PSET), suono, file.
 Non provato su MSX reale (disco fisico, Nextor/DOS2).

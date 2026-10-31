@@ -87,15 +87,15 @@ framep  equ ST+206              ; w  indirizzo fisico dell'operando del frame
 ca_rec  equ ST+208              ; w  chiamata in corso: record
 chfail  equ ST+210              ; w  catena per CASE a TO b
 rf_rec  equ ST+212              ; w
-ENT     equ 0C220h              ; indice righe NUMBERED: 6 byte (numero, puntatore, riga) in RAM alta
+ENT     equ 0CA00h              ; indice righe NUMBERED: 6 byte (numero, puntatore, riga) in RAM alta
 ENTMAX  equ 0D7F0h
-FUNT    equ 2800h               ; SUB/FUNCTION: 20 x 24 byte
+FUNT    equ 0C220h              ; SUB/FUNCTION: 20 x 24 byte (RAM alta, solo durante la compilazione)
 FUNREC  equ 24
 MAXFUN  equ 20
-PART    equ 29E0h               ; parametri: 64 x 16 byte (nome 12, tipo)
+PART    equ 0C600h               ; parametri: 64 x 16 byte (nome 12, tipo)
 MAXPAR  equ 64
-LOCT    equ 2DE0h               ; locali/parametri della funzione in compilazione: 24 x 16 byte
-MAXLOC  equ 24
+LOCT    equ 0C400h               ; locali/parametri della funzione in compilazione: 24 x 16 byte
+MAXLOC  equ 32
 
 T_EOL   equ 0
 T_NUM   equ 1
@@ -143,6 +143,13 @@ K_UNTIL equ 35
 K_SELECT equ 36
 K_CASE  equ 37
 K_IS    equ 38
+K_CONST equ 39
+K_COLOR equ 40
+K_RANDOMIZE equ 41
+K_VPOKE equ 42
+K_OUT   equ 43
+K_SLEEP equ 44
+K_STOP  equ 45
 
 B_IF    equ 1
 B_FOR   equ 2
@@ -924,7 +931,7 @@ kwtab:  db "PRINT",0,"IF",0,"THEN",0,"ELSE",0,"ELSEIF",0,"END",0,"FOR",0,"TO",0
         db "STEP",0,"NEXT",0,"WHILE",0,"WEND",0,"GOTO",0,"GOSUB",0,"RETURN",0
         db "CLS",0,"LOCATE",0,"AND",0,"OR",0,"XOR",0,"NOT",0,"MOD",0,"LET",0
         db "OPTION",0,"INPUT",0,"DIM",0,"POKE",0,"SUB",0,"FUNCTION",0,"CALL",0,"DECLARE",0,"SHARED",0
-        db "EXIT",0,"DO",0,"LOOP",0,"UNTIL",0,"SELECT",0,"CASE",0,"IS",0,0
+        db "EXIT",0,"DO",0,"LOOP",0,"UNTIL",0,"SELECT",0,"CASE",0,"IS",0,"CONST",0,"COLOR",0,"RANDOMIZE",0,"VPOKE",0,"OUT",0,"SLEEP",0,"STOP",0,0
 
 ; ---------------------------------------------------------------- helper del parser
 is_p:                           ; A = carattere: Z se il token e' quella punteggiatura
@@ -1952,6 +1959,7 @@ kwjump: dw st_print, st_if, err_syntax, st_else, st_elseif, st_end, st_for, err_
         dw st_locate, err_syntax, err_syntax, err_syntax, err_syntax, err_syntax, st_let, st_option
         dw st_input, st_dim, st_poke, st_sub, st_function, st_call, st_skip, st_shared
         dw st_exit, st_do, st_loop, err_syntax, st_select, st_case, err_syntax
+        dw st_const, st_color, st_randomize, st_vpoke, st_out, st_sleep, st_stop
 
 ; ---------------------------------------------------------------- espressioni
 want_int:
@@ -2253,13 +2261,38 @@ primary:
         xor a
         ld (tmpf),a
         ret
-.nofn:  call save_lex
+.nofn: call save_lex
         call next_tok
         ld a,'('
         call is_p
         jr z,.arr
         call restore_lex
-        call resolve_var
+        call find_rec           ; CONST?
+        jr c,.nc
+        push hl
+        ld de,14
+        add hl,de
+        ld a,(hl)
+        inc hl
+        and (hl)
+        cp 0FFh
+        pop hl
+        jr nz,.nc
+        ld de,12
+        add hl,de
+        ld e,(hl)
+        inc hl
+        ld d,(hl)
+        ex de,hl
+        ld a,21h                ; ld hl,valore
+        push hl
+        call emit_a
+        pop hl
+        call emit_w
+        xor a
+        ld (etype),a
+        jp next_tok
+.nc:    call resolve_var
         push hl
         push af
         call kind_type
@@ -2307,9 +2340,9 @@ make_nbuf:                      ; tbuf -> nbuf (testo normale, "CHR$" ecc.)
 
 ; --- funzioni predefinite (il token corrente e' il nome)
 bitab:  db "LEN",0,"ASC",0,"VAL",0,"ABS",0,"SGN",0,"RND",0,"PEEK",0,"CHR$",0,"STR$",0
-        db "LEFT$",0,"RIGHT$",0,"MID$",0,"INKEY$",0,"TIMER",0,0
+        db "LEFT$",0,"RIGHT$",0,"MID$",0,"INKEY$",0,"TIMER",0,"VPEEK",0,"INP",0,0
 bijump: dw bi_len, bi_asc, bi_val, bi_abs, bi_sgn, bi_rnd, bi_peek, bi_chr, bi_str
-        dw bi_left, bi_right, bi_mid, bi_inkey, bi_timer
+        dw bi_left, bi_right, bi_mid, bi_inkey, bi_timer, bi_vpeek, bi_inp
 
 open_paren:
         ld a,'('
@@ -3067,13 +3100,14 @@ st_dim:
         ld a,(vtyp)
         push af
         push hl                 ; posto del nuovo record
+        ld hl,tbuf              ; il nome dell'array va salvato: leggere una CONST sovrascrive tbuf
+        ld de,nbuf
+        ld bc,16
+        ldir
         call next_tok
         ld a,'('
         call expect_p
-        ld a,(ttype)
-        cp T_NUM
-        jp nz,err_syntax
-        ld de,(tval)
+        call num_or_const
         inc de                  ; elementi = massimo indice + 1
         push de
         call next_tok
@@ -3096,13 +3130,19 @@ st_dim:
 .int:   add hl,hl
         ld b,h
         ld c,l
-.go:    pop hl
+.go:    ld hl,nbuf              ; ripristina il nome
+        ld de,tbuf
+        push bc
+        ld bc,16
+        ldir
+        pop bc
+        pop hl
         call new_rec
         ld a,','
         call is_p
         ret nz
         call next_tok
-        jr .l
+        jp .l
 .dup:   ERR E_DUP
 
 ; --- tabella delle funzioni
@@ -3922,6 +3962,148 @@ st_case:
         add hl,de
         jp patch_chain          ; il corpo comincia qui
 
+num_or_const:                    ; numero o CONST -> DE = valore (il token non e' consumato)
+        ld a,(ttype)
+        cp T_NUM
+        jr nz,.id
+        ld de,(tval)
+        ret
+.id:    cp T_ID
+        jp nz,err_syntax
+        call find_rec
+        jp c,err_syntax
+        push hl
+        ld de,14
+        add hl,de
+        ld a,(hl)
+        inc hl
+        and (hl)
+        cp 0FFh
+        pop hl
+        jp nz,err_syntax
+        ld de,12
+        add hl,de
+        ld e,(hl)
+        inc hl
+        ld d,(hl)
+        ret
+
+; --- CONST nome = [-]numero {, ...}: record con conteggio FFFFh e valore al posto dell'indirizzo
+st_const:
+.l:     ld a,(ttype)
+        cp T_ID
+        jp nz,err_syntax
+        ld a,(tsuf)
+        or a
+        jp nz,err_type
+        call find_rec
+        jp nc,err_dup2
+        ld (tmpv),hl            ; posto del record
+        call next_tok
+        ld a,'='
+        call expect_p
+        ld hl,0
+        ld a,'-'
+        call is_p
+        jr nz,.pos
+        ld hl,1
+        call next_tok
+.pos:   ld (chfail),hl          ; segno (1 = negativo)
+        ld a,(ttype)
+        cp T_NUM
+        jp nz,err_syntax
+        ld de,(tval)
+        ld hl,(chfail)
+        ld a,l
+        or a
+        jr z,.val
+        ld hl,0
+        or a
+        sbc hl,de
+        ex de,hl
+.val:   ld (chfail),de          ; valore
+        ld hl,(tmpv)
+        ld bc,0
+        ld de,0FFFFh
+        call new_rec
+        ld hl,(tmpv)
+        ld de,12
+        add hl,de
+        ld de,(chfail)
+        ld (hl),e
+        inc hl
+        ld (hl),d
+        call next_tok
+        ld a,','
+        call is_p
+        ret nz
+        call next_tok
+        jr .l
+
+st_stop:
+        ld a,0C3h
+        ld hl,RT_END
+        jp emit_jabs
+
+st_randomize:
+        call expr
+        call want_int
+        call emit_i             ; ld a,h ; or l ; jr nz,+1 ; inc hl ; ld (rndseed),hl
+        db 8,7Ch,0B5h,20h,01h,23h,22h,low (RTRAM+2),high (RTRAM+2)
+        ret
+
+st_sleep:
+        call expr
+        call want_int
+        EM3 0CDh,low RT_WAIT,high RT_WAIT
+        ret
+
+two_ints:                       ; a, b -> DE = a, HL = b
+        call expr
+        call want_int
+        EM1 0E5h
+        ld a,','
+        call expect_p
+        call expr
+        call want_int
+        EM1 0D1h
+        ret
+
+st_vpoke:
+        call two_ints
+        EM3 0CDh,low RT_VPOKE,high RT_VPOKE
+        ret
+
+st_out: call two_ints
+        EM4 4Bh,7Dh,0EDh,79h    ; ld c,e ; ld a,l ; out (c),a
+        ret
+
+st_color:
+        call expr
+        call want_int
+        EM1 0E5h
+        ld a,','
+        call is_p
+        jr nz,.nobg
+        call next_tok
+        call expr
+        call want_int
+        jr .go
+.nobg:  call emit_i             ; sfondo invariato: ld a,(BAKCLR) ; ld l,a ; ld h,0
+        db 6,3Ah,low 0F3EAh,high 0F3EAh,6Fh,26h,0
+.go:    EM1 0D1h
+        EM3 0CDh,low RT_COLOR,high RT_COLOR
+        ret
+
+bi_vpeek:
+        call bi_arg_int
+        EM3 0CDh,low RT_VPEEK,high RT_VPEEK
+        ret
+bi_inp: call bi_arg_int
+        call emit_i             ; ld c,l ; in a,(c) ; ld l,a ; ld h,0
+        db 6,4Dh,0EDh,78h,6Fh,26h,0
+        ret
+
 st_wend:
         ld a,B_WHILE
         call need_blk
@@ -3948,5 +4130,5 @@ ldr_size equ $-ldr_img
 rt_image: INCBIN "build/rt.bin"
 rt_size equ $-rt_image
 comend:
-        ASSERT comend < FUNT
+        ASSERT comend < LABT
         SAVEBIN "build/qbc.com",0100h,comend-0100h

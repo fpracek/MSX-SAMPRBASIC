@@ -26,6 +26,7 @@ class Msx:
         self.screen = [[' '] * 80 for _ in range(24)]
         self.row = self.col = 0
         self.keys = []
+        self.vram = {}
 
     def w(self, addr, data):
         for i, b in enumerate(data):
@@ -119,6 +120,12 @@ class Msx:
         elif ix == 0x00C6:                              # POSIT: H = colonna, L = riga (1-based)
             self.col, self.row = m.h - 1, m.l - 1
             self.w(0xF3DD, bytes([m.h]))
+        elif ix == 0x0062:                              # CHGCLR
+            pass
+        elif ix == 0x004A:                              # RDVRM
+            m.a = self.vram.get(m.hl, 0)
+        elif ix == 0x004D:                              # WRTVRM
+            self.vram[m.hl] = m.a
         elif ix == 0x009F:                              # CHGET
             m.a = self.keys.pop(0) if self.keys else 13
         else:
@@ -144,9 +151,12 @@ class Msx:
         m = self.m
         steps = 0
         while True:
-            m.ticks_to_stop = 2_000_000
+            m.ticks_to_stop = 70_000                    # circa un frame: JIFFY avanza (serve a SLEEP/TIMER)
             ev = m.run()
-            steps += 2_000_000
+            steps += 70_000
+            if not (ev & 2):
+                j = (self.r16(0xFC9E) + 1) & 0xFFFF
+                self.w(0xFC9E, j.to_bytes(2, 'little'))
             if ev & 2:
                 pc = m.pc
                 if pc == BDOS_STUB:
