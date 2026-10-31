@@ -11,6 +11,8 @@ rt_finput:
 rt_fline:
 rt_feof:
 rt_kill:
+rt_bload:
+rt_bsave:
         jp e_nodos
 fput_sel:
 files_close_all:

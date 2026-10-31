@@ -1,0 +1,24 @@
+' BSAVE / BLOAD: memoria e VRAM
+DIM a(9)
+FOR i = 0 TO 9
+  a(i) = i * 100
+NEXT i
+BSAVE "T.BIN", VARPTR(a(0)), 20
+FOR i = 0 TO 9
+  a(i) = 0
+NEXT i
+BLOAD "T.BIN"
+s = 0
+FOR i = 0 TO 9
+  s = s + a(i)
+NEXT i
+PRINT s
+FOR i = 0 TO 299
+  VPOKE 4000 + i, i MOD 251
+NEXT i
+BSAVE "V.BIN", 4000, 300, S
+VFILL 4000, 300, 0
+PRINT VPEEK(4005)
+BLOAD "V.BIN", S
+PRINT VPEEK(4005); VPEEK(4250); VPEEK(4299)
+BLOAD "T.BIN", S

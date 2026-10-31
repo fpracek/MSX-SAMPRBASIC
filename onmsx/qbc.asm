@@ -17,9 +17,25 @@ F_DMA   equ 1Ah
 F_BWR   equ 26h
 F_BRD   equ 27h
 
+        IFDEF ROMMODE
+SRC     equ 4400h               ; il compilatore per cartucce non ha OPTION NUMBERED: le tabelle stanno nella RAM alta
+SRCMAX  equ 3BFEh
+        ELSE
 SRC     equ 4900h
 SRCMAX  equ 36FEh
+        ENDIF
 OUT0    equ 8000h
+        IFDEF ROMMODE
+HDRB    equ OUT0+(RT_EMPTY-IMGBASE)     ; intestazione del runtime dentro il buffer (il runtime e' nel buffer)
+        ELSE
+HDRB    equ ST+232              ; .COM: il runtime non sta nel buffer (si copia dal file RT.BIN): i campi si tengono qui
+        ENDIF
+HDRNAME equ HDRB+(RT_NAME-RT_EMPTY)
+HDRDSZ  equ HDRB+(RT_DSIZE-RT_EMPTY)
+HDRDAT  equ HDRB+(RT_DATA0-RT_EMPTY)
+HDRTGT  equ HDRB+(RT_TARGET-RT_EMPTY)
+HDRLEN  equ RT_TARGET+1-RT_EMPTY
+rtsz    equ ST+254              ; w  dimensione di RT.BIN (.COM)
         IFDEF ROMMODE
 IMGBASE equ 4000h               ; indirizzo virtuale dell'inizio dell'immagine (cartuccia in pagina 1)
         ELSE
@@ -28,13 +44,25 @@ IMGBASE equ 0100h
 OUTLIM  equ 0BFh                ; alto byte: oltre BF00h il programma e' troppo grande
 LDR     equ 0C000h
 
+        IFDEF ROMMODE
+LABT    equ 0CA00h
+        ELSE
 LABT    equ 3900h               ; etichette: 96 x 20 byte
+        ENDIF
 LABREC  equ 20
 MAXLAB  equ 96
+        IFDEF ROMMODE
+VART    equ 0D180h
+        ELSE
 VART    equ 4080h               ; variabili/array: 100 x 16 byte
+        ENDIF
 VARREC  equ 16
 MAXVAR  equ 100
+        IFDEF ROMMODE
+BLKS    equ 0D7C0h
+        ELSE
 BLKS    equ 46C0h               ; stack dei blocchi: 24 x 10 byte
+        ENDIF
 BLKREC  equ 10
 MAXBLK  equ 24
 
@@ -83,10 +111,17 @@ curseg  equ ST+224              ; b  segmento in compilazione (0 = fisso)
 pseg    equ ST+225              ; b  segmento corrente durante la pre-scansione
 nfar    equ ST+226              ; b  voci usate in FARTAB
 romopen equ ST+227              ; b  il file ROM e' gia' stato creato
+        IFDEF ROMMODE
+FARTABC equ 3C00h
+SEGT    equ 3C80h
+FCBSV   equ 3CA8h
+FARX    equ 3C94h
+        ELSE
 FARTABC equ 47C0h               ; FARTAB in costruzione: 32 x 4 byte (banco, 0, indirizzo)
 SEGT    equ 4840h               ; segmento di ogni SUB/FUNCTION (indice nel record)
 FCBSV   equ 4868h               ; copia dell'FCB di uscita durante INCBIN
 FARX    equ 4854h               ; indice FARTAB di ogni SUB/FUNCTION (FFh = nessuno)
+        ENDIF
 usewin  equ ST+216              ; b  il sorgente usa WINDOW: le coordinate grafiche vengono convertite
 nfunc   equ ST+192              ; b
 npart   equ ST+193              ; b
@@ -96,6 +131,8 @@ nstr    equ ST+196              ; b  stringhe locali create
 tmpk    equ ST+197              ; b  tipo di riferimento a variabile (vedi emit_ldv)
 ca_i    equ ST+198              ; b  chiamata in corso: indice dell'argomento
 ca_paren equ ST+199             ; b  chiamata in corso: parentesi presente
+mapf    equ ST+228              ; b  DIM ... MAPPER in corso
+mapcnt  equ ST+229              ; w  numero di elementi dell'array nel mapper
 fcur    equ ST+200              ; w  record della funzione in compilazione (0 = livello principale)
 fexit   equ ST+202              ; w  catena degli EXIT SUB/FUNCTION
 fskiph  equ ST+204              ; w  catena del salto che scavalca il corpo
@@ -202,6 +239,8 @@ K_MPUT equ 78
 K_MREAD equ 79
 K_MWRITE equ 80
 K_MFREE equ 81
+K_BLOAD equ 82
+K_BSAVE equ 83
 
 B_IF    equ 1
 B_FOR   equ 2
@@ -272,18 +311,19 @@ start:
         ELSE
         call write_output
         ENDIF
-        ; avvia il programma: copia il caricatore a C000h e usa ldr_copy
+        ; avvia il programma dal disco: il caricatore (a C000h) legge NOME.COM
+        ld hl,oname
+        ld (namep),hl
+        call mk_fcb
         ld hl,ldr_img
         ld de,LDR
         ld bc,ldr_size
         ldir
-        ld hl,(outp)
-        ld de,-OUT0
-        add hl,de
-        ld b,h
-        ld c,l
-        ld hl,OUT0
-        jp LDR+0Eh              ; ldr_copy
+        ld hl,fcb+1
+        ld de,LDR+3
+        ld bc,11
+        ldir
+        jp LDR
 
 ; ---------------------------------------------------------------- errori
 error:                          ; A = codice, (tline) = riga
@@ -500,6 +540,7 @@ read_source:
         ld (hl),0
         ret
 
+        IFDEF ROMMODE
 load_rt:                        ; RT.BIN -> OUT0 (immagine del runtime); outp = fine
         ld hl,s_rtbin
         ld (namep),hl
@@ -529,6 +570,54 @@ load_rt:                        ; RT.BIN -> OUT0 (immagine del runtime); outp = 
         add hl,de
         ld (outp),hl
         ret
+        ELSE
+load_rt:                        ; .COM: dimensione di RT.BIN (il file si copia per intero davanti al codice); il buffer parte vuoto
+        ld hl,s_rtbin
+        ld (namep),hl
+        call mk_fcb
+        ld de,fcb
+        ld c,F_OPEN
+        call BDOS
+        or a
+        jr z,.o
+        ld hl,0
+        ld (tline),hl
+        ERR E_RT
+.o:     call fcb_rec1
+        ld de,PART              ; la dimensione si ottiene leggendo il file a blocchi (F_SIZE dipende dalla versione del DOS)
+        ld c,F_DMA
+        call BDOS
+        ld hl,0
+        ld (rtsz),hl
+.sz:    ld de,fcb
+        ld hl,1024
+        ld c,F_BRD
+        call BDOS
+        ld a,h
+        or l
+        jr z,.sd
+        ld de,(rtsz)
+        add hl,de
+        ld (rtsz),hl
+        jr .sz
+.sd:
+        ld de,fcb
+        ld c,F_CLOSE
+        call BDOS
+        ld hl,OUT0
+        ld (outp),hl
+        ld hl,OUT0-IMGBASE      ; il codice parte subito dopo il runtime: virtuale = fisico - voff
+        ld de,(rtsz)
+        or a
+        sbc hl,de
+        ld (voff),hl
+        ld hl,HDRB              ; intestazione azzerata
+        ld de,HDRB+1
+        ld bc,HDRLEN-1
+        ld (hl),0
+        ldir
+        ret
+        ENDIF
         IFDEF ROMMODE
 s_rtbin: db "RTROM.BIN",0
         ELSE
@@ -536,7 +625,7 @@ s_rtbin: db "RT.BIN",0
         ENDIF
 
         IFNDEF ROMMODE
-write_output:                   ; NOME.COM <- immagine
+write_output:                   ; NOME.COM <- RT.BIN + codice, con l'intestazione del runtime corretta
         ld hl,fname
         ld de,oname
 .c:     ld a,(hl)
@@ -567,22 +656,66 @@ write_output:                   ; NOME.COM <- immagine
         ld (tline),hl
         ERR E_WRITE
 .m:     call fcb_rec1
-        ld de,OUT0
+        ld hl,fcb               ; FCB del file di uscita -> FCBSV
+        ld de,FCBSV
+        ld bc,37
+        ldir
+        ld hl,s_rtbin           ; si apre RT.BIN nell'FCB principale
+        ld (namep),hl
+        call mk_fcb
+        ld de,fcb
+        ld c,F_OPEN
+        call BDOS
+        or a
+        jr nz,.err
+        call fcb_rec1
+        ld de,PART              ; buffer di copia da 1 KB (la tabella dei parametri non serve piu')
+        ld c,F_DMA
+        call BDOS
+.cp:    ld de,fcb
+        ld hl,1024
+        ld c,F_BRD
+        call BDOS
+        ld a,h
+        or l
+        jr z,.cd                ; niente piu' dati
+        ld de,FCBSV
+        ld c,F_BWR
+        call BDOS
+        jr .cp
+.cd:    ld de,fcb
+        ld c,F_CLOSE
+        call BDOS
+        ld de,OUT0              ; il codice generato
         ld c,F_DMA
         call BDOS
         ld hl,(outp)
         ld de,-OUT0
         add hl,de
-        ld de,fcb
+        ld a,h
+        or l
+        jr z,.hd
+        ld de,FCBSV
         ld c,F_BWR
         call BDOS
-        push af
-        ld de,fcb
-        ld c,F_CLOSE
-        call BDOS
-        pop af
         or a
         jr nz,.err
+.hd:    ld de,HDRB              ; intestazione: nome, dimensione dati, DATA, target
+        ld c,F_DMA
+        call BDOS
+        ld hl,RT_EMPTY-IMGBASE
+        ld (FCBSV+33),hl
+        xor a
+        ld (FCBSV+35),a
+        ld hl,HDRLEN
+        ld de,FCBSV
+        ld c,F_BWR
+        call BDOS
+        or a
+        jp nz,.err
+        ld de,FCBSV
+        ld c,F_CLOSE
+        call BDOS
         ret
         ENDIF
         IFDEF ROMMODE
@@ -1069,6 +1202,142 @@ bi_varptr:                      ; VARPTR(variabile) o VARPTR(array(i)): indirizz
 .end:   call close_paren
         xor a
         ld (etype),a
+        ret
+
+arr_is_mapper:                  ; tbuf = array: NZ se sta nel mapper RAM
+        call find_arrparam
+        jr nc,.no
+        call find_rec
+        jr c,.no
+        ld de,15
+        add hl,de
+        ld a,(hl)
+        and 80h
+        ret
+.no:    xor a
+        ret
+
+mapper_desc:                    ; tbuf = array in mapper -> DE = indirizzo del descrittore
+        call find_rec
+        ld de,12
+        add hl,de
+        ld e,(hl)
+        inc hl
+        ld d,(hl)
+        ret
+
+mapper_read:                    ; x(i): ld de,descrittore ; call RT_MAGET (HL = indice -> valore)
+        call mapper_desc
+        push de
+        call next_tok
+        ld a,'('
+        call expect_p
+        call expr
+        call want_int
+        ld a,')'
+        call expect_p
+        pop hl
+        ld a,11h
+        push hl
+        call emit_a
+        pop hl
+        call emit_w
+        EM3 0CDh,low RT_MAGET,high RT_MAGET
+        xor a
+        ld (etype),a
+        ret
+
+mapper_assign:                  ; x(i) = v: push indice ; v ; pop de ; ld bc,descrittore ; call RT_MAPUT
+        call mapper_desc
+        push de
+        call next_tok
+        ld a,'('
+        call expect_p
+        call expr
+        call want_int
+        ld a,')'
+        call expect_p
+        EM1 0E5h
+        ld a,'='
+        call expect_p
+        call expr
+        call want_int
+        EM1 0D1h
+        pop hl
+        ld a,1
+        push hl
+        call emit_a
+        pop hl
+        call emit_w
+        EM3 0CDh,low RT_MAPUT,high RT_MAPUT
+        ret
+
+st_bload:                       ; BLOAD nome$ [, S] [, scostamento]
+        call expr
+        call want_str
+        EM1 0E5h
+        call emit_i             ; GX1 = 0, GY1 = 0
+        db 9,21h,0,0,22h,low GX1,high GX1,22h,low GY1,high GY1
+        ld a,','
+        call is_p
+        jr nz,.go
+        call next_tok
+        ld hl,tbuf
+        ld de,s_sw
+        ld a,(ttype)
+        cp T_ID
+        jr nz,.off
+        call str_eq
+        jr nz,.off
+        call emit_i             ; GY1 = 1
+        db 6,21h,1,0,22h,low GY1,high GY1
+        call next_tok
+        ld a,','
+        call is_p
+        jr nz,.go
+        call next_tok
+.off:   call expr
+        call want_int
+        ld hl,GX1
+        call emit_st
+.go:    EM1 0E1h
+        EM3 0CDh,low RT_BLOAD,high RT_BLOAD
+        ret
+
+st_bsave:                       ; BSAVE nome$, inizio, lunghezza [, S]
+        call expr
+        call want_str
+        EM1 0E5h
+        call emit_i             ; GX2 = 0
+        db 6,21h,0,0,22h,low GX2,high GX2
+        ld a,','
+        call expect_p
+        call expr
+        call want_int
+        ld hl,GX1
+        call emit_st
+        ld a,','
+        call expect_p
+        call expr
+        call want_int
+        ld hl,GY1
+        call emit_st
+        ld a,','
+        call is_p
+        jr nz,.go
+        call next_tok
+        ld a,(ttype)
+        cp T_ID
+        jp nz,err_syntax
+        ld hl,tbuf
+        ld de,s_sw
+        call str_eq
+        jp nz,err_syntax
+        call emit_i
+        db 6,21h,1,0,22h,low GX2,high GX2
+        call next_tok
+.go:    EM1 0E1h
+        EM3 0CDh,low RT_BSAVE,high RT_BSAVE
         ret
 
 bi_datawin:                     ; DATAWIN: indirizzo della finestra dati
@@ -1598,7 +1867,7 @@ kwtab:  db "PRINT",0,"IF",0,"THEN",0,"ELSE",0,"ELSEIF",0,"END",0,"FOR",0,"TO",0
         db "EXIT",0,"DO",0,"LOOP",0,"UNTIL",0,"SELECT",0,"CASE",0,"IS",0,"CONST",0,"COLOR",0,"RANDOMIZE",0,"VPOKE",0,"OUT",0,"SLEEP",0,"STOP",0,"SCREEN",0,"PSET",0,"PRESET",0,"LINE",0,"CIRCLE",0
         db "PALETTE",0,"PAINT",0,"PUT",0,"SPRITE",0,"GET",0,"DRAW",0,"VIEW",0,"WINDOW",0,"VBANK",0,"VFILL",0,"VWRITE",0,"SET",0,"COPY",0,"DATA",0,"READ",0,"RESTORE",0,"BEEP",0,"SOUND",0,"PLAY",0
         db "OPEN",0,"CLOSE",0,"KILL",0,"WRITE",0,"SEGMENT",0,"INCBIN",0
-        db "SETBANK",0,"VCOPY",0,"MPUT",0,"MREAD",0,"MWRITE",0,"MFREE",0,0
+        db "SETBANK",0,"VCOPY",0,"MPUT",0,"MREAD",0,"MWRITE",0,"MFREE",0,"BLOAD",0,"BSAVE",0,0
 
 ; ---------------------------------------------------------------- helper del parser
 is_p:                           ; A = carattere: Z se il token e' quella punteggiatura
@@ -2149,6 +2418,8 @@ arr_elem:                       ; tbuf = array, token = nome: emette il calcolo 
         ld c,(hl)
         inc hl
         ld b,(hl)
+        bit 7,b
+        jp nz,err_type          ; array nel mapper: solo x(i) in lettura/assegnamento
         ld a,b
         or c
         jp z,err_type
@@ -2316,7 +2587,7 @@ compile:
         xor a
         ld (iseof),a
         ld hl,fname             ; nome del sorgente nell'immagine (per il ritorno all'editor)
-        ld de,OUT0+(RT_NAME-IMGBASE)
+        ld de,HDRNAME
         ld bc,16
         ldir
         call next_tok
@@ -2356,7 +2627,7 @@ compile:
         jr nz,.tok
         ld a,2                  ; senza OPTION TARGET: ROM32
         ld (target),a
-        ld (OUT0+(RT_TARGET-IMGBASE)),a
+        ld (HDRTGT),a
 .tok:
         ENDIF
         ld a,(mode)
@@ -2460,7 +2731,7 @@ compile:
         or a
         jr nz,.nods
         ENDIF
-        ld (OUT0+(RT_DSIZE-IMGBASE)),hl
+        ld (HDRDSZ),hl
 .nods:  ld hl,RT_END
         ld a,0C3h
         jp emit_jabs
@@ -2493,7 +2764,7 @@ parse_target:                   ; token = nome del tipo di cartuccia
         inc de
         ld a,(de)
         ld (target),a
-        ld (OUT0+(RT_TARGET-IMGBASE)),a
+        ld (HDRTGT),a
         ret
 
 s_rom:  db ".ROM",0
@@ -2888,7 +3159,7 @@ kwjump: dw st_print, st_if, err_syntax, st_else, st_elseif, st_end, st_for, err_
         dw st_exit, st_do, st_loop, err_syntax, st_select, st_case, err_syntax
         dw st_const, st_color, st_randomize, st_vpoke, st_out, st_sleep, st_stop
         dw st_screen, st_pset, st_preset, st_line, st_circle, st_palette, st_paint, st_put, err_syntax, st_get, st_draw, st_view, st_window
-        dw st_vbank, st_vfill, st_vwrite, st_set, st_copy, st_data, st_read, st_restore, st_beep, st_sound, st_play, st_open, st_close, st_kill, st_write, st_segment, st_incbin, st_setbank, st_vcopy, st_mput, st_mread, st_mwrite, st_mfree
+        dw st_vbank, st_vfill, st_vwrite, st_set, st_copy, st_data, st_read, st_restore, st_beep, st_sound, st_play, st_open, st_close, st_kill, st_write, st_segment, st_incbin, st_setbank, st_vcopy, st_mput, st_mread, st_mwrite, st_mfree, st_bload, st_bsave
 
 ; ---------------------------------------------------------------- espressioni
 want_int:
@@ -3231,6 +3502,8 @@ primary:
         call emit_ldv
         jp next_tok
 .arr:   call restore_lex
+        call arr_is_mapper
+        jp nz,mapper_read
         call arr_elem           ; HL = indirizzo dell'elemento
         ld a,(etype)
         or a
@@ -3486,6 +3759,8 @@ st_assign:
         pop af
         jp emit_stv
 .arr:   call restore_lex
+        call arr_is_mapper
+        jp nz,mapper_assign
         call arr_elem           ; HL = indirizzo dell'elemento
         ld a,(etype)
         push af
@@ -4067,7 +4342,19 @@ st_dim:
         call next_tok
         ld a,')'
         call expect_p
-        pop de
+        xor a
+        ld (mapf),a
+        ld a,(ttype)
+        cp T_ID
+        jr nz,.nmp
+        ld hl,tbuf
+        ld de,s_mapper
+        call str_eq
+        jr nz,.nmp
+        ld a,1                  ; DIM x(n) MAPPER: l'array sta nei segmenti del mapper RAM
+        ld (mapf),a
+        call next_tok
+.nmp:   pop de
         pop hl
         pop af
         push hl
@@ -4075,6 +4362,9 @@ st_dim:
         ld l,e
         or a
         jr z,.int
+        ld a,(mapf)
+        or a
+        jp nz,err_type          ; solo array di interi
         ld a,d                  ; stringhe: massimo 255 elementi da 256 byte
         or a
         jp nz,err_mem
@@ -4093,12 +4383,32 @@ st_dim:
         pop bc
         pop de
         pop hl
+        ld a,(mapf)
+        or a
+        jr nz,.map
         call new_rec
-        ld a,','
+.cm:    ld a,','
         call is_p
         ret nz
         call next_tok
         jp .l
+.map:   ld (mapcnt),de          ; descrittore (6 byte) nei dati; il record ricorda il numero di elementi con il bit 15 acceso
+        set 7,d
+        ld bc,6
+        call new_rec
+        push hl
+        ld a,21h                ; ld hl,descrittore ; ld de,numero ; call RT_MDIM
+        call emit_a
+        pop hl
+        call emit_w
+        ld a,11h
+        call emit_a
+        ld hl,(mapcnt)
+        call emit_w
+        EM3 0CDh,low RT_MDIM,high RT_MDIM
+        xor a
+        ld (mapf),a
+        jr .cm
 .dup:   ERR E_DUP
 
 ; --- tabella delle funzioni
@@ -4484,6 +4794,8 @@ emit_arrref:                    ; token = nome: emette push base ; push numero e
         ld c,(hl)
         inc hl
         ld b,(hl)
+        bit 7,b
+        jp nz,err_type
         ld a,b
         or c
         jp z,err_type           ; non e' un array
@@ -5492,6 +5804,7 @@ bi_ubound:                      ; UBOUND(array): massimo indice (anche per un pa
         ld e,(hl)
         inc hl
         ld d,(hl)
+        res 7,d                 ; (array nel mapper: bit 15 = flag)
         ld a,d
         or e
         jp z,err_type
@@ -5672,7 +5985,7 @@ st_data:                        ; DATA elementi: blocco nel codice (jp oltre, el
         inc hl
         inc hl
         inc hl
-        ld (OUT0+(RT_DATA0-IMGBASE)),hl
+        ld (HDRDAT),hl
         jr .it
 .lk:    pop de
         push de
@@ -6370,6 +6683,8 @@ st_paint:                       ; PAINT (x,y)[, colore[, bordo]]
 s_spritedol: db "SPRITE$",0
 s_vdp:  db "VDP",0
 s_far:  db "FAR",0
+s_mapper: db "MAPPER",0
+s_sw:   db "S",0
 
 arr_ref_stmt:                   ; array di interi (con o senza "()") -> ARRB, ARRC
         ld a,(ttype)
@@ -6645,7 +6960,11 @@ st_wend:
 ldr_img: INCBIN "build/ldr.bin"
 ldr_size equ $-ldr_img
 comend:
+        IFDEF ROMMODE
+        ASSERT comend < FARTABC
+        ELSE
         ASSERT comend < LABT
+        ENDIF
         IFDEF ROMMODE
         SAVEBIN "build/qbcr.com",0100h,comend-0100h
         ELSE

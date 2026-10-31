@@ -355,3 +355,135 @@ rt_mfree:                       ; MFREE HL = segmento
         dec a
         ld (MALN),a
         ret
+
+; --- array di interi nel mapper: descrittore = numero di elementi (word) + fino a 4 segmenti (byte)
+mp_zero:                        ; A = segmento: lo azzera
+        di
+        call mp_sel
+        IFDEF ROMMODE
+        ld hl,8000h
+        ld bc,16384
+.z:     xor a
+        call mp_wr
+        inc hl
+        dec bc
+        ld a,b
+        or c
+        jr nz,.z
+        ELSE
+        ld hl,8000h
+        ld de,8001h
+        ld bc,16383
+        ld (hl),0
+        ldir
+        ENDIF
+        call mp_rest
+        ei
+        ret
+
+rt_mdim:                        ; HL = descrittore, DE = numero di elementi
+        ld (hl),e
+        inc hl
+        ld (hl),d
+        inc hl
+        push hl
+        ex de,hl
+        ld de,8191
+        add hl,de
+        ld a,h
+        rlca
+        rlca
+        rlca
+        and 7
+        jp z,rt_eifc
+        cp 5
+        jp nc,rt_eifc
+        ld b,a
+.l:     push bc
+        call rt_malloc
+        ld a,l
+        pop bc
+        pop hl
+        ld (hl),a
+        inc hl
+        push hl
+        push bc
+        call mp_zero
+        pop bc
+        djnz .l
+        pop hl
+        ret
+
+mp_elem:                        ; HL = indice, DE = descrittore -> HL = indirizzo in pagina 2, A = segmento
+        ex de,hl                ; HL = descrittore, DE = indice
+        ld c,(hl)
+        inc hl
+        ld b,(hl)
+        inc hl                  ; BC = numero di elementi, HL = &segmenti
+        push hl
+        ld h,d
+        ld l,e
+        or a
+        sbc hl,bc
+        pop hl
+        jp nc,rt_esub
+        ld a,d
+        rlca
+        rlca
+        rlca
+        and 3                   ; indice / 8192
+        ld c,a
+        ld b,0
+        add hl,bc
+        ld a,(hl)
+        ld (MTB),a
+        ld a,d
+        and 1Fh
+        ld h,a
+        ld l,e
+        add hl,hl
+        ld de,8000h
+        add hl,de
+        ld a,(MTB)
+        ret
+
+rt_maget:                       ; HL = indice, DE = descrittore -> HL = valore
+        call mp_elem
+        di
+        push hl
+        call mp_sel
+        pop hl
+        call mp_rd
+        push af
+        inc hl
+        call mp_rd
+        ld d,a
+        pop af
+        ld e,a
+        push de
+        call mp_rest
+        pop hl
+        ei
+        ret
+
+rt_maput:                       ; HL = valore, DE = indice, BC = descrittore
+        push hl
+        ld h,b
+        ld l,c
+        ex de,hl
+        call mp_elem
+        pop de
+        di
+        push hl
+        push de
+        call mp_sel
+        pop de
+        pop hl
+        ld a,e
+        call mp_wr
+        inc hl
+        ld a,d
+        call mp_wr
+        call mp_rest
+        ei
+        ret

@@ -143,6 +143,11 @@ inbuf   equ RTRAM+20
         jp rt_mwrite
         jp rt_malloc
         jp rt_mfree
+        jp rt_mdim
+        jp rt_maget
+        jp rt_maput
+        jp rt_bload
+        jp rt_bsave
         ASSERT $ == RT_EMPTY
 rt_empty: db 0
         ASSERT $ == RT_NAME

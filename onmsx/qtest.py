@@ -59,7 +59,7 @@ proc dump {name} {
 '''
 
 
-def run_cases(cases, wait_run=float(os.environ.get('QWAIT', '28'))):
+def run_cases(cases, wait_run=float(os.environ.get('QWAIT', '42'))):
     """cases = [(basfile_contenuto, nome)]; ritorna {nome: [righe]}"""
     if os.path.isdir(DISK):
         shutil.rmtree(DISK)
@@ -85,7 +85,7 @@ def run_cases(cases, wait_run=float(os.environ.get('QWAIT', '28'))):
                 lines.append('after time %.1f {dump %s_m%d}' % (t + k, name, k))
         kf = os.path.join(QTESTS, name + '.keys')
         if os.path.exists(kf):                       # tasti per INPUT: battuti quando il programma e' partito
-            lines.append('after time %.1f {type "%s"}' % (t + 9.0, open(kf).read().replace(chr(10), chr(92) + 'r')))
+            lines.append('after time %.1f {type "%s"}' % (t + 28.0, open(kf).read().replace(chr(10), chr(92) + 'r')))
         t += wait_run
         lines.append('after time %.1f {dump %s}' % (t, name))
         t += 1.0

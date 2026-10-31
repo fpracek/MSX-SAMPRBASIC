@@ -650,3 +650,218 @@ rt_wstr:                        ; WRITE: stringa tra virgolette
         call rt_pstr
         ld a,'"'
         jp rt_putc
+
+; --- BSAVE / BLOAD: formato binario MSX (FEh, inizio, fine, esecuzione) + dati; l'FCB e il buffer stanno in inbuf
+BBUF    equ inbuf+40
+
+bfcb_init:                      ; HL = nome: IX = FCB (inbuf), numero di record 0, record da 1 byte
+        ld ix,inbuf
+        jp parsefn
+
+bfcb_rec:
+        ld (ix+14),1
+        ld (ix+15),0
+        xor a
+        ld (ix+33),a
+        ld (ix+34),a
+        ld (ix+35),a
+        ret
+
+rt_bsave:                       ; BSAVE HL = nome, GX1 = inizio, GY1 = lunghezza, GX2 = 1 se dalla VRAM
+        push ix
+        call bfcb_init
+        ld de,inbuf
+        ld c,13h
+        call bdos
+        ld de,inbuf
+        ld c,16h
+        call bdos
+        jp nz,e_dio
+        call bfcb_rec
+        ld hl,BBUF
+        ld (hl),0FEh
+        inc hl
+        ld de,(GX1)
+        ld (hl),e
+        inc hl
+        ld (hl),d
+        inc hl
+        ld hl,(GX1)
+        ld de,(GY1)
+        add hl,de
+        dec hl
+        ex de,hl
+        ld hl,BBUF+3
+        ld (hl),e
+        inc hl
+        ld (hl),d
+        inc hl
+        ld de,(GX1)
+        ld (hl),e
+        inc hl
+        ld (hl),d
+        ld de,BBUF
+        ld c,1Ah
+        call bdos
+        ld hl,7
+        ld de,inbuf
+        ld c,26h
+        call bdos
+        jp nz,e_dio
+        ld a,(GX2)
+        or a
+        jr nz,.vram
+        ld de,(GX1)
+        ld c,1Ah
+        call bdos
+        ld hl,(GY1)
+        ld a,h
+        or l
+        jr z,.cl
+        ld de,inbuf
+        ld c,26h
+        call bdos
+        jp nz,e_dio
+        jr .cl
+.vram:  ld hl,(GY1)
+        ld a,h
+        or l
+        jr z,.cl
+        ld de,128
+        or a
+        sbc hl,de
+        jr nc,.full
+        ld hl,(GY1)
+        ld b,l
+        ld hl,0
+        ld (GY1),hl
+        jr .rd
+.full:  ld (GY1),hl
+        ld b,128
+.rd:    push bc
+        call ubank_on
+        ld hl,(GX1)
+        xor a
+        call vram_set
+        ld hl,BBUF
+        ld c,VDPD
+        inir
+        call ubank_off
+        pop bc
+        ld a,b
+        ld hl,(GX1)
+        ld e,b
+        ld d,0
+        add hl,de
+        ld (GX1),hl
+        push bc
+        ld de,BBUF
+        ld c,1Ah
+        call bdos
+        pop bc
+        ld l,b
+        ld h,0
+        ld de,inbuf
+        ld c,26h
+        call bdos
+        jp nz,e_dio
+        jr .vram
+.cl:    ld de,inbuf
+        ld c,10h
+        call bdos
+        pop ix
+        ret
+
+rt_bload:                       ; BLOAD HL = nome, GX1 = scostamento, GY1 = 1 se verso la VRAM
+        push ix
+        call bfcb_init
+        ld de,inbuf
+        ld c,0Fh
+        call bdos
+        jp nz,e_fnf
+        call bfcb_rec
+        ld de,BBUF
+        ld c,1Ah
+        call bdos
+        ld hl,7
+        ld de,inbuf
+        ld c,27h
+        call bdos
+        ld a,(BBUF)
+        cp 0FEh
+        jp nz,e_bfm
+        ld hl,(BBUF+3)          ; lunghezza = fine - inizio + 1
+        ld de,(BBUF+1)
+        or a
+        sbc hl,de
+        inc hl
+        push hl
+        ex de,hl
+        ld hl,(BBUF+1)          ; destinazione = inizio + scostamento
+        ld de,(GX1)
+        add hl,de
+        ld (GX1),hl
+        pop hl                  ; HL = lunghezza
+        ld (GY2),hl
+        ld a,(GY1)
+        or a
+        jr nz,.vram
+        ld de,(GX1)
+        ld c,1Ah
+        call bdos
+        ld hl,(GY2)
+        ld a,h
+        or l
+        jr z,.cl
+        ld de,inbuf
+        ld c,27h
+        call bdos
+        jr .cl
+.vram:  ld hl,(GY2)
+        ld a,h
+        or l
+        jr z,.cl
+        ld de,128
+        or a
+        sbc hl,de
+        jr nc,.full
+        ld hl,(GY2)
+        ld b,l
+        ld hl,0
+        ld (GY2),hl
+        jr .rd
+.full:  ld (GY2),hl
+        ld b,128
+.rd:    push bc
+        ld de,BBUF
+        ld c,1Ah
+        call bdos
+        pop bc
+        push bc
+        ld l,b
+        ld h,0
+        ld de,inbuf
+        ld c,27h
+        call bdos
+        call ubank_on
+        ld hl,(GX1)
+        ld a,40h
+        call vram_set
+        pop bc
+        push bc
+        ld hl,BBUF
+        ld c,VDPD
+        otir
+        call ubank_off
+        pop bc
+        ld hl,(GX1)
+        ld e,b
+        ld d,0
+        add hl,de
+        ld (GX1),hl
+        jr .vram
+.cl:    ld de,inbuf
+        ld c,10h
+        call bdos
+        pop ix
+        ret

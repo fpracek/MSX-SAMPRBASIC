@@ -112,7 +112,7 @@ class Msx:
         elif c == 0x1A:
             self.dma = de
         elif c == 0x27:                                 # lettura a blocchi, record da 1
-            nm = self.open.get(de)
+            nm = self.open.get(de) or self.fcbname(de)
             pos = self.r16(de + 33)
             cnt = m.hl
             data = self.files[nm][pos:pos + cnt]
@@ -121,10 +121,18 @@ class Msx:
             m.a = 0 if len(data) == cnt else 1
             m.hl = len(data)
         elif c == 0x26:
-            nm = self.open.get(de)
+            nm = self.open.get(de) or self.fcbname(de)
             pos = self.r16(de + 33)
-            self.files[nm] = self.files[nm][:pos] + self.r(self.dma, m.hl)
+            old = self.files[nm]
+            if pos > len(old):
+                old = old + bytes(pos - len(old))
+            data = self.r(self.dma, m.hl)
+            self.files[nm] = old[:pos] + data + old[pos + len(data):]
             self.w(de + 33, (pos + m.hl).to_bytes(2, 'little'))
+            m.a = 0
+        elif c == 0x23:                                 # dimensione del file (record da 1 byte)
+            nm = self.open.get(de) or self.fcbname(de)
+            self.w(de + 33, len(self.files[nm]).to_bytes(3, 'little'))
             m.a = 0
         else:
             raise RuntimeError('BDOS %02X non gestita' % c)
@@ -211,15 +219,18 @@ def compile_and_run(src, name='T.BAS', qbc=None, keys=(13,)):
     ms.boot(qbc, name)
     res = ms.run()
     info = {'phase1': res}
-    if res == 'chain':                                  # errore di compilazione: riga di comando per l'editor
-        info['tail'] = ms.r(0x81, ms.m.memory[0x80]).decode('latin-1').strip()
-        return info
+    cname = name.rsplit('.', 1)[0] + '.COM'
+    if res == 'chain':                                  # il caricatore e' pronto: QB.COM = errore di compilazione, altrimenti NOME.COM
+        fn = ms.r(LDR + 3, 11)
+        if fn.startswith(b'QB '):
+            info['tail'] = ms.r(0x81, ms.m.memory[0x80]).decode('latin-1').strip()
+            return info
+        res = 'copy'
     if res != 'copy':
         return info
-    image = ms.r(ms.m.hl, ms.m.bc)
+    image = ms.files.get(cname, b'')
     info['image'] = image
-    cname = name.rsplit('.', 1)[0] + '.COM'
-    info['disk_ok'] = ms.files.get(cname) == image
+    info['disk_ok'] = len(image) > 0
     p = Msx({})
     p.keys = list(keys)
     p.boot(image, 'X')
