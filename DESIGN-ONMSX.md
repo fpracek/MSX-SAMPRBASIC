@@ -53,6 +53,7 @@ Sintassi decisa ora, implementazione per stadi:
 3a. **Fatto**: grafica bitmap SCREEN 5-8 (PSET/PRESET/POINT/LINE/CIRCLE).
 3b. **Fatto**: PAINT, PRINT/INPUT/LOCATE/CLS in grafica, PALETTE.
 3c. **Fatto**: sprite (modo 2, SPRITE$, PUT SPRITE, dimensioni).
-3d. Collisioni, grafica MSX1 (schermi 2-3), GET/PUT/DRAW; poi suono e file.
+3d. **Fatto**: GET/PUT di aree, DRAW, COLLISION.
+3e. Grafica MSX1 (schermi 2-3), CIRCLE con archi/ellisse, VIEW/WINDOW; poi suono e file.
 4. Target ROM + `SEGMENT`/`CALL FAR` (ASCII8/16, Konami, SCC).
 5. Mapper RAM.

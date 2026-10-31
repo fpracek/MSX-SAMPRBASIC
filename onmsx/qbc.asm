@@ -159,6 +159,8 @@ K_PALETTE equ 51
 K_PAINT equ 52
 K_PUT   equ 53
 K_SPRITE equ 54
+K_GET   equ 55
+K_DRAW  equ 56
 
 B_IF    equ 1
 B_FOR   equ 2
@@ -972,7 +974,7 @@ kwtab:  db "PRINT",0,"IF",0,"THEN",0,"ELSE",0,"ELSEIF",0,"END",0,"FOR",0,"TO",0
         db "CLS",0,"LOCATE",0,"AND",0,"OR",0,"XOR",0,"NOT",0,"MOD",0,"LET",0
         db "OPTION",0,"INPUT",0,"DIM",0,"POKE",0,"SUB",0,"FUNCTION",0,"CALL",0,"DECLARE",0,"SHARED",0
         db "EXIT",0,"DO",0,"LOOP",0,"UNTIL",0,"SELECT",0,"CASE",0,"IS",0,"CONST",0,"COLOR",0,"RANDOMIZE",0,"VPOKE",0,"OUT",0,"SLEEP",0,"STOP",0,"SCREEN",0,"PSET",0,"PRESET",0,"LINE",0,"CIRCLE",0
-        db "PALETTE",0,"PAINT",0,"PUT",0,"SPRITE",0,0
+        db "PALETTE",0,"PAINT",0,"PUT",0,"SPRITE",0,"GET",0,"DRAW",0,0
 
 ; ---------------------------------------------------------------- helper del parser
 is_p:                           ; A = carattere: Z se il token e' quella punteggiatura
@@ -2051,7 +2053,7 @@ kwjump: dw st_print, st_if, err_syntax, st_else, st_elseif, st_end, st_for, err_
         dw st_input, st_dim, st_poke, st_sub, st_function, st_call, st_skip, st_shared
         dw st_exit, st_do, st_loop, err_syntax, st_select, st_case, err_syntax
         dw st_const, st_color, st_randomize, st_vpoke, st_out, st_sleep, st_stop
-        dw st_screen, st_pset, st_preset, st_line, st_circle, st_palette, st_paint, st_put, err_syntax
+        dw st_screen, st_pset, st_preset, st_line, st_circle, st_palette, st_paint, st_put, err_syntax, st_get, st_draw
 
 ; ---------------------------------------------------------------- espressioni
 want_int:
@@ -2432,9 +2434,9 @@ make_nbuf:                      ; tbuf -> nbuf (testo normale, "CHR$" ecc.)
 
 ; --- funzioni predefinite (il token corrente e' il nome)
 bitab:  db "LEN",0,"ASC",0,"VAL",0,"ABS",0,"SGN",0,"RND",0,"PEEK",0,"CHR$",0,"STR$",0
-        db "LEFT$",0,"RIGHT$",0,"MID$",0,"INKEY$",0,"TIMER",0,"VPEEK",0,"INP",0,"UBOUND",0,"POINT",0,0
+        db "LEFT$",0,"RIGHT$",0,"MID$",0,"INKEY$",0,"TIMER",0,"VPEEK",0,"INP",0,"UBOUND",0,"POINT",0,"COLLISION",0,0
 bijump: dw bi_len, bi_asc, bi_val, bi_abs, bi_sgn, bi_rnd, bi_peek, bi_chr, bi_str
-        dw bi_left, bi_right, bi_mid, bi_inkey, bi_timer, bi_vpeek, bi_inp, bi_ubound, bi_point
+        dw bi_left, bi_right, bi_mid, bi_inkey, bi_timer, bi_vpeek, bi_inp, bi_ubound, bi_point, bi_coll
 
 open_paren:
         ld a,'('
@@ -3561,6 +3563,7 @@ emit_arrarg:                    ; argomento array: emette push base ; push numer
         ld a,(tsuf)
         cp b
         jp nz,err_type          ; tipo degli elementi diverso da quello del parametro
+emit_arrref:                    ; token = nome: emette push base ; push numero elementi (array globale o parametro)
         call find_arrparam
         jr c,.glob
         ld c,l                  ; array parametro di questa funzione: copia la coppia dal frame
@@ -4638,6 +4641,96 @@ st_paint:                       ; PAINT (x,y)[, colore[, bordo]]
 
 s_spritedol: db "SPRITE$",0
 
+arr_ref_stmt:                   ; array di interi (con o senza "()") -> ARRB, ARRC
+        ld a,(ttype)
+        cp T_ID
+        jp nz,err_syntax
+        ld a,(tsuf)
+        or a
+        jp nz,err_type
+        call emit_arrref
+        call emit_i             ; pop hl ; ld (ARRC),hl ; pop hl ; ld (ARRB),hl
+        db 8,0E1h,22h,low ARRC,high ARRC,0E1h,22h,low ARRB,high ARRB
+        ret
+
+st_get:                         ; GET (x1,y1)-(x2,y2), array
+        ld de,GX1
+        ld bc,GY1
+        call emit_xy
+        ld a,'-'
+        call expect_p
+        ld de,GX2
+        ld bc,GY2
+        call emit_xy
+        ld a,','
+        call expect_p
+        call arr_ref_stmt
+        EM3 0CDh,low RT_GGET,high RT_GGET
+        ret
+
+st_gput:                        ; PUT (x,y), array[, PSET|PRESET|AND|OR|XOR]
+        ld de,GX1
+        ld bc,GY1
+        call emit_xy
+        ld a,','
+        call expect_p
+        call arr_ref_stmt
+        call emit_i             ; azione predefinita XOR
+        db 5,3Eh,4,32h,low GFLG,high GFLG
+        ld a,','
+        call is_p
+        jr nz,.go
+        call next_tok
+        ld a,(ttype)
+        cp T_KW
+        jp nz,err_syntax
+        ld a,(tval)
+        ld c,0
+        cp K_PSET
+        jr z,.set
+        inc c
+        cp K_PRESET
+        jr z,.set
+        inc c
+        cp K_AND
+        jr z,.set
+        inc c
+        cp K_OR
+        jr z,.set
+        inc c
+        cp K_XOR
+        jp nz,err_syntax
+.set:   ld a,3Eh                ; ld a,n ; ld (GFLG),a
+        call emit_a
+        ld a,c
+        call emit_a
+        ld a,32h
+        call emit_a
+        ld hl,GFLG
+        call emit_w
+        call next_tok
+.go:    EM3 0CDh,low RT_GPUT,high RT_GPUT
+        ret
+
+st_draw:                        ; DRAW "comandi"
+        call expr
+        call want_str
+        EM3 0CDh,low RT_DRAW,high RT_DRAW
+        ret
+
+bi_coll:                        ; COLLISION: -1 se due sprite si sono toccati
+        call next_tok
+        ld a,'('
+        call is_p
+        jr nz,.nop
+        call next_tok
+        ld a,')'
+        call expect_p
+.nop:   EM3 0CDh,low RT_COLL,high RT_COLL
+        xor a
+        ld (etype),a
+        ret
+
 st_sprdef:                      ; SPRITE$(n) = pattern
         call next_tok
         call open_paren
@@ -4653,9 +4746,11 @@ st_sprdef:                      ; SPRITE$(n) = pattern
         EM3 0CDh,low RT_SPRDEF,high RT_SPRDEF
         ret
 
-st_put:                         ; PUT SPRITE piano, (x,y)[, colore[, pattern]]
+st_put:                         ; PUT SPRITE piano, (x,y)[, colore[, pattern]]  oppure  PUT (x,y), array[, azione]
         ld a,K_SPRITE
-        call expect_kw
+        call is_kw
+        jp nz,st_gput
+        call next_tok
         call expr
         call want_int
         ld hl,GX1

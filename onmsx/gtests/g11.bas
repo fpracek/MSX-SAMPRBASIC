@@ -1,0 +1,14 @@
+' GET e PUT di un'area (SCREEN 5)
+DIM a(140)
+COLOR 15, 0
+SCREEN 5
+CLS
+LINE (10, 10)-(25, 25), 5, BF
+PSET (12, 12), 9
+GET (10, 10)-(25, 25), a
+PUT (100, 50), a, PSET
+PUT (100, 100), a, PSET
+PUT (100, 100), a, XOR
+PUT (150, 50), a, PRESET
+PUT (200, 50), a
+PUT (200, 50), a

@@ -49,9 +49,13 @@ RT_PAINT  equ 018Dh
 RT_SPRDEF equ 0190h
 RT_SPRPUT equ 0193h
 RT_SPRSIZE equ 0196h
-RT_EMPTY  equ 0199h             ; byte 0 (stringa vuota)
-RT_NAME   equ 019Ah             ; 16 byte: nome del sorgente (0-terminato)
-RT_DSIZE  equ 01AAh             ; word: byte di dati del programma (scritta dal compilatore)
+RT_GGET   equ 0199h
+RT_GPUT   equ 019Ch
+RT_DRAW   equ 019Fh
+RT_COLL   equ 01A2h
+RT_EMPTY  equ 01A5h             ; byte 0 (stringa vuota)
+RT_NAME   equ 01A6h             ; 16 byte: nome del sorgente (0-terminato)
+RT_DSIZE  equ 01B6h             ; word: byte di dati del programma (scritta dal compilatore)
 RTRAM     equ 0C100h            ; RAM del runtime (C000h-C086h: caricatore)
 HEAPP     equ RTRAM+0
 HEAP0     equ RTRAM+10
@@ -86,4 +90,16 @@ PX        equ RTRAM+16Ah
 PSY       equ RTRAM+16Ch
 PTX       equ RTRAM+16Eh
 PTY       equ RTRAM+170h
-DATA_BASE equ 0C280h
+ARRB      equ RTRAM+172h        ; array di GET/PUT: base e numero di elementi
+ARRC      equ RTRAM+174h
+COLFLAG   equ RTRAM+176h        ; collisione sprite accumulata dal gancio di H.TIMI
+HOOKED    equ RTRAM+177h
+OLDHK     equ RTRAM+178h        ; copia dei 5 byte originali di H.TIMI + RET
+DCOL      equ RTRAM+17Eh        ; DRAW: colore, scala, prefissi B e N, lunghezza e puntatore
+DSC       equ RTRAM+17Fh
+DB        equ RTRAM+180h
+DN        equ RTRAM+181h
+DLEN      equ RTRAM+182h
+DPOS      equ RTRAM+183h
+TIMIC     equ RTRAM+185h        ; copia in RAM alta del gancio di H.TIMI (16 byte)
+DATA_BASE equ 0C2A0h

@@ -83,6 +83,10 @@ inbuf   equ RTRAM+20
         jp rt_sprdef
         jp rt_sprput
         jp rt_sprsize
+        jp rt_gget
+        jp rt_gput
+        jp rt_draw
+        jp rt_coll
         ASSERT $ == RT_EMPTY
 rt_empty: db 0
         ASSERT $ == RT_NAME
@@ -245,6 +249,8 @@ msg_div: db 24,"Error: Division by zero"
 msg_press: db 15,"Press any key..."
 
 rt_end:
+        xor a                   ; niente eventi sprite quando si torna all'editor
+        ld (0FC6Dh),a
         ld a,(SCRMODE)
         cp 5
         jr nc,.nomsg            ; in grafica il testo non si vede: si attende solo un tasto
@@ -937,6 +943,7 @@ rt_vpoke:                   ; DE = indirizzo VRAM (0-16383), HL = valore
         INCLUDE "rtgfx.asm"
         INCLUDE "rtgtext.asm"
         INCLUDE "rtspr.asm"
+        INCLUDE "rtgx.asm"
 
 ldr_img: INCBIN "build/ldr.bin"
 ldr_size equ $-ldr_img

@@ -32,6 +32,10 @@ proc vdump {name} {
     set f [open "$OUTDIR/$name.vram" wb]
     puts -nonewline $f $data
     close $f
+    set data [debug read_block memory 0xF3E0 32]
+    set f [open "$OUTDIR/$name.ram" wb]
+    puts -nonewline $f $data
+    close $f
     set data [debug read_block "VDP regs" 0 48]
     set f [open "$OUTDIR/$name.reg" wb]
     puts -nonewline $f $data
@@ -59,7 +63,7 @@ def pixel(v, mode, x, y):
     raise ValueError(mode)
 
 
-def run_cases(names, wait=30.0):
+def run_cases(names, wait=50.0):
     if os.path.isdir(DISK):
         shutil.rmtree(DISK)
     os.makedirs(DISK)

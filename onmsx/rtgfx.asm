@@ -83,6 +83,7 @@ rt_screen:                      ; HL = modo 0..8 (CHGMOD del BIOS)
         ld (FONTPTR),hl
         ld (heapend),hl
 .hf:    call load_font
+        call rt_trpon
         xor a
         ld (TCX),a
         ld (TCY),a
