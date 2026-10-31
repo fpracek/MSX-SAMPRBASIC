@@ -10,6 +10,7 @@
 ; =====================================================================
 CHGET   equ 009Fh
 CHSNS   equ 009Ch
+KILBUF  equ 0156h
 INITXT  equ 006Ch
 ERAFNK  equ 00CCh
 GTPAD   equ 00DBh
@@ -253,10 +254,25 @@ start:
         ld (LINLEN),a
         BIOS INITXT
         BIOS ERAFNK
+        ld hl,0F87Fh            ; F1-F4: un solo carattere ciascuno (aprono i menu File, Edit, Find, Help)
+        ld de,fkcodes
+        ld b,4
+.fk:    ld a,(de)
+        ld (hl),a
+        inc hl
+        ld (hl),0
+        ld a,l
+        add a,15
+        ld l,a
+        jr nc,.fn
+        inc h
+.fn:    inc de
+        djnz .fk
         ld hl,0F8BFh            ; stringa del tasto F5 = 15h (un solo carattere gestito dall'editor)
         ld (hl),15h
         inc hl
         ld (hl),0
+        BIOS KILBUF             ; scarta i tasti in attesa (ripetizioni, F5 del lancio precedente)
         call vdp_init
         call font_load
         call blink_clear
@@ -1446,6 +1462,8 @@ handle_key:
         call nc,mark_text       ; selezione attiva: ridisegna
         jp refresh
 
+fkcodes: db 02h,04h,05h,0Ah     ; codici di F1-F4
+
 keytab: db 0Dh
         dw k_enter
         db 08h
@@ -1492,6 +1510,14 @@ keytab: db 0Dh
         dw k_replace
         db 15h                  ; F5 (la stringa del tasto funzione e' un solo byte 15h)
         dw k_run
+        db 02h                  ; F1-F4: menu File, Edit, Find, Help
+        dw k_f1
+        db 04h
+        dw k_f2
+        db 05h
+        dw k_f3
+        db 0Ah
+        dw k_f4
         IFDEF COM
         db 13h
         dw k_save
@@ -1948,14 +1974,23 @@ s_ctf:    db "Ctrl+F",0
 s_ctg:    db "Ctrl+G",0
 s_ctt:    db "Ctrl+T",0
 m_about:  db "SamPr Basic 0.2 - BASIC IDE and compiler for MSX2",0
-m_keys:   db "Esc=menu Ctrl+S/W/O/Q file Ctrl+C/X/V clip Ctrl+Z/Y undo Ctrl+F/G/T find",0
+m_keys:   db "Esc,F1-F4=menu F5=run Ctrl+S/W/O/Q file Ctrl+C/X/V clip Ctrl+Z/Y undo Ctrl+F/G/T find",0
 m_nodisk: db "No disk access in this build",0
 
 k_menu: ld a,1                  ; ESC: apre il menu File
+open_menu:
         ld (menuopen),a
         xor a
         ld (menusel),a
         ret
+k_f1:   ld a,1
+        jr open_menu
+k_f2:   ld a,2
+        jr open_menu
+k_f3:   ld a,3
+        jr open_menu
+k_f4:   ld a,4
+        jr open_menu
 
 k_mdel: call sel_range
         jp c,ed_delete
@@ -2054,6 +2089,25 @@ menu_exec:                      ; esegue la voce evidenziata
 menu_key:                       ; A = tasto, menu aperto
         cp 1Bh
         jp z,menu_close
+        ld b,1                  ; F1-F4: passa direttamente a quel menu
+        cp 02h
+        jr z,.fk
+        inc b
+        cp 04h
+        jr z,.fk
+        inc b
+        cp 05h
+        jr z,.fk
+        inc b
+        cp 0Ah
+        jr nz,.nfk
+.fk:    ld a,b
+        jp .st
+.nfk:   cp 15h                  ; F5: chiude il menu ed esegue
+        jr nz,.nf5
+        call menu_close
+        jp k_run
+.nf5:
         cp 0Dh
         jp z,menu_exec
         cp 1Dh

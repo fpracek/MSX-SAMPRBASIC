@@ -165,3 +165,10 @@ verticale, `thv` = celle del binario orizzontale, `hmaxw` = massimo scroll orizz
 numero di registro 12-14 si sovrapporrebbe a R#4-R#6 e romperebbe lo schermo); il cursore e' comunque il glifo inverso.
 Test: `python e40.py` (build ROM su MSX1, openMSX `Sony_HB-75P`: layout, cursore, scroll verticale e orizzontale, barre, mouse, menu Run); gli altri test
 restano su MSX2. Il `.COM` (con il DOS) non e' ancora stato provato su MSX1: in openMSX l'MSX1 con interfaccia disco AVT parte in Disk BASIC.
+
+## Menu da tastiera
+- **Esc** apre il menu File; **F1, F2, F3, F4** aprono direttamente File, Edit, Find, Help (all'avvio l'editor ridefinisce le stringhe dei tasti funzione F1-F4 a un solo
+  carattere di controllo: 02h, 04h, 05h, 0Ah); **F5** esegue (Run). Con un menu aperto: F1-F4 passano a quel menu, **←/→** al menu vicino, **↑/↓** scelgono la voce,
+  **Invio** la esegue, la lettera sottolineata di ogni voce la esegue direttamente, **Esc** chiude; F5 chiude il menu e lancia il programma.
+- All'avvio si scarta il buffer di tastiera (`KILBUF`), cosi' i tasti rimasti dal lancio precedente non fanno ripartire F5; lo stesso fa il runtime prima di attendere il
+  tasto a fine programma («Press any key..»). Test: `python efk.py`.

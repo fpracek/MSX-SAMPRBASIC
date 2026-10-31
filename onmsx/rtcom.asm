@@ -416,6 +416,10 @@ rt_end:
         call rt_pstr
 .nomsg:
         push ix                 ; la BIOS (CALSLT) distrugge IX: il frame delle SUB/FUNCTION va salvato
+        ld ix,0156h             ; KILBUF: i tasti battuti durante l'esecuzione non devono saltare l'attesa
+        call rt_bios
+        pop ix
+        push ix
         ld ix,CHGET
         call rt_bios
         pop ix
