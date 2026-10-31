@@ -25,7 +25,7 @@ def demo_lines():
         if i % 7 == 0:
             body = ('0123456789' * 25)[:200 - 4]
         else:
-            body = f'riga di prova numero {i} - testo qualunque per provare lo scroll'
+            body = f'riga di prova numero {i} - testo per provare lo scroll'
         out.append(f'{i:03d} ' + body)
     return out
 

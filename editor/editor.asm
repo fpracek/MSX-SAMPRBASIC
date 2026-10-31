@@ -50,12 +50,12 @@ KWBLINK equ 010h               ; R#13
 MPAD    equ 12                  ; GTPAD: 12 = mouse porta 1 (16 = porta 2)
 
         IFDEF COM
-BUF     equ 3300h               ; gap buffer: 3300h-BFFFh (TPA, pagine 0-2)
-UNDO    equ RAMB+0440h          ; registro di annullamento: C440h-CFFFh
-UNDOSZ  equ 0BC0h
+BUF     equ 3400h               ; gap buffer: 3400h-BFFFh (TPA, pagine 0-2)
+UNDO    equ RAMB+0460h          ; registro di annullamento: C460h-CFFFh
+UNDOSZ  equ 0BA0h
 CLIP    equ UNDO+UNDOSZ         ; clipboard: D000h fino a (0006h)-0300h
         ELSE
-BUF     equ RAMB+0440h          ; gap buffer (fino a bufend)
+BUF     equ RAMB+0460h          ; gap buffer (fino a bufend)
 UNDO    equ 0DE00h              ; registro di annullamento di 2 KB (solo build ROM)
 UNDOSZ  equ 0800h
 CLIP    equ 0E600h              ; clipboard di 2.5 KB (solo build ROM)
@@ -77,6 +77,19 @@ onfile  equ RAMB+0425h              ; b  il testo corrisponde a un file su disco
 oldsz   equ RAMB+0427h              ; w  dimensione del file prima di una sovrascrittura in posto
 inplace equ RAMB+0429h              ; b  il salvataggio sovrascrive il file esistente
 cmdok   equ RAMB+0426h              ; b  la riga di comando aveva il marcatore " +"
+sw      equ RAMB+0430h              ; b  larghezza dello schermo: 80 (MSX2) o 40 (MSX1)
+swm1    equ RAMB+0431h              ; b  sw-1 (colonna della barra verticale = VCOLS)
+swm2    equ RAMB+0432h              ; b  sw-2 (colonna della freccia destra)
+thv     equ RAMB+0433h              ; b  sw-3 (celle del binario orizzontale)
+m2flag  equ RAMB+0434h              ; b  0 = MSX1 (TMS9918: niente tabella di blink, R#12/13/14), altrimenti MSX2 o superiore
+vcolsw  equ RAMB+0435h              ; w  VCOLS = sw-1
+vcw1    equ RAMB+0437h              ; w  VCOLS-1
+nvcw1   equ RAMB+0439h              ; w  -(VCOLS-1)
+hmaxw   equ RAMB+043Bh              ; w  HMAX (massimo scroll orizzontale)
+hmax1w  equ RAMB+043Dh              ; w  HMAX+1
+pattb   equ RAMB+043Fh              ; w  tabella dei pattern: 1000h (80 colonne) o 0800h (40)
+mxmax   equ RAMB+0441h              ; w  limite x del mouse = sw*8
+rbm2    equ RAMB+0443h              ; w  indirizzo di rowbuf+sw-2
 kwnext  equ RAMB+0423h              ; b  prossima riga schermo (0..) da colorare nei tempi morti (VROWS = fatto)
 cur     equ RAMB+0000h              ; w  offset logico del cursore
 len     equ RAMB+0002h              ; w  lunghezza del testo
@@ -234,7 +247,8 @@ start:
         ENDIF
         xor a
         ld (CSRSW),a
-        ld a,80
+        call width_init
+        ld a,(sw)
         ld (LINL40),a
         ld (LINLEN),a
         BIOS INITXT
@@ -303,14 +317,76 @@ vsetr:                          ; HL = indirizzo VRAM (lettura); clobbera A
         nop
         ret
 
+width_init:                      ; versione MSX (byte 002Dh): 80 colonne su MSX2, 40 su MSX1; parametri di layout
+        IFDEF COM
+        ld hl,002Dh
+        ld a,(EXPTBL)
+        call 000Ch              ; RDSLT
+        ei
+        ELSE
+        ld a,(002Dh)
+        ENDIF
+        ld (m2flag),a
+        ld b,80
+        ld hl,1000h
+        or a
+        jr nz,.w
+        ld b,40
+        ld hl,0800h
+.w:     ld (pattb),hl
+        ld a,b
+        ld (sw),a
+        dec a
+        ld (swm1),a
+        ld l,a
+        ld h,0
+        ld (vcolsw),hl
+        dec hl
+        ld (vcw1),hl
+        ld a,l
+        ld (swm2),a
+        ex de,hl
+        ld hl,0
+        or a
+        sbc hl,de
+        ld (nvcw1),hl
+        ld a,(swm2)
+        dec a
+        ld (thv),a
+        ld a,(sw)
+        ld l,a
+        ld h,0
+        ex de,hl
+        ld hl,256
+        or a
+        sbc hl,de               ; 256 - sw = HMAX (MAXCOL - VCOLS + 1)
+        ld (hmaxw),hl
+        inc hl
+        ld (hmax1w),hl
+        ex de,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        ld (mxmax),hl
+        ld a,(sw)
+        ld l,a
+        ld h,0
+        ld de,rowbuf-2
+        add hl,de
+        ld (rbm2),hl
+        ret
+
 vdp_init:
-        xor a                   ; R#14 = 0
-        out (VDPC),a
-        ld a,8Eh
-        out (VDPC),a
         ld a,0F4h               ; R#7: testo 15 su blu
         out (VDPC),a
         ld a,87h
+        out (VDPC),a
+        ld a,(m2flag)
+        or a
+        ret z                   ; MSX1: niente R#12/R#13/R#14 (i numeri sopra il 7 si sovrapporrebbero ai registri 0-7)
+        xor a                   ; R#14 = 0
+        out (VDPC),a
+        ld a,8Eh
         out (VDPC),a
         ld a,KWCOL              ; R#12: colori alternativi (parole chiave)
         out (VDPC),a
@@ -323,8 +399,11 @@ vdp_init:
         ret
 
 font_load:                      ; 128-255 = copie negate di 0-127 (font gia' in VRAM da INITXT), glifi 1-5 propri
-        ld hl,PATT
-        ld de,PATT+1024
+        ld hl,(pattb)
+        ld de,1024
+        add hl,de
+        ex de,hl
+        ld hl,(pattb)
         ld a,128
 .cp:    push af
         push hl
@@ -365,7 +444,7 @@ font_load:                      ; 128-255 = copie negate di 0-127 (font gia' in 
         add hl,hl
         add hl,hl
         add hl,hl
-        ld de,PATT
+        ld de,(pattb)
         add hl,de
         ex de,hl                ; DE = indirizzo normale
         pop hl                  ; HL = glifo
@@ -418,13 +497,16 @@ glyphs: db 000h,000h,030h,078h,0FCh,000h,000h,000h     ; 1 freccia su
         db 030h,030h,030h,0F0h,0F0h,000h,000h,000h     ; 12 angolo basso-destra
 
 blink_clear:
+        ld a,(m2flag)
+        or a
+        jr z,.nb                ; MSX1: a 0800h c'e' la tabella dei pattern
         ld hl,BLKT
         call vsetw
         ld b,240
         xor a
 .l:     out (VDPD),a
         djnz .l
-        ld a,0FFh
+.nb:    ld a,0FFh
         ld (blx),a
         xor a
         ld (curdr),a
@@ -445,9 +527,12 @@ cell_addr:                      ; D = riga, E = colonna -> HL; clobbera D, BC
         add hl,bc               ; *5
         add hl,hl
         add hl,hl
-        add hl,hl
+        add hl,hl               ; *40
+        ld a,(sw)
+        cp 80
+        jr nz,.w
         add hl,hl               ; *80
-        ld d,0
+.w:     ld d,0
         add hl,de
         ret
 
@@ -931,13 +1016,13 @@ scroll_h:                       ; HL = delta (con segno) colonne
         bit 7,h
         jr z,.p
         ld hl,0
-.p:     ld de,HMAX+1
+.p:     ld de,(hmax1w)
         push hl
         or a
         sbc hl,de
         pop hl
         jr c,.ok
-        ld hl,HMAX
+        ld hl,(hmaxw)
 .ok:    ld de,(hscroll)
         push hl
         or a
@@ -977,12 +1062,12 @@ ensure_visible:                 ; scorre la vista in modo che il cursore sia vis
 .r1:    push hl
         or a
         sbc hl,de
-        ld de,VCOLS
+        ld de,(vcolsw)
         or a
         sbc hl,de
         pop hl
         ret c
-        ld de,VCOLS-1
+        ld de,(vcw1)
         or a
         sbc hl,de
         ld (hscroll),hl
@@ -1920,7 +2005,12 @@ menu_info:                      ; menu aperto -> B = larghezza, C = voci, HL = e
         add a,a
         add a,d
         ld d,a                  ; 6*k
-        ret
+        ld a,(sw)               ; il riquadro non esce dallo schermo (40 colonne: i menu a destra si spostano a sinistra)
+        sub b
+        cp d
+        jr nc,.o
+        ld d,a
+.o:     ret
 
 menu_close:
         xor a
@@ -2262,7 +2352,7 @@ prompt_line:
         ld (plen),a
 .draw:  ld hl,rowbuf
         ld de,rowbuf+1
-        ld bc,79
+        ld bc,(vcolsw)
         ld (hl),' '
         ldir
         ld hl,(pprm)
@@ -2273,7 +2363,8 @@ prompt_line:
         ld a,'_'
         ld (de),a
         ld hl,rowbuf
-        ld b,80
+        ld a,(sw)
+        ld b,a
 .o:     set 7,(hl)
         inc hl
         djnz .o
@@ -2282,7 +2373,8 @@ prompt_line:
         call cell_addr
         call vsetw
         ld hl,rowbuf
-        ld b,80
+        ld a,(sw)
+        ld b,a
         ld c,VDPD
         otir
 .key:   BIOS CHGET
@@ -2352,14 +2444,15 @@ show_row0:                      ; HL = testo: lo mostra in video inverso sulla r
         push hl
         ld hl,rowbuf
         ld de,rowbuf+1
-        ld bc,79
+        ld bc,(vcolsw)
         ld (hl),' '
         ldir
         pop hl
         ld de,rowbuf+1
         call strcpy
         ld hl,rowbuf
-        ld b,80
+        ld a,(sw)
+        ld b,a
 .o:     set 7,(hl)
         inc hl
         djnz .o
@@ -2368,7 +2461,8 @@ show_row0:                      ; HL = testo: lo mostra in video inverso sulla r
         call cell_addr
         call vsetw
         ld hl,rowbuf
-        ld b,80
+        ld a,(sw)
+        ld b,a
         ld c,VDPD
         otir
         ret
@@ -3174,7 +3268,7 @@ refresh:
 build_row:                      ; costruisce rowbuf per la riga che inizia in (rp)
         ld hl,rowbuf
         ld de,rowbuf+1
-        ld bc,VCOLS-1
+        ld bc,(vcw1)
         ld (hl),' '
         ldir
         ld a,(reof)
@@ -3197,7 +3291,8 @@ build_row:                      ; costruisce rowbuf per la riga che inizia in (r
         jr nz,.skip
         jr .eof
 .copy:  ld de,rowbuf
-        ld b,VCOLS
+        ld a,(swm1)
+        ld b,a
         ld a,(selact)
         or a
         jr nz,.cps
@@ -3330,7 +3425,8 @@ redraw_text:
         call cell_addr
         call vsetw
         ld hl,rowbuf
-        ld b,VCOLS
+        ld a,(swm1)
+        ld b,a
         ld c,VDPD
         otir
         ld a,(rrow)
@@ -3358,8 +3454,10 @@ vthumb_idx:                     ; -> A = posizione del pollice (0..TV-1)
 
 hthumb_idx:                     ; -> A = posizione del pollice (0..TH-1)
         ld hl,(hscroll)
-        ld de,HMAX
-        ld c,TH-1
+        ld de,(hmaxw)
+        ld a,(thv)
+        dec a
+        ld c,a
         call scale
         ld a,l
         ret
@@ -3368,7 +3466,8 @@ draw_vbar:
         call vthumb_idx
         add a,2
         ld (tmpb),a
-        ld e,79
+        ld a,(swm1)
+        ld e,a
         ld d,1
         ld a,01h
         call put_cell
@@ -3381,7 +3480,8 @@ draw_vbar:
         ld a,0A0h
         jr z,.p
         ld a,05h
-.p:     ld e,79
+.p:     ld hl,swm1
+        ld e,(hl)
         call put_cell
         inc d
         ld a,d
@@ -3395,13 +3495,14 @@ draw_hbar:
         ld (tmpb),a
         ld hl,rowbuf
         ld de,rowbuf+1
-        ld bc,79
+        ld bc,(vcolsw)
         ld (hl),05h
         ldir
         ld a,03h
         ld (rowbuf),a
         ld a,04h
-        ld (rowbuf+78),a
+        ld hl,(rbm2)
+        ld (hl),a
         ld a,(tmpb)
         ld e,a
         ld d,0
@@ -3413,7 +3514,8 @@ draw_hbar:
         call cell_addr
         call vsetw
         ld hl,rowbuf
-        ld b,80
+        ld a,(sw)
+        ld b,a
         ld c,VDPD
         otir
         ret
@@ -3421,9 +3523,12 @@ draw_hbar:
 draw_title:
         ld hl,rowbuf
         ld de,rowbuf+1
-        ld bc,79
+        ld bc,(vcolsw)
         ld (hl),' '
         ldir
+        ld a,(sw)
+        cp 80
+        jp nz,draw_title40
         ld hl,s_menubar
         ld de,rowbuf
         call strcpy
@@ -3465,7 +3570,8 @@ draw_title:
         pop de
         call dec16
 .inv:   ld hl,rowbuf
-        ld b,80
+        ld a,(sw)
+        ld b,a
 .o:     set 7,(hl)
         inc hl
         djnz .o
@@ -3490,10 +3596,46 @@ draw_title:
         call cell_addr
         call vsetw
         ld hl,rowbuf
-        ld b,80
+        ld a,(sw)
+        ld b,a
         ld c,VDPD
         otir
         ret
+
+draw_title40:                   ; 40 colonne: barra dei menu (30 colonne) e stato "riga:colonna" a destra;
+        ld hl,(msgptr)          ; un messaggio occupa tutta la barra
+        ld a,h
+        or l
+        jr z,.nomsg
+        ld hl,rowbuf
+        ld de,rowbuf+1
+        ld bc,(vcolsw)
+        ld (hl),' '
+        ldir
+        ld hl,(msgptr)
+        ld de,rowbuf
+        call strcpy
+        jp draw_title.inv
+.nomsg: ld hl,s_menubar
+        ld de,rowbuf
+        call strcpy
+        ld a,(modified)
+        or a
+        jr z,.st
+        ld a,'*'
+        ld (rowbuf+30),a
+.st:    ld de,rowbuf+31
+        ld hl,(curline)
+        call dec16
+        ld a,':'
+        ld (de),a
+        inc de
+        push de
+        call cur_col            ; (clobbera DE)
+        inc hl
+        pop de
+        call dec16
+        jp draw_title.inv
 
 s_menubar: db " File  Edit  Find  Help  Run  ",0
 s_untitled: db "(untitled)",0
@@ -3535,7 +3677,8 @@ cursor_show:                    ; il cursore e' il glifo inverso (bit 7) della c
         or a
         ret nz
         ld a,l
-        cp VCOLS
+        ld hl,swm1
+        cp (hl)
         ret nc
         ld (tmpd),a             ; x
         ld hl,(curline)
@@ -3690,8 +3833,11 @@ kw_scan:                        ; ROWBUF (VCOLS caratteri) -> flag di colore del
         ld (hl),0
         ld bc,9
         ldir
+        ld hl,(vcolsw)
+        ld de,rowbuf
+        add hl,de
+        ld (hl),0               ; sentinella (classe 4): la scansione non esce dalla riga
         xor a
-        ld (rowbuf+VCOLS),a     ; sentinella (classe 4): la scansione non esce dalla riga
         ld (kwq),a
         ld hl,rowbuf-1
         ld d,high kwcls
@@ -3786,6 +3932,9 @@ kw_put:                         ; A = riga schermo (1..22): KWF -> tabella di bl
         ret
 
 kw_reset:                       ; testo ridisegnato: i colori si azzerano e si ricalcolano nei tempi morti
+        ld a,(m2flag)
+        or a
+        ret z                   ; MSX1: nessun colore
         ld hl,BLKT+10
         call vsetw
         ld b,220
@@ -3796,6 +3945,9 @@ kw_reset:                       ; testo ridisegnato: i colori si azzerano e si r
         ret
 
 kw_idle:                        ; nessun tasto in attesa: colora fino a 2 righe leggendole dalla VRAM
+        ld a,(m2flag)
+        or a
+        ret z
         ld a,(menuopen)
         or a
         ret nz
@@ -3815,7 +3967,8 @@ kw_do1:
         call cell_addr
         call vsetr
         ld hl,rowbuf
-        ld b,VCOLS
+        ld a,(swm1)
+        ld b,a
         ld c,VDPD
         inir
         call kw_scan
@@ -3924,7 +4077,7 @@ mouse_poll:
         ld d,a
         ld hl,(mpx)
         add hl,de
-        ld de,640
+        ld de,(mxmax)
         call clamp
         ld (mpx),hl
         ld a,(rdy)
@@ -4012,7 +4165,7 @@ do_action:                      ; A = 1 su, 2 giu, 3 pag su, 4 pag giu, 5 sx, 6 
         jr z,.rt
         cp 7
         jr z,.hl
-        ld hl,VCOLS-1
+        ld hl,(vcw1)
         jr .h
 .up:    ld hl,-1
         jr .v
@@ -4027,7 +4180,7 @@ do_action:                      ; A = 1 su, 2 giu, 3 pag su, 4 pag giu, 5 sx, 6 
         jr .h
 .rt:    ld hl,1
         jr .h
-.hl:    ld hl,-(VCOLS-1)
+.hl:    ld hl,(nvcw1)
 .h:     call scroll_h
         jp refresh
 
@@ -4049,7 +4202,8 @@ mouse_press:
         jr z,.hbar
         ret nc
         ld a,e
-        cp 79
+        ld hl,swm1
+        cp (hl)
         jp nz,click_text
         ld a,d
         cp 1
@@ -4080,11 +4234,13 @@ mouse_press:
         ld a,5
         jp z,start_repeat
         ld a,e
-        cp 78
+        ld hl,swm2
+        cp (hl)
         ld a,6
         jp z,start_repeat
         ld a,e
-        cp 79
+        ld hl,swm1
+        cp (hl)
         ret nc
         call hthumb_idx
         inc a
@@ -4136,7 +4292,8 @@ mouse_hold:
         cp 5
         jr nc,.hor
         ld a,(mcx)
-        cp 79
+        ld hl,swm1
+        cp (hl)
         jr nz,.stop
         ld a,(mact)
         cp 3
@@ -4228,13 +4385,18 @@ drag_h:
         sub 1
         jr nc,.a
         xor a
-.a:     cp TH
+.a:     ld hl,thv
+        cp (hl)
         jr c,.b
-        ld a,TH-1
+        ld a,(hl)
+        dec a
 .b:     ld (tmpd),a
         ld c,a
-        ld hl,HMAX
-        ld de,TH-1
+        ld hl,(hmaxw)
+        ld a,(thv)
+        dec a
+        ld e,a
+        ld d,0
         call scale              ; HL = scroll candidato (arrotondato per difetto)
         ld de,(hscroll)
         ld (tmp1),de            ; valore precedente
@@ -4348,9 +4510,10 @@ drag_text:                      ; pulsante tenuto premuto: la selezione segue il
         ld a,22
 .r2:    ld (tgtrow),a
         ld a,(mcx)
-        cp 79
+        ld hl,swm1
+        cp (hl)
         jr c,.c1
-        ld a,78
+        ld a,(swm2)
 .c1:    ld (tgtcol),a
         ld hl,(cur)
         push hl

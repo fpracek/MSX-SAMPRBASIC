@@ -154,3 +154,14 @@ da `blx`/`bly`/`curch`. Attenzione: la build ROM dei test (con il testo demo) ha
 - **Salvataggio in posto**: se il file esiste e non e' molto piu' lungo del testo, `save_file` lo apre e lo sovrascrive (senza cancellarlo e ricrearlo: 1,3 s invece di 3,1 s su DOS 1);
   se il testo nuovo e' piu' corto scrive ^Z dopo il testo e il resto resta come residuo (il caricamento si ferma al ^Z; il compilatore tronca il sorgente al ^Z).
   Se il file e' piu' lungo del testo di oltre 1 KB (o supera 64 KB) si cancella e ricrea come prima. Test: `python esave.py`.
+
+## MSX1: 40 colonne (stadio 25)
+All'avvio l'editor legge la versione MSX (byte 002Dh): su MSX1 usa il testo a 40 colonne (TEXT 1, tabella dei pattern a 0800h), su MSX2 e superiori
+l'80 colonne di prima (TEXT 2, pattern a 1000h). Tutta la geometria e' in variabili calcolate da `width_init` (`sw` = 80/40, `swm1` = colonna della barra
+verticale, `thv` = celle del binario orizzontale, `hmaxw` = massimo scroll orizzontale = 256 - sw, `pattb`, `mxmax` = sw*8 per il mouse, ...);
+`cell_addr` moltiplica la riga per `sw`. A 40 colonne: la barra dei menu occupa le colonne 0-29, a destra c'e' lo stato compatto `riga:colonna`
+(con `*` se il testo e' modificato) e un messaggio occupa tutta la barra; i riquadri dei menu si spostano a sinistra per non uscire dallo schermo
+(`menu_info`). Non esistono su MSX1 (TMS9918): la tabella di blink e quindi i colori delle parole chiave, R#12, R#13 e R#14 (non si scrivono mai: il
+numero di registro 12-14 si sovrapporrebbe a R#4-R#6 e romperebbe lo schermo); il cursore e' comunque il glifo inverso.
+Test: `python e40.py` (build ROM su MSX1, openMSX `Sony_HB-75P`: layout, cursore, scroll verticale e orizzontale, barre, mouse, menu Run); gli altri test
+restano su MSX2. Il `.COM` (con il DOS) non e' ancora stato provato su MSX1: in openMSX l'MSX1 con interfaccia disco AVT parte in Disk BASIC.

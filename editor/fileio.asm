@@ -559,6 +559,9 @@ exit_program:
 leave_screen:
         ld a,(csrsave)
         ld (CSRSW),a
+        ld a,(m2flag)
+        or a
+        ret z                   ; MSX1: niente R#13
         xor a                   ; R#13 = 0: niente blink
         out (VDPC),a
         ld a,8Dh
