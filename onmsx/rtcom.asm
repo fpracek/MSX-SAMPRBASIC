@@ -132,6 +132,7 @@ inbuf   equ RTRAM+20
         jp rt_kill
         jp rt_wint
         jp rt_wstr
+        jp rt_farcall
         ASSERT $ == RT_EMPTY
 rt_empty: db 0
         ASSERT $ == RT_NAME
@@ -195,6 +196,9 @@ rt_start:
         ld (rndseed),hl
         ld hl,(rt_data0)
         ld (DPTR),hl
+        IFDEF ROMMODE
+        call rom_vars
+        ENDIF
         jp rt_prog
 
 rt_locate:                  ; DE = riga, HL = colonna
@@ -1035,7 +1039,10 @@ rt_wait:                    ; HL = frame da attendere
         dec hl
         jr .l
 
-rt_nyi: ret                 ; voci riservate per i prossimi stadi
+rt_nyi: ret
+        IFNDEF ROMMODE
+rt_farcall: ret                 ; solo per le cartucce
+        ENDIF                 ; voci riservate per i prossimi stadi
 
         INCLUDE "rtgfx.asm"
         INCLUDE "rtgtext.asm"

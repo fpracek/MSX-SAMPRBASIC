@@ -79,6 +79,13 @@ fi_s    equ ST+188              ; w
 voff    equ ST+220              ; w  fisico - virtuale (cambia con il segmento)
 outlim  equ ST+222              ; b  alto byte oltre il quale l'output e' troppo grande
 target  equ ST+223              ; b  tipo di cartuccia (0 COM)
+curseg  equ ST+224              ; b  segmento in compilazione (0 = fisso)
+pseg    equ ST+225              ; b  segmento corrente durante la pre-scansione
+nfar    equ ST+226              ; b  voci usate in FARTAB
+romopen equ ST+227              ; b  il file ROM e' gia' stato creato
+FARTABC equ 46C0h               ; FARTAB in costruzione: 32 x 4 byte (banco, 0, indirizzo)
+SEGT    equ 4740h               ; segmento di ogni SUB/FUNCTION (indice nel record)
+FARX    equ 4754h               ; indice FARTAB di ogni SUB/FUNCTION (FFh = nessuno)
 usewin  equ ST+216              ; b  il sorgente usa WINDOW: le coordinate grafiche vengono convertite
 nfunc   equ ST+192              ; b
 npart   equ ST+193              ; b
@@ -186,6 +193,7 @@ K_OPEN equ 70
 K_CLOSE equ 71
 K_KILL equ 72
 K_WRITE equ 73
+K_SEGMENT equ 74
 
 B_IF    equ 1
 B_FOR   equ 2
@@ -250,9 +258,11 @@ start:
         call chk_rom
         ENDIF
         call compile
-        call write_output
         IFDEF ROMMODE
+        call rom_finish
         jp rom_done
+        ELSE
+        call write_output
         ENDIF
         ; avvia il programma: copia il caricatore a C000h e usa ldr_copy
         ld hl,ldr_img
@@ -517,6 +527,7 @@ s_rtbin: db "RTROM.BIN",0
 s_rtbin: db "RT.BIN",0
         ENDIF
 
+        IFNDEF ROMMODE
 write_output:                   ; NOME.COM <- immagine
         ld hl,fname
         ld de,oname
@@ -529,11 +540,7 @@ write_output:                   ; NOME.COM <- immagine
         inc hl
         inc de
         jr .c
-.x:     IFDEF ROMMODE
-        ld hl,s_rom
-        ELSE
-        ld hl,s_com
-        ENDIF
+.x:     ld hl,s_com
         ld bc,5
         ldir
         ld hl,oname
@@ -561,33 +568,88 @@ write_output:                   ; NOME.COM <- immagine
         ld de,fcb
         ld c,F_BWR
         call BDOS
-        or a
-        jr nz,.err
-        IFDEF ROMMODE
-        call rom_pad
-        ENDIF
+        push af
         ld de,fcb
         ld c,F_CLOSE
         call BDOS
+        pop af
+        or a
+        jr nz,.err
         ret
+        ENDIF
         IFDEF ROMMODE
-rom_pad:                        ; riempie con zeri fino a 16 KB (ROM16) o 32 KB (le altre)
-        ld hl,16384
+rom_werr:
+        ld hl,0
+        ld (tline),hl
+        ERR E_WRITE
+
+rom_create:                     ; NOME.ROM: crea il file (una volta sola)
+        ld hl,fname
+        ld de,oname
+.c:     ld a,(hl)
+        or a
+        jr z,.x
+        cp '.'
+        jr z,.x
+        ld (de),a
+        inc hl
+        inc de
+        jr .c
+.x:     ld hl,s_rom
+        ld bc,5
+        ldir
+        ld hl,oname
+        ld (namep),hl
+        call mk_fcb
+        ld de,fcb
+        ld c,F_DEL
+        call BDOS
+        call mk_fcb
+        ld de,fcb
+        ld c,F_MAKE
+        call BDOS
+        or a
+        jr nz,rom_werr
+        call fcb_rec1
+        ld de,OUT0
+        ld c,F_DMA
+        call BDOS
+        ld a,1
+        ld (romopen),a
+        ret
+
+segsz:                          ; -> DE = dimensione di un segmento commutabile
+        ld de,8192
         ld a,(target)
-        cp 1
-        jr z,.t
-        ld hl,32768
-.t:     ex de,hl
-        ld hl,(outp)
+        cp 4
+        ret nz
+        ld de,16384
+        ret
+
+rom_flush:                      ; DE = dimensione del segmento: scrive il buffer e riempie con zeri
         push de
+        ld a,(romopen)
+        or a
+        call z,rom_create
+        ld hl,(outp)
         ld de,-OUT0
         add hl,de
-        pop de
-        ex de,hl                ; HL = totale, DE = scritto
+        push hl
+        ld de,fcb
+        ld c,F_BWR
+        call BDOS
         or a
-        sbc hl,de
-        jr c,.big               ; l'immagine supera la dimensione scelta
-        ld (tmpv),hl            ; HL = riempimento
+        jp nz,rom_werr
+        pop hl                  ; scritti
+        pop de                  ; dimensione
+        ex de,hl
+        or a
+        sbc hl,de               ; riempimento
+        jp c,err_big
+        ld a,h
+        or l
+        ret z
+        ld (tmpv),hl
         ld hl,OUT0
         ld de,OUT0+1
         ld bc,16383
@@ -612,12 +674,239 @@ rom_pad:                        ; riempie con zeri fino a 16 KB (ROM16) o 32 KB 
         call BDOS
         or a
         jr z,.z
+        jp rom_werr
+
+rom_finish:                     ; ultimo segmento, FARTAB e dimensione dei dati nell'intestazione, chiusura
+        ld a,(curseg)
+        or a
+        jr nz,.seg
+        ld de,16384
+        ld a,(target)
+        cp 1
+        jr z,.go
+        ld de,32768
+        jr .go
+.seg:   call segsz
+.go:    call rom_flush
+        ld a,(curseg)
+        or a
+        jr z,.close             ; un solo segmento: l'intestazione e' gia' completa
+        ld hl,7F00h-4000h       ; FARTAB sta a 7F00h, cioe' a 3F00h nel file
+        ld (fcb+33),hl
+        xor a
+        ld (fcb+35),a
+        ld de,FARTABC
+        ld c,F_DMA
+        call BDOS
+        ld hl,128
+        ld de,fcb
+        ld c,F_BWR
+        call BDOS
+        or a
+        jp nz,rom_werr
+        ld hl,(dptr)
+        ld de,-DATA_BASE
+        add hl,de
+        ld (tmpv),hl
+        ld hl,RT_DSIZE-IMGBASE
+        ld (fcb+33),hl
+        xor a
+        ld (fcb+35),a
+        ld de,tmpv
+        ld c,F_DMA
+        call BDOS
+        ld hl,2
+        ld de,fcb
+        ld c,F_BWR
+        call BDOS
+        or a
+        jp nz,rom_werr
+.close: ld de,fcb
+        ld c,F_CLOSE
+        call BDOS
+        ret
+
+rec_index:                      ; HL = record SUB/FUNCTION -> A = indice
+        ld de,FUNT
+        or a
+        sbc hl,de
+        ld de,FUNREC
+        ld b,0
+.l:     ld a,h
+        or l
+        jr z,.d
+        or a
+        sbc hl,de
+        inc b
+        jr .l
+.d:     ld a,b
+        ret
+
+rec_far:                        ; HL = record -> A = indice FARTAB se la routine sta in un altro segmento, altrimenti FFh
+        call rec_index
+        ld e,a
+        ld d,0
+        ld hl,SEGT
+        add hl,de
+        ld a,(hl)
+        or a
+        jr z,.no
+        ld b,a
+        ld a,(curseg)
+        cp b
+        jr z,.no
+        ld hl,FARX
+        add hl,de
+        ld a,(hl)
+        ret
+.no:    ld a,0FFh
+        ret
+
+rom_regfunc:                    ; nuova routine (indice nfunc-1): segmento della pre-scansione e voce FARTAB
+        push hl
+        push de
+        ld a,(nfunc)
+        dec a
+        ld e,a
+        ld d,0
+        ld hl,SEGT
+        add hl,de
+        ld a,(pseg)
+        ld (hl),a
+        ld hl,FARX
+        add hl,de
+        ld (hl),0FFh
+        ld a,(pseg)
+        or a
+        jr z,.d
+        ld a,(nfar)
+        cp 32
+        jp nc,err_many
+        ld (hl),a
+        inc a
+        ld (nfar),a
+.d:     pop de
+        pop hl
+        ret
+
+segbank:                        ; -> A = numero di banco del segmento corrente
+        ld a,(curseg)
+        ld b,a
+        ld a,(target)
+        cp 4
+        ld a,b
+        ret z
+        inc a
+        ret
+
+rom_defsub:                     ; la routine (fcur) comincia qui: voce FARTAB (banco, indirizzo)
+        ld a,(curseg)
+        or a
+        ret z
+        ld hl,(fcur)
+        call rec_index
+        ld e,a
+        ld d,0
+        ld hl,FARX
+        add hl,de
+        ld a,(hl)
+        cp 0FFh
+        ret z
+        ld l,a
+        ld h,0
+        add hl,hl
+        add hl,hl
+        ld de,FARTABC
+        add hl,de
+        push hl
+        call segbank
+        pop hl
+        ld (hl),a
+        inc hl
+        ld (hl),0
+        inc hl
+        push hl
+        call get_pc
+        ex de,hl
+        pop hl
+        ld (hl),e
+        inc hl
+        ld (hl),d
+        ret
+
+err_many:
+        ERR E_MANY
+
+st_segment:                     ; SEGMENT n: da qui il codice va nel segmento n (n = segmento precedente + 1)
+        ld a,(target)
+        cp 3
+        jp c,err_syntax         ; solo ASCII8, ASCII16, KONAMI, SCC
+        ld a,(ttype)
+        cp T_NUM
+        jp nz,err_syntax
+        ld hl,(tval)
+        ld a,(curseg)
+        inc a
+        cp l
+        jp nz,err_syntax
+        ld a,h
+        or a
+        jp nz,err_syntax
+        ld a,(fcur)
+        ld hl,(fcur)
+        ld a,h
+        or l
+        jp nz,err_syntax        ; non dentro una SUB/FUNCTION
+        ld a,(nblk)
+        or a
+        jp nz,err_syntax
+        ld a,(nlab)             ; salti in avanti non risolti non possono attraversare i segmenti
+        or a
+        jr z,.nl
+        ld b,a
+        ld hl,LABT
+.pl:    push hl
+        ld de,14
+        add hl,de
+        ld a,(hl)
+        or a
+        jr nz,.ok
+        inc hl
+        ld a,(hl)
+        inc hl
+        or (hl)
+        jr z,.ok
+        pop hl
+        jp err_label
+.ok:    pop hl
+        ld de,LABREC
+        add hl,de
+        djnz .pl
+.nl:    ld a,(curseg)
+        or a
+        ld de,16384
+        jr z,.fl
+        call segsz
+.fl:    call rom_flush
+        ld hl,OUT0
+        ld (outp),hl
         ld hl,0
-        ld (tline),hl
-        ERR E_WRITE
-.big:   ld hl,0
-        ld (tline),hl
-        ERR E_BIG
+        ld (voff),hl            ; il segmento commutabile sta a 8000h: fisico = virtuale
+        ld a,(target)
+        cp 4
+        ld a,0BFh
+        jr z,.l
+        ld a,0A0h
+.l:     ld (outlim),a
+        ld a,(curseg)
+        inc a
+        ld (curseg),a
+        jp next_tok
+        ENDIF
+
+        IFNDEF ROMMODE
+st_segment:
+        jp err_syntax
         ENDIF
 s_com:  db ".COM",0
 
@@ -1066,7 +1355,7 @@ kwtab:  db "PRINT",0,"IF",0,"THEN",0,"ELSE",0,"ELSEIF",0,"END",0,"FOR",0,"TO",0
         db "OPTION",0,"INPUT",0,"DIM",0,"POKE",0,"SUB",0,"FUNCTION",0,"CALL",0,"DECLARE",0,"SHARED",0
         db "EXIT",0,"DO",0,"LOOP",0,"UNTIL",0,"SELECT",0,"CASE",0,"IS",0,"CONST",0,"COLOR",0,"RANDOMIZE",0,"VPOKE",0,"OUT",0,"SLEEP",0,"STOP",0,"SCREEN",0,"PSET",0,"PRESET",0,"LINE",0,"CIRCLE",0
         db "PALETTE",0,"PAINT",0,"PUT",0,"SPRITE",0,"GET",0,"DRAW",0,"VIEW",0,"WINDOW",0,"VBANK",0,"VFILL",0,"VWRITE",0,"SET",0,"COPY",0,"DATA",0,"READ",0,"RESTORE",0,"BEEP",0,"SOUND",0,"PLAY",0
-        db "OPEN",0,"CLOSE",0,"KILL",0,"WRITE",0,0
+        db "OPEN",0,"CLOSE",0,"KILL",0,"WRITE",0,"SEGMENT",0,0
 
 ; ---------------------------------------------------------------- helper del parser
 is_p:                           ; A = carattere: Z se il token e' quella punteggiatura
@@ -1180,6 +1469,12 @@ define_label:                   ; tbuf = nome: definisce l'etichetta al pc corre
         jr z,.ok
         ERR E_DUP
 .ok:    ld (hl),1
+        push hl
+        ld de,5                 ; +19: segmento dell'etichetta
+        add hl,de
+        ld a,(curseg)
+        ld (hl),a
+        pop hl
         pop hl
         push hl
         call get_pc
@@ -1207,7 +1502,14 @@ label_jump:                     ; A = opcode (C3 jp / CD call), tbuf = nome
         inc hl                  ; non definita: catena di fixup nella testa (rec+15)
         pop af
         jp emit_jchain
-.def:   dec hl
+.def:   push hl
+        ld de,5
+        add hl,de
+        ld a,(curseg)
+        cp (hl)
+        pop hl
+        jp nz,err_label         ; etichetta in un altro segmento
+        dec hl
         dec hl
         ld e,(hl)
         inc hl
@@ -1724,6 +2026,17 @@ compile:
         ld (etype),a
         ld (usewin),a
         ld (target),a
+        ld (curseg),a
+        ld (pseg),a
+        ld (nfar),a
+        ld (romopen),a
+        IFDEF ROMMODE
+        ld hl,FARTABC
+        ld de,FARTABC+1
+        ld bc,127
+        ld (hl),0
+        ldir
+        ENDIF
         ld hl,OUT0-IMGBASE
         ld (voff),hl
         ld a,OUTLIM
@@ -1895,8 +2208,13 @@ compile:
 .fin:   ld hl,(dptr)             ; dimensione dei dati nell'immagine del runtime
         ld de,-DATA_BASE
         add hl,de
+        IFDEF ROMMODE
+        ld a,(curseg)
+        or a
+        jr nz,.nods
+        ENDIF
         ld (OUT0+(RT_DSIZE-IMGBASE)),hl
-        ld hl,RT_END
+.nods:  ld hl,RT_END
         ld a,0C3h
         jp emit_jabs
 
@@ -2321,7 +2639,7 @@ kwjump: dw st_print, st_if, err_syntax, st_else, st_elseif, st_end, st_for, err_
         dw st_exit, st_do, st_loop, err_syntax, st_select, st_case, err_syntax
         dw st_const, st_color, st_randomize, st_vpoke, st_out, st_sleep, st_stop
         dw st_screen, st_pset, st_preset, st_line, st_circle, st_palette, st_paint, st_put, err_syntax, st_get, st_draw, st_view, st_window
-        dw st_vbank, st_vfill, st_vwrite, st_set, st_copy, st_data, st_read, st_restore, st_beep, st_sound, st_play, st_open, st_close, st_kill, st_write
+        dw st_vbank, st_vfill, st_vwrite, st_set, st_copy, st_data, st_read, st_restore, st_beep, st_sound, st_play, st_open, st_close, st_kill, st_write, st_segment
 
 ; ---------------------------------------------------------------- espressioni
 want_int:
@@ -3585,9 +3903,20 @@ prescan:                        ; registra le firme di SUB/FUNCTION di tutto il 
         jr nz,.adv
         ld a,(tval)
         cp K_WINDOW
-        jr nz,.adv
+        jr nz,.nw
         ld a,1
         ld (usewin),a           ; il programma usa WINDOW
+        jr .adv
+.nw:    IFDEF ROMMODE
+        cp K_SEGMENT
+        jr nz,.adv
+        call next_tok
+        ld a,(ttype)
+        cp T_NUM
+        jr nz,.skip
+        ld a,(tval)
+        ld (pseg),a
+        ENDIF
 .adv:   call next_tok
         jr .skip
 
@@ -3621,6 +3950,9 @@ reg_func:                       ; token = SUB/FUNCTION: crea il record con nome 
         ld a,(nfunc)
         inc a
         ld (nfunc),a
+        IFDEF ROMMODE
+        call rom_regfunc
+        ENDIF
         ex de,hl
         ld hl,tbuf
         ld bc,12
@@ -3816,6 +4148,17 @@ emit_args:                      ; HL = record; legge gli argomenti (anche fra pa
         ld a,(etype)
         cp b
         jp nz,err_type
+        IFDEF ROMMODE
+        ld a,(etype)
+        or a
+        jr z,.pp
+        ld hl,(ca_rec)          ; stringa verso un altro segmento: copia nello heap (i letterali stanno nel segmento di chi chiama)
+        call rec_far
+        cp 0FFh
+        jr z,.pp
+        EM3 0CDh,low RT_SDUP,high RT_SDUP
+.pp:
+        ENDIF
         EM1 0E5h                ; push hl
 .nx:    ld a,(ca_i)
         inc a
@@ -3956,6 +4299,22 @@ find_arrparam:                  ; tbuf = nome: NC se e' un parametro array della
         ret
 
 emit_callrec:                   ; HL = record: call della routine (o catena di fixup se non ancora definita)
+        IFDEF ROMMODE
+        push hl
+        call rec_far
+        pop hl
+        cp 0FFh
+        jr z,.direct
+        push af                 ; routine in un altro segmento: ld a,indice ; call RT_FARCALL
+        ld a,3Eh
+        call emit_a
+        pop af
+        call emit_a
+        ld hl,RT_FARCALL
+        ld a,0CDh
+        jp emit_jabs
+.direct:
+        ENDIF
         ld de,16
         add hl,de
         ld a,(hl)
@@ -4011,6 +4370,15 @@ st_call:
         ld a,(ttype)
         cp T_ID
         jp nz,err_syntax
+        ld hl,tbuf              ; CALL FAR nome: FAR e' facoltativo (la chiamata fra segmenti e' automatica)
+        ld de,s_far
+        call str_eq
+        jr nz,.nf
+        call next_tok
+        ld a,(ttype)
+        cp T_ID
+        jp nz,err_syntax
+.nf:
         call find_func
         jp c,err_label
         push hl
@@ -4082,6 +4450,9 @@ begin_func:                     ; token = nome; C = 1 SUB / 2 FUNCTION
         inc hl                  ; +19 catena delle chiamate precedenti
         call patch_chain
         pop hl
+        IFDEF ROMMODE
+        call rom_defsub
+        ENDIF
         call emit_i             ; push ix ; ld ix,0 ; add ix,sp ; ld hl,-FRAME ; add hl,sp ; ld sp,hl
         db 8,0DDh,0E5h,0DDh,21h,0,0,0DDh,39h
         ld a,21h
@@ -5033,6 +5404,9 @@ parse_op:                       ; operatore logico -> ld a,n ; ld (GOP),a  (PSET
 opnames: db "TPSET",0,8,"TPRESET",0,12,"TAND",0,9,"TOR",0,10,"TXOR",0,11,0
 
 st_data:                        ; DATA elementi: blocco nel codice (jp oltre, elementi, 2, collegamento)
+        ld a,(curseg)
+        or a
+        jp nz,err_syntax        ; DATA solo nel segmento fisso
         call get_pc
         push hl                 ; indirizzo del blocco
         ld a,0C3h
@@ -5745,6 +6119,7 @@ st_paint:                       ; PAINT (x,y)[, colore[, bordo]]
 
 s_spritedol: db "SPRITE$",0
 s_vdp:  db "VDP",0
+s_far:  db "FAR",0
 
 arr_ref_stmt:                   ; array di interi (con o senza "()") -> ARRB, ARRC
         ld a,(ttype)

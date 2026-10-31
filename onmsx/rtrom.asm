@@ -38,3 +38,86 @@ rt_wstr:                        ; WRITE: stringa tra virgolette
         call rt_pstr
         ld a,'"'
         jp rt_putc
+
+; --- chiamate fra segmenti: A = indice nella tabella FARTAB (4 byte: banco, 0, indirizzo)
+; Lo stato di ritorno sta in una pila software (indirizzo + banco) in C000h-C08Fh, cosi' il frame dello stack
+; vista dalla routine chiamata resta [ritorno][argomenti]
+FARTAB  equ 7F00h
+FSTK    equ 0C000h
+rt_farcall:
+        ld l,a
+        ld h,0
+        add hl,hl
+        add hl,hl
+        ld de,FARTAB
+        add hl,de
+        ld c,(hl)               ; C = banco di destinazione
+        inc hl
+        inc hl
+        ld e,(hl)
+        inc hl
+        ld d,(hl)               ; DE = indirizzo
+        di
+        exx
+        pop de                  ; DE' = ritorno del chiamante
+        ld hl,(FARSP)
+        ld (hl),e
+        inc hl
+        ld (hl),d
+        inc hl
+        ld a,(CURBANK)
+        ld (hl),a
+        inc hl
+        ld (FARSP),hl
+        exx
+        ld hl,far_ret
+        push hl
+        ld a,c
+        ld hl,(CWREG)
+        ld (CURBANK),a
+        ld (hl),a
+        ex de,hl
+        ei
+        jp (hl)
+far_ret:
+        di
+        exx
+        ld hl,(FARSP)
+        dec hl
+        ld a,(hl)
+        dec hl
+        ld d,(hl)
+        dec hl
+        ld e,(hl)
+        ld (FARSP),hl
+        ld hl,(CWREG)
+        ld (CURBANK),a
+        ld (hl),a
+        push de
+        exx
+        ei
+        ret
+
+rom_vars:                       ; dopo l'azzeramento della RAM: pila delle chiamate, registro della finestra di codice
+        ld hl,FSTK
+        ld (FARSP),hl
+        ld a,(rt_target)
+        sub 3
+        ret c
+        add a,a
+        ld e,a
+        ld d,0
+        ld hl,cwregs
+        add hl,de
+        ld e,(hl)
+        inc hl
+        ld d,(hl)
+        ld (CWREG),de
+        ld a,(rt_target)
+        cp 4
+        ld a,2                  ; banchi da 8 KB: la finestra di codice parte dal banco 2
+        jr nz,.b
+        ld a,1                  ; ASCII16: banco 1
+.b:     ld (CURBANK),a
+        ret
+cwregs: dw 7000h, 7000h, 8000h, 9000h
