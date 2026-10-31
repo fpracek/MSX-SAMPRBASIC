@@ -175,6 +175,10 @@ K_RESTORE equ 66
 K_BEEP equ 67
 K_SOUND equ 68
 K_PLAY equ 69
+K_OPEN equ 70
+K_CLOSE equ 71
+K_KILL equ 72
+K_WRITE equ 73
 
 B_IF    equ 1
 B_FOR   equ 2
@@ -838,7 +842,7 @@ next_tok:
         inc hl
         djnz .z
         pop hl
-        ld b,15
+        ld b,14
 .il:    ld a,(hl)
         cp '_'
         jr z,.ic
@@ -933,7 +937,7 @@ next_tok:
         ld a,c
         push hl
         ld hl,puncts
-        ld b,13
+        ld b,15
 .pl:    cp (hl)
         jr z,.pv
         inc hl
@@ -953,7 +957,7 @@ next_tok:
         ld a,T_P
         ld (ttype),a
         ret
-puncts: db "()+-*/",5Ch,"=<>,;:?"
+puncts: db "()+-*/",5Ch,"=<>,;:?#"
 s_rem:  db "REM",0
 
 find_in:                        ; HL = tabella di stringhe 0-terminate (fine: byte 0), DE = nome -> A = indice, C se manca
@@ -988,7 +992,8 @@ kwtab:  db "PRINT",0,"IF",0,"THEN",0,"ELSE",0,"ELSEIF",0,"END",0,"FOR",0,"TO",0
         db "CLS",0,"LOCATE",0,"AND",0,"OR",0,"XOR",0,"NOT",0,"MOD",0,"LET",0
         db "OPTION",0,"INPUT",0,"DIM",0,"POKE",0,"SUB",0,"FUNCTION",0,"CALL",0,"DECLARE",0,"SHARED",0
         db "EXIT",0,"DO",0,"LOOP",0,"UNTIL",0,"SELECT",0,"CASE",0,"IS",0,"CONST",0,"COLOR",0,"RANDOMIZE",0,"VPOKE",0,"OUT",0,"SLEEP",0,"STOP",0,"SCREEN",0,"PSET",0,"PRESET",0,"LINE",0,"CIRCLE",0
-        db "PALETTE",0,"PAINT",0,"PUT",0,"SPRITE",0,"GET",0,"DRAW",0,"VIEW",0,"WINDOW",0,"VBANK",0,"VFILL",0,"VWRITE",0,"SET",0,"COPY",0,"DATA",0,"READ",0,"RESTORE",0,"BEEP",0,"SOUND",0,"PLAY",0,0
+        db "PALETTE",0,"PAINT",0,"PUT",0,"SPRITE",0,"GET",0,"DRAW",0,"VIEW",0,"WINDOW",0,"VBANK",0,"VFILL",0,"VWRITE",0,"SET",0,"COPY",0,"DATA",0,"READ",0,"RESTORE",0,"BEEP",0,"SOUND",0,"PLAY",0
+        db "OPEN",0,"CLOSE",0,"KILL",0,"WRITE",0,0
 
 ; ---------------------------------------------------------------- helper del parser
 is_p:                           ; A = carattere: Z se il token e' quella punteggiatura
@@ -2072,7 +2077,7 @@ kwjump: dw st_print, st_if, err_syntax, st_else, st_elseif, st_end, st_for, err_
         dw st_exit, st_do, st_loop, err_syntax, st_select, st_case, err_syntax
         dw st_const, st_color, st_randomize, st_vpoke, st_out, st_sleep, st_stop
         dw st_screen, st_pset, st_preset, st_line, st_circle, st_palette, st_paint, st_put, err_syntax, st_get, st_draw, st_view, st_window
-        dw st_vbank, st_vfill, st_vwrite, st_set, st_copy, st_data, st_read, st_restore, st_beep, st_sound, st_play
+        dw st_vbank, st_vfill, st_vwrite, st_set, st_copy, st_data, st_read, st_restore, st_beep, st_sound, st_play, st_open, st_close, st_kill, st_write
 
 ; ---------------------------------------------------------------- espressioni
 want_int:
@@ -2453,10 +2458,10 @@ make_nbuf:                      ; tbuf -> nbuf (testo normale, "CHR$" ecc.)
 
 ; --- funzioni predefinite (il token corrente e' il nome)
 bitab:  db "LEN",0,"ASC",0,"VAL",0,"ABS",0,"SGN",0,"RND",0,"PEEK",0,"CHR$",0,"STR$",0
-        db "LEFT$",0,"RIGHT$",0,"MID$",0,"INKEY$",0,"TIMER",0,"VPEEK",0,"INP",0,"UBOUND",0,"POINT",0,"COLLISION",0,"BASE",0,"VDP",0,"STICK",0,"STRIG",0,"VREAD$",0,0
+        db "LEFT$",0,"RIGHT$",0,"MID$",0,"INKEY$",0,"TIMER",0,"VPEEK",0,"INP",0,"UBOUND",0,"POINT",0,"COLLISION",0,"BASE",0,"VDP",0,"STICK",0,"STRIG",0,"VREAD$",0,"EOF",0,0
 bijump: dw bi_len, bi_asc, bi_val, bi_abs, bi_sgn, bi_rnd, bi_peek, bi_chr, bi_str
         dw bi_left, bi_right, bi_mid, bi_inkey, bi_timer, bi_vpeek, bi_inp, bi_ubound, bi_point, bi_coll
-        dw bi_base, bi_vdp, bi_stick, bi_strig, bi_vread
+        dw bi_base, bi_vdp, bi_stick, bi_strig, bi_vread, bi_eof
 
 open_paren:
         ld a,'('
@@ -2691,7 +2696,7 @@ st_assign:
 .astr:  EM3 0CDh,low RT_SCOPY,high RT_SCOPY
         ret
 
-st_print:
+st_print0:
         ld c,1                  ; C = a capo finale
 .l:     push bc
         call at_send
@@ -3181,6 +3186,9 @@ st_poke:
         ret
 
 st_input:
+        ld a,'#'
+        call is_p
+        jp z,st_finput
         ld c,1                  ; C = stampa "? "
         ld a,(ttype)
         cp T_STR
@@ -4991,6 +4999,218 @@ st_play:                        ; PLAY voce1$[, voce2$[, voce3$]]
 .go:    EM3 0CDh,low RT_PLAY,high RT_PLAY
         ret
 
+st_print:                       ; PRINT [#n,] elementi
+        ld a,'#'
+        call is_p
+        jp nz,st_print0
+        call sel_file
+        call st_print0
+        jp emit_outreset
+
+sel_file:                       ; "#n," -> RT_OUTSEL
+        call next_tok
+        call expr
+        call want_int
+        EM3 0CDh,low RT_OUTSEL,high RT_OUTSEL
+        ld a,','
+        jp expect_p
+
+emit_outreset:                  ; ld hl,0 ; call RT_OUTSEL
+        call emit_i
+        db 6,21h,0,0,0CDh,low RT_OUTSEL,high RT_OUTSEL
+        ret
+
+st_write:                       ; WRITE [#n,] elementi
+        ld a,'#'
+        call is_p
+        jr nz,.nf
+        call sel_file
+.nf:    call at_send
+        jr z,.end
+.l:     call expr
+        ld a,(etype)
+        or a
+        jr nz,.s
+        EM3 0CDh,low RT_WINT,high RT_WINT
+        jr .nx
+.s:     EM3 0CDh,low RT_WSTR,high RT_WSTR
+.nx:    ld a,','
+        call is_p
+        jr nz,.end
+        ld b,1
+        ld hl,s_comma
+        call emit_lit
+        EM3 0CDh,low RT_PSTR,high RT_PSTR
+        call next_tok
+        jr .l
+.end:   EM3 0CDh,low RT_PNL,high RT_PNL
+        jp emit_outreset
+s_comma: db ","
+
+st_open:                        ; OPEN nome$ FOR INPUT|OUTPUT|APPEND AS [#]n
+        call expr
+        call want_str
+        EM1 0E5h
+        ld a,K_FOR
+        call expect_kw
+        ld c,1
+        ld a,K_INPUT
+        call is_kw
+        jr z,.m
+        ld a,(ttype)
+        cp T_ID
+        jp nz,err_syntax
+        ld hl,tbuf
+        ld de,s_output
+        call str_eq
+        ld c,2
+        jr z,.m
+        ld hl,tbuf
+        ld de,s_append
+        call str_eq
+        jp nz,err_syntax
+        ld c,3
+.m:     push bc
+        call next_tok
+        pop bc
+        ld a,21h                ; ld hl,modo ; ld (GY1),hl
+        call emit_a
+        ld l,c
+        ld h,0
+        call emit_w
+        ld hl,GY1
+        call emit_st
+        ld a,(ttype)
+        cp T_ID
+        jp nz,err_syntax
+        ld hl,tbuf
+        ld de,s_as
+        call str_eq
+        jp nz,err_syntax
+        call next_tok
+        ld a,'#'
+        call is_p
+        jr nz,.n
+        call next_tok
+.n:     call expr
+        call want_int
+        ld hl,GX1
+        call emit_st
+        EM1 0E1h
+        EM3 0CDh,low RT_OPEN,high RT_OPEN
+        ret
+s_output: db "OUTPUT",0
+s_append: db "APPEND",0
+s_as:   db "AS",0
+
+st_close:                       ; CLOSE [[#]n[, [#]m...]]
+        call at_send
+        jr nz,.l
+        call emit_i
+        db 6,21h,0,0,0CDh,low RT_CLOSE,high RT_CLOSE
+        ret
+.l:     ld a,'#'
+        call is_p
+        jr nz,.e
+        call next_tok
+.e:     call expr
+        call want_int
+        EM3 0CDh,low RT_CLOSE,high RT_CLOSE
+        ld a,','
+        call is_p
+        ret nz
+        call next_tok
+        jr .l
+
+st_kill:
+        call expr
+        call want_str
+        EM3 0CDh,low RT_KILL,high RT_KILL
+        ret
+
+bi_eof:                         ; EOF(n)
+        call bi_arg_int
+        EM3 0CDh,low RT_FEOF,high RT_FEOF
+        ret
+
+st_finput:                      ; INPUT #n, var[, var...]
+        call next_tok
+        call expr
+        call want_int
+        ld hl,GX1
+        call emit_st
+        ld a,','
+        call expect_p
+.l:     ld a,(ttype)
+        cp T_ID
+        jp nz,err_syntax
+        call resolve_var
+        ld (tmpk),a
+        ld (tmpv),hl
+        call next_tok
+        EM3 2Ah,low GX1,high GX1
+        EM3 0CDh,low RT_FINPUT,high RT_FINPUT
+        ld a,(tmpk)
+        call kind_type
+        or a
+        jr nz,.s
+        EM3 0CDh,low RT_VAL,high RT_VAL
+.s:     ld a,(tmpk)
+        ld hl,(tmpv)
+        call emit_stv
+        ld a,','
+        call is_p
+        ret nz
+        call next_tok
+        jr .l
+
+st_lineinput:                   ; LINE INPUT [#n,] var$
+        call next_tok
+        ld a,'#'
+        call is_p
+        jr nz,.kb
+        call next_tok
+        call expr
+        call want_int
+        ld hl,GX1
+        call emit_st
+        ld a,','
+        call expect_p
+        ld a,(ttype)
+        cp T_ID
+        jp nz,err_syntax
+        call resolve_var
+        ld (tmpk),a
+        ld (tmpv),hl
+        call next_tok
+        EM3 2Ah,low GX1,high GX1
+        EM3 0CDh,low RT_FLINE,high RT_FLINE
+        jr .st
+.kb:    ld a,(ttype)
+        cp T_STR
+        jr nz,.v
+        call emit_strlit        ; prompt facoltativo
+        EM3 0CDh,low RT_PSTR,high RT_PSTR
+        call next_tok
+        ld a,';'
+        call expect_p
+.v:     ld a,(ttype)
+        cp T_ID
+        jp nz,err_syntax
+        call resolve_var
+        ld (tmpk),a
+        ld (tmpv),hl
+        call next_tok
+        EM3 0CDh,low RT_INPUT,high RT_INPUT
+.st:    ld a,(tmpk)
+        call kind_type
+        or a
+        jp nz,.ok
+        jp err_type
+.ok:    ld a,(tmpk)
+        ld hl,(tmpv)
+        jp emit_stv
+
 st_set:                         ; SET PAGE visibile[, attiva]  |  SET SCROLL x, y
         ld a,(ttype)
         cp T_ID
@@ -5186,7 +5406,10 @@ st_circle:                      ; CIRCLE (x,y), r[, colore[, inizio[, fine[, asp
 .go:    EM3 0CDh,low RT_GCIRCLE,high RT_GCIRCLE
         ret
 
-st_line:                        ; LINE [(x1,y1)]-(x2,y2)[, colore[, B|BF]]
+st_line:                        ; LINE [(x1,y1)]-(x2,y2)[, colore[, B|BF]]  |  LINE INPUT [#n,] var$
+        ld a,K_INPUT
+        call is_kw
+        jp z,st_lineinput
         ld a,'('
         call is_p
         jr nz,.cur

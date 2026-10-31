@@ -1,41 +1,30 @@
-i = 0
-DO
-  i = i + 1
-  IF i = 7 THEN EXIT DO
-LOOP
-PRINT i
-j = 10
-DO WHILE j > 0
-  j = j - 3
-LOOP
-PRINT j
-k = 0
-DO UNTIL k >= 3
-  k = k + 1
-LOOP
-PRINT k
+' file piu' lunghi di un record, copia tra due file, append su file lungo
+OPEN "T3.TXT" FOR OUTPUT AS #1
+FOR i = 1 TO 60
+  PRINT #1, "line"; i
+NEXT i
+CLOSE #1
+OPEN "T3.TXT" FOR INPUT AS #1
+OPEN "T3B.TXT" FOR OUTPUT AS #2
 n = 0
-DO
+DO WHILE NOT EOF(1)
+  LINE INPUT #1, a$
+  PRINT #2, a$
   n = n + 1
-LOOP WHILE n < 5
-PRINT n
-m = 0
-DO
-  m = m + 2
-LOOP UNTIL m > 6
-PRINT m
-FOR v = 0 TO 8
-  SELECT CASE v
-    CASE 1
-      PRINT "one";
-    CASE 2, 3
-      PRINT "two-three";
-    CASE 4 TO 6
-      PRINT "four-six";
-    CASE IS >= 7
-      PRINT "big";
-    CASE ELSE
-      PRINT "?";
-  END SELECT
-  PRINT v
-NEXT v
+LOOP
+CLOSE
+PRINT n; a$
+OPEN "T3B.TXT" FOR APPEND AS #3
+PRINT #3, "extra"
+CLOSE #3
+OPEN "T3B.TXT" FOR INPUT AS #1
+n = 0
+DO WHILE NOT EOF(1)
+  INPUT #1, a$
+  n = n + 1
+  IF n = 30 THEN PRINT a$
+LOOP
+CLOSE
+PRINT n; a$
+KILL "T3.TXT"
+KILL "T3B.TXT"

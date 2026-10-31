@@ -79,10 +79,19 @@ RT_RESTORE equ 01E7h
 RT_BEEP   equ 01EAh
 RT_SOUND  equ 01EDh
 RT_PLAY   equ 01F0h
-RT_EMPTY  equ 01F3h             ; byte 0 (stringa vuota)
-RT_NAME   equ 01F4h             ; 16 byte: nome del sorgente (0-terminato)
-RT_DSIZE  equ 0204h             ; word: byte di dati del programma (scritta dal compilatore)
-RT_DATA0  equ 0206h             ; word: primo elemento DATA (0 = nessun DATA)
+RT_OPEN   equ 01F3h
+RT_CLOSE  equ 01F6h
+RT_OUTSEL equ 01F9h
+RT_FINPUT equ 01FCh
+RT_FLINE  equ 01FFh
+RT_FEOF   equ 0202h
+RT_KILL   equ 0205h
+RT_WINT   equ 0208h
+RT_WSTR   equ 020Bh
+RT_EMPTY  equ 020Eh             ; byte 0 (stringa vuota)
+RT_NAME   equ 020Fh             ; 16 byte: nome del sorgente (0-terminato)
+RT_DSIZE  equ 021Fh             ; word: byte di dati del programma (scritta dal compilatore)
+RT_DATA0  equ 0221h             ; word: primo elemento DATA (0 = nessun DATA)
 RTRAM     equ 0C090h            ; RAM del runtime (C000h-C086h: caricatore)
 HEAPP     equ RTRAM+0
 HEAP0     equ RTRAM+10
@@ -184,4 +193,6 @@ PVOICE    equ RTRAM+1D2h        ; PLAY: stato delle voci (3 x 12 byte)
 PHZ       equ RTRAM+1F6h        ; PLAY: frequenza di quadro * 240
 PTEMPO    equ RTRAM+1F8h
 PANY      equ RTRAM+1FAh
+FILEP     equ RTRAM+1FBh        ; descrittori dei file (0 = non ancora riservati)
+OUTSEL    equ RTRAM+1FDh        ; file di PRINT# (0 = schermo)
 DATA_BASE equ 0C2A0h

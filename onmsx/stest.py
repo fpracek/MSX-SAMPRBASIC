@@ -12,7 +12,7 @@ DISK = qtest.DISK
 STESTS = os.path.join(HERE, 'stests')
 DOSDIR = qtest.DOSDIR
 FAILS = 0
-STEP = 0.05
+STEP = 0.02
 
 
 def check(c, m):

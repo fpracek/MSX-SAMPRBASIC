@@ -113,6 +113,15 @@ inbuf   equ RTRAM+20
         jp rt_beep
         jp rt_sound
         jp rt_play
+        jp rt_open
+        jp rt_close
+        jp rt_outsel
+        jp rt_finput
+        jp rt_fline
+        jp rt_feof
+        jp rt_kill
+        jp rt_wint
+        jp rt_wstr
         ASSERT $ == RT_EMPTY
 rt_empty: db 0
         ASSERT $ == RT_NAME
@@ -250,6 +259,13 @@ rt_cls:
         jr .g
 
 rt_putc:
+        push af
+        ld a,(OUTSEL)
+        or a
+        jr z,.scr
+        pop af
+        jp fput_sel
+.scr:   pop af
         push hl
         push de
         push bc
@@ -320,6 +336,7 @@ msg_div: db 24,"Error: Division by zero"
 msg_press: db 15,"Press any key..."
 
 rt_end:
+        call files_close_all
         xor a                   ; niente eventi sprite quando si torna all'editor
         ld (0FC6Dh),a
         ld a,(SCRMODE)
@@ -362,8 +379,7 @@ rt_end:
 rt_zone:                    ; virgola nel PRINT: prossima zona da 14
 .l:     ld a,' '
         call rt_putc
-        ld a,(CSRX)
-        dec a
+        call curcol
 .m:     sub 14
         ret z
         jr nc,.m
@@ -1005,6 +1021,7 @@ rt_nyi: ret                 ; voci riservate per i prossimi stadi
         INCLUDE "rtwin.asm"
         INCLUDE "rtvram.asm"
         INCLUDE "rtsnd.asm"
+        INCLUDE "rtfile.asm"
 
 ldr_img: INCBIN "build/ldr.bin"
 ldr_size equ $-ldr_img
