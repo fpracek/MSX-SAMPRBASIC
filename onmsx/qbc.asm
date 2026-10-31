@@ -4,7 +4,7 @@
 ; Una passata, emissione diretta; HL = accumulatore, operando sinistro sullo stack.
 ; Input: riga di comando " NOME.BAS"  ->  scrive NOME.COM e lo avvia.
 ; Errore: ricarica l'editor con " NOME.BAS E<riga> <codice>".
-; Memoria: codice 0100h-3BFFh, tabelle 3C00h-4BFFh, sorgente 4C00h-7FFFh,
+; Memoria: codice 0100h-3CFFh, tabelle 3D00h-4CFFh, sorgente 4D00h-7FFFh,
 ;          output 8000h-BEFFh (indirizzi virtuali da 0100h: virt = fisico - 7F00h).
 ; =====================================================================
         INCLUDE "rtabi.inc"
@@ -21,8 +21,8 @@ F_BRD   equ 27h
 SRC     equ 4400h               ; il compilatore per cartucce non ha OPTION NUMBERED: le tabelle stanno nella RAM alta
 SRCMAX  equ 3BFEh
         ELSE
-SRC     equ 4C00h
-SRCMAX  equ 33FEh
+SRC     equ 4D00h
+SRCMAX  equ 32FEh
         ENDIF
 OUT0    equ 8000h
         IFDEF ROMMODE
@@ -35,6 +35,8 @@ HDRDSZ  equ HDRB+(RT_DSIZE-RT_EMPTY)
 HDRDAT  equ HDRB+(RT_DATA0-RT_EMPTY)
 HDRTGT  equ HDRB+(RT_TARGET-RT_EMPTY)
 HDRLEN  equ RT_TARGET+1-RT_EMPTY
+RTSTAMP equ 0C200h               ; 20 byte: timbro di RT.BIN (COM)
+RTCHK   equ 0CA00h               ; primo blocco del NOME.COM esistente (dopo la compilazione l'indice NUMBERED non serve piu')
 rtsz    equ ST+254              ; w  dimensione di RT.BIN (.COM)
         IFDEF ROMMODE
 IMGBASE equ 4000h               ; indirizzo virtuale dell'inizio dell'immagine (cartuccia in pagina 1)
@@ -47,21 +49,21 @@ LDR     equ 0C000h
         IFDEF ROMMODE
 LABT    equ 0CA00h
         ELSE
-LABT    equ 3C00h               ; etichette: 96 x 20 byte
+LABT    equ 3D00h               ; etichette: 96 x 20 byte
         ENDIF
 LABREC  equ 20
 MAXLAB  equ 96
         IFDEF ROMMODE
 VART    equ 0D180h
         ELSE
-VART    equ 4380h               ; variabili/array: 100 x 16 byte
+VART    equ 4480h               ; variabili/array: 100 x 16 byte
         ENDIF
 VARREC  equ 16
 MAXVAR  equ 100
         IFDEF ROMMODE
 BLKS    equ 0D7C0h
         ELSE
-BLKS    equ 49C0h               ; stack dei blocchi: 24 x 10 byte
+BLKS    equ 4AC0h               ; stack dei blocchi: 24 x 10 byte
         ENDIF
 BLKREC  equ 10
 MAXBLK  equ 24
@@ -119,7 +121,7 @@ FARX    equ 4094h
         ELSE
 FARTABC equ 48C0h               ; FARTAB in costruzione: 32 x 4 byte (banco, 0, indirizzo)
 SEGT    equ 4940h               ; segmento di ogni SUB/FUNCTION (indice nel record)
-FCBSV   equ 4B68h               ; copia dell'FCB di uscita durante INCBIN
+FCBSV   equ 4C68h               ; copia dell'FCB di uscita durante INCBIN
 FARX    equ 4954h               ; indice FARTAB di ogni SUB/FUNCTION (FFh = nessuno)
         ENDIF
 dbgpa   equ ST+217              ; w  operando (fisico) da correggere con l'indirizzo della tabella delle variabili
@@ -600,6 +602,10 @@ load_rt:                        ; .COM: dimensione di RT.BIN (il file si copia p
         call BDOS
         ld hl,(PART+RT_SIZE-IMGBASE)
         ld (rtsz),hl
+        ld hl,PART+RT_STAMP-IMGBASE      ; timbro della costruzione: serve a riconoscere un NOME.COM gia' pronto
+        ld de,RTSTAMP
+        ld bc,RT_STAMPLEN
+        ldir
         ld de,fcb
         ld c,F_CLOSE
         call BDOS
@@ -650,7 +656,49 @@ write_output:                   ; NOME.COM <- RT.BIN + codice, con l'intestazion
         ld hl,oname
         ld (namep),hl
         call mk_fcb
+        ld de,fcb               ; NOME.COM esiste gia' con lo stesso runtime? allora si riscrive solo il codice
+        ld c,F_OPEN
+        call BDOS
+        or a
+        jr nz,.new
+        call fcb_rec1
+        ld de,RTCHK
+        ld c,F_DMA
+        call BDOS
         ld de,fcb
+        ld hl,1024
+        ld c,F_BRD
+        call BDOS
+        ld a,h
+        cp 2
+        jr c,.nomatch           ; file troppo corto
+        ld hl,RTCHK+RT_STAMP-IMGBASE
+        ld de,RTSTAMP
+        ld b,RT_STAMPLEN
+.cmp:   ld a,(de)
+        cp (hl)
+        jr nz,.nomatch
+        inc hl
+        inc de
+        djnz .cmp
+        ld hl,fcb
+        ld de,FCBSV
+        ld bc,37
+        ldir
+        ld hl,(rtsz)            ; il codice va scritto dopo il runtime
+        ld (FCBSV+33),hl
+        xor a
+        ld (FCBSV+35),a
+        ld (FCBSV+36),a
+        jp .cd
+.nomatch:
+        ld de,fcb
+        ld c,F_CLOSE
+        call BDOS
+        ld hl,oname
+        ld (namep),hl
+        call mk_fcb
+.new:   ld de,fcb
         ld c,F_DEL
         call BDOS
         call mk_fcb

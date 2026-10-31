@@ -18,6 +18,9 @@ getcmd:                         ; riga di comando (0080h: lunghezza + testo) -> 
         ld (errline),hl
         xor a
         ld (errcode),a
+        ld (cmdok),a
+        ld (compiled),a
+        ld (onfile),a
         ld hl,0080h
         ld a,(hl)
         or a
@@ -56,7 +59,12 @@ parse_err:                      ; HL dopo il nome: " E<riga> <codice>" (ritorno 
         jr nz,.e
         inc hl
         jr .sk
-.e:     cp 'E'
+.e:     cp '+'                  ; " +": il programma e' appena stato eseguito dalla compilazione di questo sorgente
+        jr nz,.e2
+        ld a,1
+        ld (cmdok),a
+        ret
+.e2:    cp 'E'
         ret nz
         inc hl
         call .num
@@ -97,6 +105,8 @@ startup_load:
         or a
         ret z
         call load_file
+        ld a,(cmdok)
+        ld (compiled),a
         ld hl,(errline)
         ld a,h
         or l
@@ -170,6 +180,9 @@ fcb_rec1:                       ; dimensione record 1, posizione casuale 0
 
 ; ---------------------------------------------------------------- caricamento
 load_file:
+        xor a
+        ld (compiled),a
+        ld (onfile),a
         call mk_fcb
         ld de,fcb
         ld c,F_OPEN
@@ -220,6 +233,8 @@ load_file:
         ld (dirty),a
         xor a
         ld (modified),a
+        inc a
+        ld (onfile),a
         ld a,(ioerr)
         cp 2
         jr nz,.ok
@@ -308,7 +323,12 @@ ld_put:                         ; A = byte da accodare al testo; C se il buffer 
 
 ; ---------------------------------------------------------------- salvataggio
 save_file:                      ; -> C se errore (messaggio in msgptr)
-        call mk_fcb
+        ld a,(modified)
+        or a
+        jr z,.ncl
+        xor a
+        ld (compiled),a        ; il testo e' cambiato dopo l'ultima compilazione
+.ncl:   call mk_fcb
         ld de,fcb
         ld c,F_DEL
         call BDOS               ; l'errore (file inesistente) e' ignorato
@@ -353,6 +373,8 @@ save_file:                      ; -> C se errore (messaggio in msgptr)
         jr nz,.err
         xor a
         ld (modified),a
+        inc a
+        ld (onfile),a
         ld hl,(nbytes)
         ld (tmp1),hl
         ld hl,m_saved
@@ -453,6 +475,8 @@ k_new:
         call ed_reset
         xor a
         ld (fname),a
+        ld (onfile),a
+        ld (compiled),a
         ld a,1
         ld (dirty),a
         ld hl,m_newfile
@@ -533,9 +557,20 @@ k_run:
         ld hl,s_bas
         ld bc,5
         ldir
-.save:  call save_file
+.save:  ld a,(modified)
+        or a
+        jr nz,.dosave           ; testo cambiato: va salvato
+        ld a,(onfile)
+        or a
+        jr z,.dosave            ; nessun file su disco: va salvato
+        ld a,(compiled)
+        or a
+        jr z,.comp              ; invariato ma non compilato (o errore): si ricompila senza salvare
+        call run_only           ; invariato e compilato: rilancia NOME.COM (ritorna solo se manca)
+        jr .comp
+.dosave: call save_file
         ret c
-        call leave_screen
+.comp:  call leave_screen
         ld hl,fname
         ld de,0082h
         ld bc,16
@@ -565,6 +600,32 @@ k_run:
         jp 0C000h
 s_bas:  db ".BAS",0
 s_qbc:  db "QBC     COM"
+
+run_only:                       ; NOME.COM esiste? allora lo carica con il caricatore (non torna)
+        call mk_fcb
+        ld hl,s_com3
+        ld de,fcb+9
+        ld bc,3
+        ldir
+        ld de,fcb
+        ld c,F_OPEN
+        call BDOS
+        or a
+        ret nz
+        ld de,fcb
+        ld c,F_CLOSE
+        call BDOS
+        call leave_screen
+        ld hl,ldr_img
+        ld de,0C000h
+        ld bc,ldr_size
+        ldir
+        ld hl,fcb+1             ; nome del programma da caricare (ldr_fn a C003h)
+        ld de,0C003h
+        ld bc,11
+        ldir
+        jp 0C000h
+s_com3: db "COM"
 
 goto_line:                      ; HL = riga (1..): cursore all'inizio della riga
         ld (tmp2),hl

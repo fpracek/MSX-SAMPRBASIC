@@ -169,6 +169,14 @@ rt_target: db 0
         jp rt_dbg
         ASSERT $ == RT_SIZE
         dw rt_prog-RTB
+        ASSERT $ == RT_STAMP
+        db __DATE__," ",__TIME__
+        IFDEF DBGRT
+        db "D"
+        ELSE
+        db "N"
+        ENDIF
+        ASSERT $ == RT_STAMP+RT_STAMPLEN
 
 rt_bios:
         ld iy,(EXPTBL-1)
@@ -419,7 +427,13 @@ rt_end:
         inc hl
         inc b
         jr .n
-.d:     ld (hl),0Dh
+.d:     ld (hl),' '             ; " +": il sorgente non e' cambiato dopo la compilazione (l'editor puo' rilanciare NOME.COM)
+        inc hl
+        ld (hl),'+'
+        inc hl
+        ld (hl),0Dh
+        inc b
+        inc b
         ld a,b
         inc a
         ld (0080h),a

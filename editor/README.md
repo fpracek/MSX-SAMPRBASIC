@@ -145,3 +145,9 @@ leggendo il testo dalla VRAM), quindi appaiono una frazione di secondo dopo il t
 Il cursore, che prima usava il blink hardware, ora e' il glifo inverso della cella (stesso lampeggio: 32 quadri).
 Test: `python ekw.py` (il modello Python confronta i flag di tutte le 22 righe, anche dopo lo scorrimento); gli altri test leggono la cella del cursore
 da `blx`/`bly`/`curch`. Attenzione: la build ROM dei test (con il testo demo) ha ora solo ~90 byte liberi nei 16 KB.
+
+## F5 piu' rapido
+- Se il testo non e' cambiato dall'ultimo caricamento/salvataggio (`modified` = 0 e `onfile` = 1) F5 non salva il sorgente (risparmia ~3 s di disco).
+- Se in piu' il programma e' appena stato eseguito da questa compilazione (`compiled` = 1: l'editor e' stato riaperto da NOME.COM con la riga di comando `NOME.BAS +`)
+  F5 non ricompila: carica direttamente NOME.COM col caricatore (`run_only`; se il file manca, ricompila). `compiled` si azzera quando il testo cambia
+  (all'atto del salvataggio con `modified` = 1), con Open e con New. Test: `erun.py` (F5 senza modifiche entro 12 s).

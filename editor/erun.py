@@ -39,10 +39,20 @@ def main():
     sc.dump('r0b_typed')
     sc.tap(7, 0x02, 1, 0.5)                          # F5
     sc.t += 70.0                                     # salvataggio + QBC + compilazione + scrittura + avvio
+    sc.do('set ::nopatch 1', 0.1)                    # il programma e' in esecuzione: la RAM dell'editor non vale
     sc.dump('r1_ran')
     sc.tap(8, 0x01, 1, 0.5)                          # spazio: il programma termina e ricarica l'editor
     sc.t += 30.0
+    sc.do('unset ::nopatch', 0.1)
     sc.dump('r2_back')
+    sc.tap(7, 0x02, 1, 0.5)                          # F5 di nuovo: testo invariato e compilato -> rilancia NOME.COM subito
+    sc.t += 12.0                                     # (una ricompilazione ne richiederebbe molti di piu')
+    sc.do('set ::nopatch 1', 0.1)
+    sc.dump('r2c_rerun')
+    sc.tap(8, 0x01, 1, 0.5)                          # spazio: ritorna all'editor
+    sc.t += 30.0
+    sc.do('unset ::nopatch', 0.1)
+    sc.dump('r2d_back2')
     ecom.chord(sc, *ecom.CTRL_O, gap=1.0)            # apre ERR.BAS
     sc.text('ERR.BAS' + BS + 'r', 8.0)
     sc.dump('r2b_err_loaded')
@@ -73,6 +83,11 @@ def main():
     rows, vs, bl = load('r2_back')
     check(rows[1][:24] == 'PRINT "Hello from MSXQB"' and 'Loaded 64 bytes' in rows[0], f'editor riaperto con il sorgente: {rows[0][:50]!r} {rows[1][:20]!r}')
     check(vs['len'] > 50 and vs['curline'] == 1, f'len={vs["len"]} curline={vs["curline"]}')
+    print('--- r2c F5 senza modifiche: rilancia NOME.COM senza ricompilare')
+    rows, vs, bl = load('r2c_rerun')
+    check(rows[0].startswith('Hello from MSXQB') and rows[1].startswith(' 1  2  3'), f'il programma gira di nuovo: {rows[0][:20]!r}')
+    rows, vs, bl = load('r2d_back2')
+    check('Loaded' in rows[0] and rows[1][:24] == 'PRINT "Hello from MSXQB"', f"e torna all'editor: {rows[0][:40]!r}")
     print('--- r3 errore di sintassi')
     rows, vs, bl = load('r2b_err_loaded')
     check(rows[4][:9] == 'PRINT 1 +', f'ERR.BAS aperto: {rows[4][:12]!r}')

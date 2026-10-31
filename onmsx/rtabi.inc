@@ -124,6 +124,8 @@ RT_DSIZE  equ RTB+(0264h-0100h)             ; word: byte di dati del programma (
 RT_DATA0  equ RTB+(0266h-0100h)             ; word: primo elemento DATA (0 = nessun DATA)
 RT_TARGET equ RTB+(0268h-0100h)             ; byte: tipo di cartuccia (1 ROM16, 2 ROM32, 3 ASCII8, 4 ASCII16, 5 KONAMI, 6 SCC)
 RT_DBG    equ RT_TARGET+1       ; jp rt_dbg: gancio del debugger (OPTION DEBUG)
+RT_STAMP  equ RT_DBG+5          ; 20 byte: data, ora e variante della costruzione (il compilatore .COM li confronta)
+RT_STAMPLEN equ 20
 RT_SIZE   equ RT_DBG+3          ; word: dimensione dell'immagine del runtime (letta dal compilatore .COM senza leggere tutto il file)
 RTRAM     equ 0C090h            ; RAM del runtime (C000h-C086h: caricatore)
 HEAPP     equ RTRAM+0

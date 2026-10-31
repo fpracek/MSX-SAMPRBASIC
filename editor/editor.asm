@@ -72,6 +72,9 @@ curch   equ RAMB+041Fh              ; b  carattere sotto il cursore
 cph     equ RAMB+0420h              ; b  fase del cursore (1 = visibile)
 blcnt   equ RAMB+0421h              ; b  contatore di quadri
 curdr   equ RAMB+0422h              ; b  il glifo del cursore e' disegnato
+compiled equ RAMB+0424h             ; b  NOME.COM e' la compilazione del testo attuale (marcatore " +" dal programma)
+onfile  equ RAMB+0425h              ; b  il testo corrisponde a un file su disco (caricato o salvato)
+cmdok   equ RAMB+0426h              ; b  la riga di comando aveva il marcatore " +"
 kwnext  equ RAMB+0423h              ; b  prossima riga schermo (0..) da colorare nei tempi morti (VROWS = fatto)
 cur     equ RAMB+0000h              ; w  offset logico del cursore
 len     equ RAMB+0002h              ; w  lunghezza del testo
