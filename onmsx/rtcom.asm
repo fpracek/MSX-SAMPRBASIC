@@ -165,6 +165,8 @@ rt_dsize: dw 0
 rt_data0: dw 0
         ASSERT $ == RT_TARGET
 rt_target: db 0
+        ASSERT $ == RT_DBG
+        jp rt_dbg
 
 rt_bios:
         ld iy,(EXPTBL-1)
@@ -1078,6 +1080,11 @@ rt_datawin: ld hl,0
         INCLUDE "rtvram.asm"
         INCLUDE "rtsnd.asm"
         INCLUDE "rtmap.asm"
+        IFDEF DBGRT
+        INCLUDE "rtdbg.asm"
+        ELSE
+rt_dbg: ret
+        ENDIF
         IFDEF ROMMODE
         INCLUDE "rtrom.asm"
         ELSE

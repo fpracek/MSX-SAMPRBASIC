@@ -4,7 +4,7 @@
 ; Una passata, emissione diretta; HL = accumulatore, operando sinistro sullo stack.
 ; Input: riga di comando " NOME.BAS"  ->  scrive NOME.COM e lo avvia.
 ; Errore: ricarica l'editor con " NOME.BAS E<riga> <codice>".
-; Memoria: codice 0100h-39FFh, tabelle 3A00h-49FFh, sorgente 4A00h-7FFFh,
+; Memoria: codice 0100h-3AFFh, tabelle 3B00h-4AFFh, sorgente 4B00h-7FFFh,
 ;          output 8000h-BEFFh (indirizzi virtuali da 0100h: virt = fisico - 7F00h).
 ; =====================================================================
         INCLUDE "rtabi.inc"
@@ -21,8 +21,8 @@ F_BRD   equ 27h
 SRC     equ 4400h               ; il compilatore per cartucce non ha OPTION NUMBERED: le tabelle stanno nella RAM alta
 SRCMAX  equ 3BFEh
         ELSE
-SRC     equ 4A00h
-SRCMAX  equ 35FEh
+SRC     equ 4B00h
+SRCMAX  equ 34FEh
         ENDIF
 OUT0    equ 8000h
         IFDEF ROMMODE
@@ -47,21 +47,21 @@ LDR     equ 0C000h
         IFDEF ROMMODE
 LABT    equ 0CA00h
         ELSE
-LABT    equ 3A00h               ; etichette: 96 x 20 byte
+LABT    equ 3B00h               ; etichette: 96 x 20 byte
         ENDIF
 LABREC  equ 20
 MAXLAB  equ 96
         IFDEF ROMMODE
 VART    equ 0D180h
         ELSE
-VART    equ 4180h               ; variabili/array: 100 x 16 byte
+VART    equ 4280h               ; variabili/array: 100 x 16 byte
         ENDIF
 VARREC  equ 16
 MAXVAR  equ 100
         IFDEF ROMMODE
 BLKS    equ 0D7C0h
         ELSE
-BLKS    equ 47C0h               ; stack dei blocchi: 24 x 10 byte
+BLKS    equ 48C0h               ; stack dei blocchi: 24 x 10 byte
         ENDIF
 BLKREC  equ 10
 MAXBLK  equ 24
@@ -119,9 +119,11 @@ FARX    equ 3C94h
         ELSE
 FARTABC equ 48C0h               ; FARTAB in costruzione: 32 x 4 byte (banco, 0, indirizzo)
 SEGT    equ 4940h               ; segmento di ogni SUB/FUNCTION (indice nel record)
-FCBSV   equ 4968h               ; copia dell'FCB di uscita durante INCBIN
+FCBSV   equ 4A68h               ; copia dell'FCB di uscita durante INCBIN
 FARX    equ 4954h               ; indice FARTAB di ogni SUB/FUNCTION (FFh = nessuno)
         ENDIF
+dbgpa   equ ST+217              ; w  operando (fisico) da correggere con l'indirizzo della tabella delle variabili
+dbgf    equ ST+219              ; b  OPTION DEBUG attivo
 usewin  equ ST+216              ; b  il sorgente usa WINDOW: le coordinate grafiche vengono convertite
 nfunc   equ ST+192              ; b
 npart   equ ST+193              ; b
@@ -545,7 +547,7 @@ read_source:
 
         IFDEF ROMMODE
 load_rt:                        ; RT.BIN -> OUT0 (immagine del runtime); outp = fine
-        ld hl,s_rtbin
+        call rt_name_sel
         ld (namep),hl
         call mk_fcb
         ld de,fcb
@@ -561,7 +563,7 @@ load_rt:                        ; RT.BIN -> OUT0 (immagine del runtime); outp = 
         ld c,F_DMA
         call BDOS
         ld de,fcb
-        ld hl,3000h
+        ld hl,3800h
         ld c,F_BRD
         call BDOS
         push hl
@@ -575,7 +577,7 @@ load_rt:                        ; RT.BIN -> OUT0 (immagine del runtime); outp = 
         ret
         ELSE
 load_rt:                        ; .COM: dimensione di RT.BIN (il file si copia per intero davanti al codice); il buffer parte vuoto
-        ld hl,s_rtbin
+        call rt_name_sel
         ld (namep),hl
         call mk_fcb
         ld de,fcb
@@ -621,10 +623,18 @@ load_rt:                        ; .COM: dimensione di RT.BIN (il file si copia p
         ldir
         ret
         ENDIF
+rt_name_sel:                    ; -> HL = nome del runtime: con OPTION DEBUG quello con il debugger (RTD.BIN / RTROMD.BIN)
+        call chk_dbg
+        ld hl,s_rtbin
+        ret z
+        ld hl,s_rtdbin
+        ret
         IFDEF ROMMODE
 s_rtbin: db "RTROM.BIN",0
+s_rtdbin: db "RTROMD.BIN",0
         ELSE
 s_rtbin: db "RT.BIN",0
+s_rtdbin: db "RTD.BIN",0
         ENDIF
 
         IFNDEF ROMMODE
@@ -663,7 +673,7 @@ write_output:                   ; NOME.COM <- RT.BIN + codice, con l'intestazion
         ld de,FCBSV
         ld bc,37
         ldir
-        ld hl,s_rtbin           ; si apre RT.BIN nell'FCB principale
+        call rt_name_sel        ; si apre RT.BIN nell'FCB principale
         ld (namep),hl
         call mk_fcb
         ld de,fcb
@@ -2661,6 +2671,7 @@ compile:
         ld (tmpf),a
         ld (etype),a
         ld (usewin),a
+        ld (dbgf),a
         ld (target),a
         ld (curseg),a
         ld (pseg),a
@@ -2856,7 +2867,40 @@ compile:
         ld (HDRDSZ),hl
 .nods:  ld hl,RT_END
         ld a,0C3h
-        jp emit_jabs
+        call emit_jabs
+        IFNDEF ROMMODE
+        ld a,(dbgf)             ; OPTION DEBUG: tabella delle variabili dopo il codice: n, poi i record di VART
+        or a
+        ret z
+        call get_pc
+        ex de,hl
+        ld hl,(dbgpa)
+        ld (hl),e
+        inc hl
+        ld (hl),d
+        ld a,(nvar)
+        call emit_a
+        ld a,(nvar)
+        or a
+        ret z
+        ld l,a
+        ld h,0
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        ld b,h
+        ld c,l
+        ld hl,VART
+.dt:    ld a,(hl)
+        inc hl
+        call emit_a
+        dec bc
+        ld a,b
+        or c
+        jr nz,.dt
+        ENDIF
+        ret
 
 
         IFDEF ROMMODE
@@ -2976,6 +3020,7 @@ chk_rom:                        ; il sorgente ha "OPTION TARGET <cartuccia>": si
 .f:     pop hl
 .n:     inc hl
         jr .l
+        ENDIF
 match_ci:                       ; HL = testo, DE = modello minuscolo 0-terminato: Z se coincide (HL avanza)
 .m:     ld a,(de)
         or a
@@ -2997,6 +3042,30 @@ skip_sp:
 .a:     inc hl
         jr .s
 s_optionl: db "option",0
+s_debugl: db "debug",0
+chk_dbg:                        ; Z se il sorgente non ha "OPTION DEBUG"
+        ld hl,SRC
+.l:     ld a,(hl)
+        or a
+        ret z
+        or 20h
+        cp 'o'
+        jr nz,.n
+        push hl
+        ld de,s_optionl
+        call match_ci
+        jr nz,.f
+        call skip_sp
+        ld de,s_debugl
+        call match_ci
+        jr nz,.f
+        pop hl
+        or 1
+        ret
+.f:     pop hl
+.n:     inc hl
+        jr .l
+        IFNDEF ROMMODE
 s_targetl: db "target",0
 s_qbcr: db "QBCR    COM"
         ENDIF
@@ -3049,7 +3118,10 @@ line_loop:
         jr .line
 .notlab:
         call restore_lex
-.stmt:  call statement
+.stmt:  ld a,(dbgf)
+        or a
+        call nz,emit_dbg
+        call statement
         ld a,(ttype)
         or a
         jr z,.line
@@ -3821,7 +3893,36 @@ bi_mid: call next_tok
         ret
 
 ; ---------------------------------------------------------------- istruzioni
+emit_dbg:                       ; OPTION DEBUG: ld hl,<riga> ; call RT_DBG
+        ld a,21h
+        call emit_a
+        ld hl,(tline)
+        call emit_w
+        EM3 0CDh,low RT_DBG,high RT_DBG
+        ret
+
+s_debug: db "DEBUG",0
+
 st_option:
+        ld a,(ttype)
+        cp T_ID
+        jr nz,st_skip
+        ld hl,tbuf
+        ld de,s_debug
+        call str_eq
+        jr nz,st_skip
+        ld a,1
+        ld (dbgf),a
+        IFNDEF ROMMODE
+        ld a,21h                ; ld hl,tabella ; ld (DBGT),hl  (l'indirizzo si scrive a fine compilazione)
+        call emit_a
+        ld hl,(outp)
+        ld (dbgpa),hl
+        ld hl,0
+        call emit_w
+        ld hl,DBGT
+        call emit_st
+        ENDIF
 st_skip:                        ; DECLARE e OPTION: resto della riga ignorato
 .l:     ld a,(ttype)
         or a

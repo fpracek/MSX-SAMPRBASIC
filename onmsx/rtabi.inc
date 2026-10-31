@@ -123,6 +123,7 @@ RT_NAME   equ RTB+(0254h-0100h)             ; 16 byte: nome del sorgente (0-term
 RT_DSIZE  equ RTB+(0264h-0100h)             ; word: byte di dati del programma (scritta dal compilatore)
 RT_DATA0  equ RTB+(0266h-0100h)             ; word: primo elemento DATA (0 = nessun DATA)
 RT_TARGET equ RTB+(0268h-0100h)             ; byte: tipo di cartuccia (1 ROM16, 2 ROM32, 3 ASCII8, 4 ASCII16, 5 KONAMI, 6 SCC)
+RT_DBG    equ RT_TARGET+1       ; jp rt_dbg: gancio del debugger (OPTION DEBUG)
 RTRAM     equ 0C090h            ; RAM del runtime (C000h-C086h: caricatore)
 HEAPP     equ RTRAM+0
 HEAP0     equ RTRAM+10
@@ -239,4 +240,6 @@ MTB       equ RTRAM+20Bh
 MJT       equ RTRAM+20Ch        ; tabella delle routine del mapper (DOS 2)
 MALN      equ RTRAM+20Eh        ; segmenti presi dall'alto (senza DOS 2)
 RAMSL     equ RTRAM+20Fh        ; ROM: slot della RAM (pagina 3 = mapper)
-DATA_BASE equ 0C2A0h
+DBGP      equ RTRAM+210h        ; debugger: blocco di stato (in cima all'heap), 0 = non ancora creato
+DBGT      equ RTRAM+212h        ; debugger: tabella delle variabili (scritta dal programma)
+DATA_BASE equ 0C2B0h

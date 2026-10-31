@@ -512,6 +512,7 @@ rt_copy:                        ; COPY (GX1,GY1)-(GX2,GY2),CSP TO (CDX,CDY),CDP 
 rt_scroll:                      ; SET SCROLL GX1 = x, GY1 = y: R#23 (verticale), R#26/R#27 (orizzontale, V9958)
         ld hl,(GX1)
         ld a,(GY1)
+        ld (RG8SAV+15),a        ; copia del BIOS di R#23 (il debugger la ripristina)
         di
         out (VDPC),a
         ld a,80h+23

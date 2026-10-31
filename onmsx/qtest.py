@@ -32,6 +32,8 @@ def build_all():
     sj('--raw=build/ldr.bin', 'ldr.asm')
     sj('--raw=build/rt.bin', 'rtcom.asm')
     sj('-DROMMODE', '--raw=build/rtrom.bin', 'rtcom.asm')
+    sj('-DDBGRT', '--raw=build/rtd.bin', 'rtcom.asm')
+    sj('-DROMMODE', '-DDBGRT', '--raw=build/rtromd.bin', 'rtcom.asm')
     sj('--sym=build/qbc.sym', 'qbc.asm')
     sj('-DROMMODE', '--sym=build/qbcr.sym', 'qbc.asm')
     sj('--raw=build/qbstub.com', 'qbstub.asm')
@@ -70,6 +72,8 @@ def run_cases(cases, wait_run=float(os.environ.get('QWAIT', '42'))):
     shutil.copy(os.path.join(BUILD, 'qbstub.com'), os.path.join(DISK, 'QB.COM'))
     shutil.copy(os.path.join(BUILD, 'rt.bin'), os.path.join(DISK, 'RT.BIN'))
     shutil.copy(os.path.join(BUILD, 'rtrom.bin'), os.path.join(DISK, 'RTROM.BIN'))
+    shutil.copy(os.path.join(BUILD, 'rtd.bin'), os.path.join(DISK, 'RTD.BIN'))
+    shutil.copy(os.path.join(BUILD, 'rtromd.bin'), os.path.join(DISK, 'RTROMD.BIN'))
     tf = os.path.join(HERE, 'testfiles')              # file di dati per i test (INCBIN)
     if os.path.isdir(tf):
         for f in os.listdir(tf):
