@@ -4,7 +4,7 @@
 ; Una passata, emissione diretta; HL = accumulatore, operando sinistro sullo stack.
 ; Input: riga di comando " NOME.BAS"  ->  scrive NOME.COM e lo avvia.
 ; Errore: ricarica l'editor con " NOME.BAS E<riga> <codice>".
-; Memoria: codice 0100h-2FFFh, tabelle 3000h-3FFFh, sorgente 4000h-7FFFh,
+; Memoria: codice 0100h-33FFh, tabelle 3400h-42FFh, sorgente 4400h-7FFFh,
 ;          output 8000h-BEFFh (indirizzi virtuali da 0100h: virt = fisico - 7F00h).
 ; =====================================================================
         INCLUDE "rtabi.inc"
@@ -17,20 +17,20 @@ F_DMA   equ 1Ah
 F_BWR   equ 26h
 F_BRD   equ 27h
 
-SRC     equ 4000h
-SRCMAX  equ 3FFEh
+SRC     equ 4400h
+SRCMAX  equ 3BFEh
 OUT0    equ 8000h
 VOFF    equ 7F00h
 OUTLIM  equ 0BFh                ; alto byte: oltre BF00h il programma e' troppo grande
 LDR     equ 0C000h
 
-LABT    equ 3000h               ; etichette: 96 x 20 byte
+LABT    equ 3400h               ; etichette: 96 x 20 byte
 LABREC  equ 20
 MAXLAB  equ 96
-VART    equ 3780h               ; variabili/array: 100 x 16 byte
+VART    equ 3B80h               ; variabili/array: 100 x 16 byte
 VARREC  equ 16
 MAXVAR  equ 100
-BLKS    equ 3E10h               ; stack dei blocchi: 24 x 10 byte
+BLKS    equ 4210h               ; stack dei blocchi: 24 x 10 byte
 BLKREC  equ 10
 MAXBLK  equ 24
 
@@ -172,6 +172,9 @@ K_COPY equ 63
 K_DATA equ 64
 K_READ equ 65
 K_RESTORE equ 66
+K_BEEP equ 67
+K_SOUND equ 68
+K_PLAY equ 69
 
 B_IF    equ 1
 B_FOR   equ 2
@@ -985,7 +988,7 @@ kwtab:  db "PRINT",0,"IF",0,"THEN",0,"ELSE",0,"ELSEIF",0,"END",0,"FOR",0,"TO",0
         db "CLS",0,"LOCATE",0,"AND",0,"OR",0,"XOR",0,"NOT",0,"MOD",0,"LET",0
         db "OPTION",0,"INPUT",0,"DIM",0,"POKE",0,"SUB",0,"FUNCTION",0,"CALL",0,"DECLARE",0,"SHARED",0
         db "EXIT",0,"DO",0,"LOOP",0,"UNTIL",0,"SELECT",0,"CASE",0,"IS",0,"CONST",0,"COLOR",0,"RANDOMIZE",0,"VPOKE",0,"OUT",0,"SLEEP",0,"STOP",0,"SCREEN",0,"PSET",0,"PRESET",0,"LINE",0,"CIRCLE",0
-        db "PALETTE",0,"PAINT",0,"PUT",0,"SPRITE",0,"GET",0,"DRAW",0,"VIEW",0,"WINDOW",0,"VBANK",0,"VFILL",0,"VWRITE",0,"SET",0,"COPY",0,"DATA",0,"READ",0,"RESTORE",0,0
+        db "PALETTE",0,"PAINT",0,"PUT",0,"SPRITE",0,"GET",0,"DRAW",0,"VIEW",0,"WINDOW",0,"VBANK",0,"VFILL",0,"VWRITE",0,"SET",0,"COPY",0,"DATA",0,"READ",0,"RESTORE",0,"BEEP",0,"SOUND",0,"PLAY",0,0
 
 ; ---------------------------------------------------------------- helper del parser
 is_p:                           ; A = carattere: Z se il token e' quella punteggiatura
@@ -2069,7 +2072,7 @@ kwjump: dw st_print, st_if, err_syntax, st_else, st_elseif, st_end, st_for, err_
         dw st_exit, st_do, st_loop, err_syntax, st_select, st_case, err_syntax
         dw st_const, st_color, st_randomize, st_vpoke, st_out, st_sleep, st_stop
         dw st_screen, st_pset, st_preset, st_line, st_circle, st_palette, st_paint, st_put, err_syntax, st_get, st_draw, st_view, st_window
-        dw st_vbank, st_vfill, st_vwrite, st_set, st_copy, st_data, st_read, st_restore
+        dw st_vbank, st_vfill, st_vwrite, st_set, st_copy, st_data, st_read, st_restore, st_beep, st_sound, st_play
 
 ; ---------------------------------------------------------------- espressioni
 want_int:
@@ -4940,6 +4943,52 @@ st_restore:                     ; RESTORE [etichetta]
         EM3 0CDh,low RT_RESTORE,high RT_RESTORE
         ret
 .go:    EM3 0CDh,low RT_RESTORE,high RT_RESTORE
+        ret
+
+st_beep:
+        EM3 0CDh,low RT_BEEP,high RT_BEEP
+        ret
+
+st_sound:                       ; SOUND registro, valore
+        call expr
+        call want_int
+        ld hl,GX1
+        call emit_st
+        ld a,','
+        call expect_p
+        call expr
+        call want_int
+        ld hl,GY1
+        call emit_st
+        EM3 0CDh,low RT_SOUND,high RT_SOUND
+        ret
+
+st_play:                        ; PLAY voce1$[, voce2$[, voce3$]]
+        call emit_i
+        db 12,21h,0,0,22h,low PLV,high PLV,22h,low PLV+2,high PLV+2,22h,low PLV+4,high PLV+4
+        ld hl,PLV
+.l:     push hl
+        call expr
+        call want_str
+        pop hl
+        push hl
+        call emit_st
+        pop hl
+        inc hl
+        inc hl
+        ld a,','
+        call is_p
+        jr nz,.go
+        push hl
+        call next_tok
+        pop hl
+        ld de,PLV+6
+        or a
+        sbc hl,de
+        add hl,de
+        jp z,err_syntax
+        jr .l
+.go:    EM3 0CDh,low RT_PLAY,high RT_PLAY
         ret
 
 st_set:                         ; SET PAGE visibile[, attiva]  |  SET SCROLL x, y

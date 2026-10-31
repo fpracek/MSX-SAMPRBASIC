@@ -76,12 +76,14 @@ RT_SETPAGE equ 01DEh
 RT_SCROLL equ 01E1h
 RT_READ   equ 01E4h
 RT_RESTORE equ 01E7h
-RT_LOGOP  equ 01EAh
-RT_EMPTY  equ 01EDh             ; byte 0 (stringa vuota)
-RT_NAME   equ 01EEh             ; 16 byte: nome del sorgente (0-terminato)
-RT_DSIZE  equ 01FEh             ; word: byte di dati del programma (scritta dal compilatore)
-RT_DATA0  equ 0200h             ; word: primo elemento DATA (0 = nessun DATA)
-RTRAM     equ 0C100h            ; RAM del runtime (C000h-C086h: caricatore)
+RT_BEEP   equ 01EAh
+RT_SOUND  equ 01EDh
+RT_PLAY   equ 01F0h
+RT_EMPTY  equ 01F3h             ; byte 0 (stringa vuota)
+RT_NAME   equ 01F4h             ; 16 byte: nome del sorgente (0-terminato)
+RT_DSIZE  equ 0204h             ; word: byte di dati del programma (scritta dal compilatore)
+RT_DATA0  equ 0206h             ; word: primo elemento DATA (0 = nessun DATA)
+RTRAM     equ 0C090h            ; RAM del runtime (C000h-C086h: caricatore)
 HEAPP     equ RTRAM+0
 HEAP0     equ RTRAM+10
 GX1       equ RTRAM+118h        ; parametri grafici (word)
@@ -177,4 +179,9 @@ CSP       equ RTRAM+1C4h        ; COPY: pagina sorgente, destinazione (x,y), pag
 CDX       equ RTRAM+1C6h
 CDY       equ RTRAM+1C8h
 CDP       equ RTRAM+1CAh
-DATA_BASE equ 0C2E0h
+PLV       equ RTRAM+1CCh        ; PLAY: stringhe delle 3 voci
+PVOICE    equ RTRAM+1D2h        ; PLAY: stato delle voci (3 x 12 byte)
+PHZ       equ RTRAM+1F6h        ; PLAY: frequenza di quadro * 240
+PTEMPO    equ RTRAM+1F8h
+PANY      equ RTRAM+1FAh
+DATA_BASE equ 0C2A0h

@@ -66,5 +66,6 @@ Limiti: sorgente 14 KB, programma 16 KB, 96 etichette, 100 variabili/array, 20 S
 `../editor/erun.py` 12/12, `ecom.py` 25/25.
 Grafica per i giochi (stadio 14): `VBANK`, `VPOKE`/`VPEEK` a 17 bit, `VFILL`, `VWRITE`, `VREAD$`, `BASE(n)`, `VDP(n)` / `VDP(n)=v`, `STICK`, `STRIG`, `COLOR=(n,r,g,b)`, `COLOR=RESTORE`, `COLOR SPRITE(n)=c`, `COLOR SPRITE$(n)=colori` (gtest 250 controlli).
 Stadio 15: `PSET/LINE ...,op` (PSET PRESET AND OR XOR e T...), `COPY (..)-(..),pag TO (..),pag,op`, `SET PAGE vis,att` (SCREEN 5-8, anche CLS/testo/PAINT/GET/PUT sulla pagina attiva), `SET SCROLL x,y`, `DATA`/`READ`/`RESTORE [etichetta subito prima di un DATA]`, SCREEN 3 (PSET/POINT/LINE/CIRCLE; non PAINT/GET/PUT/testo), SCREEN 10-12 (solo MSX2+: CHGMOD 8 + R#25 YJK/YAE; collaudati su openMSX FS-A1ST con `GMACHINE=Panasonic_FS-A1ST python gtest.py`, test `p*.bas`). Tutta la catena (compilatore + gtest) gira anche sull'FS-A1ST (turbo R, DOS2).
-Non ancora supportati: float, suono, file.
+Stadio 16 (suono): `BEEP`, `SOUND reg,val`, `PLAY v1$[,v2$[,v3$]]` (MML bloccante a 3 voci: A-G # + -, R, O, L, T, V, N, < >, punti; tempo a risoluzione di 1 JIFFY; collaudo `stest.py` che campiona i registri del PSG). Memoria: RAM runtime a C090h, tabelle del compilatore a 3400h, sorgente fino a 15 KB.
+Non ancora supportati: float, file.
 Non provato su MSX reale (disco fisico, Nextor/DOS2).

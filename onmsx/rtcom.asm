@@ -110,7 +110,9 @@ inbuf   equ RTRAM+20
         jp rt_scroll
         jp rt_read
         jp rt_restore
-        jp rt_nyi
+        jp rt_beep
+        jp rt_sound
+        jp rt_play
         ASSERT $ == RT_EMPTY
 rt_empty: db 0
         ASSERT $ == RT_NAME
@@ -1002,6 +1004,7 @@ rt_nyi: ret                 ; voci riservate per i prossimi stadi
         INCLUDE "rtcirc.asm"
         INCLUDE "rtwin.asm"
         INCLUDE "rtvram.asm"
+        INCLUDE "rtsnd.asm"
 
 ldr_img: INCBIN "build/ldr.bin"
 ldr_size equ $-ldr_img
