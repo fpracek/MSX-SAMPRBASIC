@@ -4,7 +4,7 @@
 ; Una passata, emissione diretta; HL = accumulatore, operando sinistro sullo stack.
 ; Input: riga di comando " NOME.BAS"  ->  scrive NOME.COM e lo avvia.
 ; Errore: ricarica l'editor con " NOME.BAS E<riga> <codice>".
-; Memoria: codice 0100h-3DFFh, tabelle 3E00h-4CFFh, sorgente 4D00h-7FFFh,
+; Memoria: codice 0100h-39FFh, tabelle 3A00h-49FFh, sorgente 4A00h-7FFFh,
 ;          output 8000h-BEFFh (indirizzi virtuali da 0100h: virt = fisico - 7F00h).
 ; =====================================================================
         INCLUDE "rtabi.inc"
@@ -21,8 +21,8 @@ F_BRD   equ 27h
 SRC     equ 4400h               ; il compilatore per cartucce non ha OPTION NUMBERED: le tabelle stanno nella RAM alta
 SRCMAX  equ 3BFEh
         ELSE
-SRC     equ 4D00h
-SRCMAX  equ 32FEh
+SRC     equ 4A00h
+SRCMAX  equ 35FEh
         ENDIF
 OUT0    equ 8000h
         IFDEF ROMMODE
@@ -47,21 +47,21 @@ LDR     equ 0C000h
         IFDEF ROMMODE
 LABT    equ 0CA00h
         ELSE
-LABT    equ 3E00h               ; etichette: 96 x 20 byte
+LABT    equ 3A00h               ; etichette: 96 x 20 byte
         ENDIF
 LABREC  equ 20
 MAXLAB  equ 96
         IFDEF ROMMODE
 VART    equ 0D180h
         ELSE
-VART    equ 4580h               ; variabili/array: 100 x 16 byte
+VART    equ 4180h               ; variabili/array: 100 x 16 byte
         ENDIF
 VARREC  equ 16
 MAXVAR  equ 100
         IFDEF ROMMODE
 BLKS    equ 0D7C0h
         ELSE
-BLKS    equ 4BC0h               ; stack dei blocchi: 24 x 10 byte
+BLKS    equ 47C0h               ; stack dei blocchi: 24 x 10 byte
         ENDIF
 BLKREC  equ 10
 MAXBLK  equ 24
@@ -103,7 +103,6 @@ dptr    equ ST+166              ; w  prossimo byte libero nell'area dati del pro
 dlim    equ ST+168              ; w  limite dell'area dati
 nbuf    equ ST+170              ; 16 byte: nome normalizzato (per le funzioni predefinite)
 vtyp    equ ST+186              ; b  tipo dell'ultima variabile cercata
-numst   equ ST+190              ; w  inizio di una costante numerica (lexer)
 fi_s    equ ST+188              ; w
 voff    equ ST+220              ; w  fisico - virtuale (cambia con il segmento)
 outlim  equ ST+222              ; b  alto byte oltre il quale l'output e' troppo grande
@@ -113,15 +112,15 @@ pseg    equ ST+225              ; b  segmento corrente durante la pre-scansione
 nfar    equ ST+226              ; b  voci usate in FARTAB
 romopen equ ST+227              ; b  il file ROM e' gia' stato creato
         IFDEF ROMMODE
-FARTABC equ 4000h
-SEGT    equ 4080h
-FCBSV   equ 40A8h
-FARX    equ 4094h
+FARTABC equ 3C00h
+SEGT    equ 3C80h
+FCBSV   equ 3CA8h
+FARX    equ 3C94h
         ELSE
-FARTABC equ 4D00h               ; FARTAB in costruzione: 32 x 4 byte (banco, 0, indirizzo)
-SEGT    equ 4D80h               ; segmento di ogni SUB/FUNCTION (indice nel record)
-FCBSV   equ 4CB0h               ; copia dell'FCB di uscita durante INCBIN
-FARX    equ 4D94h               ; indice FARTAB di ogni SUB/FUNCTION (FFh = nessuno)
+FARTABC equ 48C0h               ; FARTAB in costruzione: 32 x 4 byte (banco, 0, indirizzo)
+SEGT    equ 4940h               ; segmento di ogni SUB/FUNCTION (indice nel record)
+FCBSV   equ 4968h               ; copia dell'FCB di uscita durante INCBIN
+FARX    equ 4954h               ; indice FARTAB di ogni SUB/FUNCTION (FFh = nessuno)
         ENDIF
 usewin  equ ST+216              ; b  il sorgente usa WINDOW: le coordinate grafiche vengono convertite
 nfunc   equ ST+192              ; b
@@ -157,7 +156,6 @@ T_ID    equ 2
 T_STR   equ 3
 T_KW    equ 4
 T_P     equ 5
-T_FLT   equ 6               ; costante in virgola mobile: tval = testo nel sorgente, tlen = lunghezza
 
 K_PRINT equ 0
 K_IF    equ 1
@@ -1695,17 +1693,6 @@ next_tok:
         cp 'z'+1
         jp c,.id
 .pu:    ld a,(hl)
-        cp '.'
-        jr nz,.pp
-        inc hl
-        ld a,(hl)
-        dec hl
-        sub '0'
-        cp 10
-        jr nc,.pp
-        ld (numst),hl           ; ".5": costante senza parte intera
-        jr .fl
-.pp:    ld a,(hl)
         jp .punct
 .eof:   ld (lp),hl
         ld a,1
@@ -1729,10 +1716,9 @@ next_tok:
         jr z,.go
         cp 1Ah
         jr nz,.cmt
-        jp .go
+        jr .go
 
-.num:   ld (numst),hl
-        ld de,0
+.num:   ld de,0
 .nl:    ld a,(hl)
         sub '0'
         cp 10
@@ -1753,75 +1739,11 @@ next_tok:
         pop hl
         inc hl
         jr .nl
-.ne:    ld a,(hl)
-        cp '.'
-        jr z,.fl
-        or 20h
-        cp 'e'
-        jr nz,.int
-        inc hl
-        ld a,(hl)
-        dec hl
-        cp '+'
-        jr z,.fl
-        cp '-'
-        jr z,.fl
-        sub '0'
-        cp 10
-        jr nc,.int
-        jr .fl
-.int:   ld (tval),de
+.ne:    ld (tval),de
         ld (lp),hl
         ld a,T_NUM
         ld (ttype),a
         ret
-.fl:    IFDEF ROMMODE
-        ERR E_TYPE              ; le cartucce non hanno la virgola mobile
-        ELSE
-        ld a,(hl)
-        cp '.'
-        jr nz,.fe
-        inc hl
-.fd:    ld a,(hl)
-        sub '0'
-        cp 10
-        jr nc,.fe
-        inc hl
-        jr .fd
-.fe:    ld a,(hl)
-        or 20h
-        cp 'e'
-        jr nz,.ff
-        push hl                 ; esponente: E [+-] cifre
-        inc hl
-        ld a,(hl)
-        cp '+'
-        jr z,.e1
-        cp '-'
-        jr nz,.e2
-.e1:    inc hl
-.e2:    ld a,(hl)
-        sub '0'
-        cp 10
-        jr nc,.en               ; non e' un esponente: si resta prima della E
-.e3:    inc hl
-        ld a,(hl)
-        sub '0'
-        cp 10
-        jr c,.e3
-        pop de
-        jr .ff
-.en:    pop hl
-.ff:    ld de,(numst)
-        ld a,l
-        sub e
-        ld (tlen),a
-        ld (tval),de
-        ld (lp),hl
-        ld a,T_FLT
-        ld (ttype),a
-        ret
-        ENDIF
 
 .amp:   inc hl
         ld a,(hl)
@@ -1862,7 +1784,7 @@ next_tok:
         jr .hl
 .he:    ld a,c
         or a
-        jp nz,.ne
+        jr nz,.ne
         ERR E_CHAR
 .bin:   inc hl
         ld de,0
@@ -1948,29 +1870,9 @@ next_tok:
         cp '$'
         jr z,.sf
         cp '%'
-        jr nz,.nfs
+        jr nz,.fin
         inc hl                  ; A% = A: il suffisso intero si ignora
         jr .fin
-.nfs:   cp '!'
-        jr z,.fs
-        cp '#'
-        jr nz,.fin
-        inc hl                  ; '#' e' un suffisso solo se non e' seguito da una cifra (PRINT#1)
-        ld a,(hl)
-        dec hl
-        sub '0'
-        cp 10
-        jr c,.fin
-.fs:    IFDEF ROMMODE
-        ERR E_TYPE
-        ELSE
-        inc hl
-        ld a,2
-        ld (tsuf),a
-        ld a,'!'
-        ld (tbuf+11),a          ; A! e A# sono la stessa variabile in virgola mobile
-        jr .fin
-        ENDIF
 .sf:    inc hl
         ld a,1
         ld (tsuf),a
@@ -2030,7 +1932,7 @@ next_tok:
         ld a,c
         push hl
         ld hl,puncts
-        ld b,16
+        ld b,15
 .pl:    cp (hl)
         jr z,.pv
         inc hl
@@ -2050,7 +1952,7 @@ next_tok:
         ld a,T_P
         ld (ttype),a
         ret
-puncts: db "()+-*/",5Ch,"=<>,;:?#^"
+puncts: db "()+-*/",5Ch,"=<>,;:?#"
 s_rem:  db "REM",0
 
 find_in:                        ; HL = tabella di stringhe 0-terminate (fine: byte 0), DE = nome -> A = indice, C se manca
@@ -2327,12 +2229,8 @@ new_rec:                        ; HL = posto, BC = byte, DE = numero elementi (0
         ex de,hl
         ret
 
-kind_type:                      ; A = tipo di riferimento (emit_ldv) -> A = 0 intero, 1 stringa, 2 float
-        cp 7
-        jr nz,.n7
-        ld a,2
-        ret
-.n7:    cp 1
+kind_type:                      ; A = tipo di riferimento (emit_ldv) -> A = 0 intero, 1 stringa
+        cp 1
         jr z,.s
         cp 3
         jr z,.s
@@ -2387,13 +2285,8 @@ resolve_var:                    ; tbuf -> A = tipo di riferimento, HL = indirizz
         ret
 .glob:  call find_var
         ld a,(vtyp)
-        cp 2
-        ret nz
-        ld a,7                  ; riferimento 7 = variabile float globale
         ret
 .new:   ld a,(vtyp)             ; nuova variabile locale
-        cp 2
-        jp z,err_type           ; niente float nelle SUB/FUNCTION (per ora)
         or a
         jr nz,.ns
         ld a,(nint)
@@ -2473,16 +2366,7 @@ loct_add:                       ; tbuf = nome, A = tipo (0 int, 1 str, 2 shared,
         ret
 
 emit_ldv:                       ; A = tipo di riferimento, HL = indirizzo/scostamento: HL (programma) = valore o puntatore
-        cp 7
-        jr nz,.nf
-        push hl                 ; float globale: ld hl,indirizzo ; call RT_FLD (FA = valore)
-        ld a,21h
-        call emit_a
-        pop hl
-        call emit_w
-        EM3 0CDh,low RT_FLD,high RT_FLD
-        ret
-.nf:    or a
+        or a
         jr nz,.k1
         ld a,2Ah                ; globale intero: ld hl,(nn)
         jr .abs
@@ -2521,16 +2405,7 @@ emit_ldv:                       ; A = tipo di riferimento, HL = indirizzo/scosta
         ret
 
 emit_stv:                       ; A = tipo di riferimento, HL = indirizzo/scostamento: memorizza il valore in HL (programma)
-        cp 7
-        jr nz,.nf
-        push hl                 ; float globale: ld hl,indirizzo ; call RT_FST (FA -> variabile)
-        ld a,21h
-        call emit_a
-        pop hl
-        call emit_w
-        EM3 0CDh,low RT_FST,high RT_FST
-        ret
-.nf:    or a
+        or a
         jr nz,.n1
         ld a,22h                ; globale intero: ld (nn),hl
         push hl
@@ -2598,9 +2473,6 @@ find_var:                       ; variabile scalare (tbuf) -> HL = indirizzo; vt
         or a
         jr z,.s
         ld bc,256
-        cp 2
-        jr nz,.s
-        ld bc,4                 ; float: 4 byte
 .s:     ld de,0
         jp new_rec
 
@@ -2697,12 +2569,8 @@ arr_elem:                       ; tbuf = array, token = nome: emette il calcolo 
         EM3 0CDh,low RT_CHK,high RT_CHK
         ld a,(etype)
         or a
-        jr z,.int
-        cp 2
         jr nz,.str
-        EM2 29h,29h             ; float: indice * 4
-        jr .base
-.int:   EM1 29h                 ; add hl,hl
+        EM1 29h                 ; add hl,hl
         jr .base
 .str:   EM3 65h,2Eh,0           ; ld h,l ; ld l,0   (indice * 256)
 .base:  ld a,11h                ; ld de,base
@@ -3499,24 +3367,16 @@ e_cmp:  call e_add
         ld e,(hl)
         inc hl
         ld d,(hl)
-        push de                 ; routine booleana (b_eq ecc.)
+        push de                 ; routine per interi
         ld a,(etype)
         push af                 ; tipo dell'operando sinistro
         call next_tok
-        call push_left
+        EM1 0E5h
         call e_add
         pop bc                  ; B = tipo sinistro
         ld a,(etype)
         cp b
-        jr z,.same
-        cp 1                    ; tipi diversi: solo intero e float
-        jp z,err_type
-        ld a,b
-        cp 1
-        jp z,err_type
-        jr .fl
-.same:  cp 2
-        jr z,.fl
+        jp nz,err_type
         ld c,a                  ; tipo comune (emit_i clobbera A)
         EM1 0D1h
         ld a,c
@@ -3532,14 +3392,6 @@ e_cmp:  call e_add
 .res:   xor a
         ld (etype),a
         jr .l
-.fl:    call fl_prep
-        ld hl,RT_FCMP
-        ld a,0CDh
-        call emit_jabs
-        pop hl
-        ld a,0CDh
-        call emit_jabs
-        jr .res
 
 cmptab: db '=':dw RT_BEQ
         db 1:dw RT_BNE
@@ -3547,79 +3399,6 @@ cmptab: db '=':dw RT_BEQ
         db '>':dw RT_BGT
         db 2:dw RT_BLE
         db 3:dw RT_BGE
-
-push_left:                      ; operando sinistro (etype) sullo stack: intero e stringa con push hl, float con RT_FPUSH
-        ld a,(etype)
-        cp 2
-        jr z,.f
-        EM1 0E5h
-        ret
-.f:     EM3 0CDh,low RT_FPUSH,high RT_FPUSH
-        ret
-
-fl_prep:                        ; B = tipo sinistro (sullo stack), etype = tipo destro: FB = sinistro, FA = destro (float)
-        ld a,(etype)
-        cp 2
-        jr z,.rf
-        or a
-        jp nz,err_type
-        EM3 0CDh,low RT_FITOF,high RT_FITOF     ; destro intero (HL) -> FA
-.rf:    ld a,b
-        cp 2
-        jr z,.lf
-        or a
-        jp nz,err_type
-        EM3 0CDh,low RT_FIPOP,high RT_FIPOP     ; sinistro intero dallo stack -> FB
-        jr .d
-.lf:    EM3 0CDh,low RT_FPOP,high RT_FPOP
-.d:     ld a,2
-        ld (etype),a
-        ret
-
-coerce:                         ; B = tipo di destinazione (0 intero, 1 stringa, 2 float): converte il valore (etype) o segnala l'errore
-        ld a,(etype)
-        cp b
-        ret z
-        ld c,a
-        ld a,b
-        cp 2
-        jr z,.tf
-        or a
-        jp nz,err_type
-        ld a,c
-        cp 2
-        jp nz,err_type
-        EM3 0CDh,low RT_FRND,high RT_FRND       ; float -> intero (arrotondato)
-        xor a
-        ld (etype),a
-        ret
-.tf:    ld a,c
-        or a
-        jp nz,err_type
-        EM3 0CDh,low RT_FITOF,high RT_FITOF     ; intero -> float
-        ld a,2
-        ld (etype),a
-        ret
-
-primary_flt:                    ; costante float: pozzetto da 5 byte nei dati; il testo si converte alla prima esecuzione
-        ld bc,5
-        call alloc_data
-        push hl
-        ld a,(tlen)
-        ld b,a
-        ld hl,(tval)
-        call emit_lit           ; il testo e' nel codice: HL (programma) = puntatore
-        EM1 0EBh                ; ex de,hl
-        pop hl
-        ld a,21h                ; ld hl,pozzetto ; call RT_FLIT
-        push hl
-        call emit_a
-        pop hl
-        call emit_w
-        EM3 0CDh,low RT_FLIT,high RT_FLIT
-        ld a,2
-        ld (etype),a
-        jp next_tok
 
 e_add:  call e_mod
 .l:     ld a,'+'
@@ -3634,20 +3413,12 @@ e_add:  call e_mod
         ld b,a                  ; tipo sinistro
         push bc
         call next_tok
-        call push_left
+        EM1 0E5h
         call e_mod
         pop bc
         ld a,(etype)
         cp b
-        jr z,.same
-        cp 1                    ; tipi diversi: solo intero e float
-        jp z,err_type
-        ld a,b
-        cp 1
-        jp z,err_type
-        jr .fl
-.same:  cp 2
-        jr z,.fl
+        jp nz,err_type
         ld a,b
         or a
         jr nz,.str
@@ -3667,15 +3438,6 @@ e_add:  call e_mod
         ld a,1
         ld (tmpf),a
         jr .l
-.fl:    call fl_prep
-        ld hl,RT_FADD
-        ld a,c
-        or a
-        jr z,.fo
-        ld hl,RT_FSUB
-.fo:    ld a,0CDh
-        call emit_jabs
-        jp .l
 
 e_mod:  call e_idiv
 .l:     ld a,K_MOD
@@ -3706,48 +3468,26 @@ e_idiv: call e_mul
 e_mul:  call e_unary
 .l:     ld a,'*'
         call is_p
-        ld c,0
-        jr z,.go
+        jr z,.mul
         ld a,'/'
         call is_p
         ret nz
-        ld c,1
-.go:    ld a,(etype)
-        ld b,a
-        push bc
+        call want_int
         call next_tok
-        call push_left
+        EM1 0E5h
         call e_unary
-        pop bc
-        ld a,(etype)
-        cp 1
-        jp z,err_type
-        ld a,b
-        cp 1
-        jp z,err_type
-        cp 2
-        jr z,.fl
-        ld a,(etype)
-        cp 2
-        jr z,.fl
-        ld a,c                  ; due interi: '*' = prodotto, '/' = divisione intera
-        or a
-        jr nz,.dv
+        call want_int
+        EM2 0D1h,0EBh           ; '/' = divisione intera (niente float)
+        EM3 0CDh,low RT_DIV,high RT_DIV
+        jr .l
+.mul:   call want_int
+        call next_tok
+        EM1 0E5h
+        call e_unary
+        call want_int
         EM1 0D1h
         EM3 0CDh,low RT_MUL,high RT_MUL
-        jp .l
-.dv:    EM2 0D1h,0EBh
-        EM3 0CDh,low RT_DIV,high RT_DIV
-        jp .l
-.fl:    call fl_prep
-        ld hl,RT_FMUL
-        ld a,c
-        or a
-        jr z,.fo
-        ld hl,RT_FDIV
-.fo:    ld a,0CDh
-        call emit_jabs
-        jp .l
+        jr .l
 
 e_unary:
         ld a,'-'
@@ -3755,58 +3495,17 @@ e_unary:
         jr nz,.nm
         call next_tok
         call e_unary
-        ld a,(etype)
-        cp 2
-        jr nz,.i
-        EM3 0CDh,low RT_FNEG,high RT_FNEG
-        ret
-.i:     call want_int
+        call want_int
         EM7 0EBh,21h,0,0,0B7h,0EDh,52h   ; ex de,hl ; ld hl,0 ; or a ; sbc hl,de
         ret
 .nm:    ld a,'+'
         call is_p
-        jp nz,e_pow
+        jr nz,primary
         call next_tok
         jr e_unary
 
-e_pow:  call primary            ; base ^ esponente (sempre in virgola mobile)
-.l:     ld a,'^'
-        call is_p
-        ret nz
-        ld a,(etype)
-        ld b,a
-        push bc
-        call next_tok
-        call push_left
-        call e_pexp
-        pop bc
-        call fl_prep
-        EM3 0CDh,low RT_FPOW,high RT_FPOW
-        jr .l
-
-e_pexp: ld a,'-'                ; esponente: segno facoltativo e primario
-        call is_p
-        jr nz,.p
-        call next_tok
-        call e_pexp
-        ld a,(etype)
-        cp 2
-        jr nz,.i
-        EM3 0CDh,low RT_FNEG,high RT_FNEG
-        ret
-.i:     call want_int
-        EM7 0EBh,21h,0,0,0B7h,0EDh,52h
-        ret
-.p:     ld a,'+'
-        call is_p
-        jp nz,primary
-        call next_tok
-        jr e_pexp
-
 primary:
         ld a,(ttype)
-        cp T_FLT
-        jp z,primary_flt
         cp T_NUM
         jr nz,.nn
         ld a,21h                ; ld hl,nn
@@ -3930,12 +3629,8 @@ primary:
         call arr_elem           ; HL = indirizzo dell'elemento
         ld a,(etype)
         or a
-        jr z,.ival
-        cp 2
         ret nz                  ; stringa: HL e' gia' il puntatore
-        EM3 0CDh,low RT_FLD,high RT_FLD         ; float: FA = elemento
-        ret
-.ival:  EM4 5Eh,23h,56h,0EBh    ; ld e,(hl) ; inc hl ; ld d,(hl) ; ex de,hl
+        EM4 5Eh,23h,56h,0EBh    ; ld e,(hl) ; inc hl ; ld d,(hl) ; ex de,hl
         ret
 .ni:    cp T_P
         jp nz,err_syntax
@@ -3960,10 +3655,8 @@ make_nbuf:                      ; tbuf -> nbuf (testo normale, "CHR$" ecc.)
         djnz .l
 .e:     ld a,(tbuf+11)
         cp '$'
-        jr z,.a
-        cp '!'
         jr nz,.z
-.a:     ld (de),a
+        ld (de),a
         inc de
 .z:     xor a
         ld (de),a
@@ -3973,13 +3666,10 @@ make_nbuf:                      ; tbuf -> nbuf (testo normale, "CHR$" ecc.)
 bitab:  db "LEN",0,"ASC",0,"VAL",0,"ABS",0,"SGN",0,"RND",0,"PEEK",0,"CHR$",0,"STR$",0
         db "LEFT$",0,"RIGHT$",0,"MID$",0,"INKEY$",0,"TIMER",0,"VPEEK",0,"INP",0,"UBOUND",0,"POINT",0,"COLLISION",0,"BASE",0,"VDP",0,"STICK",0,"STRIG",0,"VREAD$",0,"EOF",0,"DATAWIN",0,"MAPPERSEGS",0,"MGET",0,"VARPTR",0
         db "MALLOC",0,"LOF",0
-        db "MKI$",0,"CVI",0,"SQR",0,"SIN",0,"COS",0,"TAN",0,"ATN",0,"LOG",0,"EXP",0
-        db "INT",0,"FIX",0,"CINT",0,"CSNG",0,"CDBL",0,"VAL!",0,0
+        db "MKI$",0,"CVI",0,0
 bijump: dw bi_len, bi_asc, bi_val, bi_abs, bi_sgn, bi_rnd, bi_peek, bi_chr, bi_str
         dw bi_left, bi_right, bi_mid, bi_inkey, bi_timer, bi_vpeek, bi_inp, bi_ubound, bi_point, bi_coll
         dw bi_base, bi_vdp, bi_stick, bi_strig, bi_vread, bi_eof, bi_datawin, bi_mapsegs, bi_mget, bi_varptr, bi_malloc, bi_lof, bi_mki, bi_cvi
-        dw bi_fsqr, bi_fsin, bi_fcos, bi_ftan, bi_fatn, bi_flog, bi_fexp
-        dw bi_int, bi_fix, bi_cint, bi_csng, bi_csng, bi_fval
 
 open_paren:
         ld a,'('
@@ -4009,18 +3699,9 @@ bi1s:   push hl                 ; un argomento stringa -> intero
 bi_chr: ld hl,RT_CHR
         ld c,1
         jr bi1i
-bi_str: call bi_arg_any
-        ld a,(etype)
-        cp 2
-        jr z,.f
-        call want_int
-        EM3 0CDh,low RT_STR,high RT_STR
-        jr .d
-.f:     EM3 0CDh,low RT_FSTR,high RT_FSTR
-.d:     ld a,1
-        ld (etype),a
-        ld (tmpf),a
-        ret
+bi_str: ld hl,RT_STR
+        ld c,1
+        jr bi1i
 bi_rnd: ld hl,RT_RND
         ld c,0
 bi1i:   push bc                 ; un argomento intero; C = tipo del risultato
@@ -4041,25 +3722,11 @@ bi1i:   push bc                 ; un argomento intero; C = tipo del risultato
         ld (tmpf),a
         ret
 
-bi_abs: call bi_arg_any
-        ld a,(etype)
-        cp 2
-        jr nz,.i
-        EM3 0CDh,low RT_FABS,high RT_FABS
-        ret
-.i:     call want_int
+bi_abs: call bi_arg_int
         call emit_i
         db 7,0CBh,7Ch,28h,03h,0CDh,low RT_NEG,high RT_NEG   ; bit 7,h ; jr z,+3 ; call rt_neg
         ret
-bi_sgn: call bi_arg_any
-        ld a,(etype)
-        cp 2
-        jr nz,.i
-        EM3 0CDh,low RT_FSGN,high RT_FSGN
-        xor a
-        ld (etype),a
-        ret
-.i:     call want_int
+bi_sgn: call bi_arg_int
         call emit_i
         db 16,0CBh,7Ch,20h,09h,7Ch,0B5h,28h,08h,21h,1,0,18h,03h,21h,0FFh,0FFh
         ret
@@ -4067,78 +3734,6 @@ bi_peek:
         call bi_arg_int
         EM4 7Eh,6Fh,26h,0       ; ld a,(hl) ; ld l,a ; ld h,0
         ret
-bi_arg_any:                     ; "(" espressione ")" di qualunque tipo
-        call next_tok
-        call open_paren
-        call expr
-        jp close_paren
-
-to_float:                       ; il valore (etype) diventa float in FA (errore per le stringhe)
-        ld a,(etype)
-        cp 2
-        ret z
-        or a
-        jp nz,err_type
-        EM3 0CDh,low RT_FITOF,high RT_FITOF
-        ld a,2
-        ld (etype),a
-        ret
-
-bi_fsqr: ld hl,RT_FSQR
-        jr bi_ffn
-bi_fsin: ld hl,RT_FSIN
-        jr bi_ffn
-bi_fcos: ld hl,RT_FCOS
-        jr bi_ffn
-bi_ftan: ld hl,RT_FTAN
-        jr bi_ffn
-bi_fatn: ld hl,RT_FATN
-        jr bi_ffn
-bi_flog: ld hl,RT_FLOG
-        jr bi_ffn
-bi_fexp: ld hl,RT_FEXP
-bi_ffn: push hl                 ; funzione matematica: argomento intero o float, risultato float
-        call bi_arg_any
-        call to_float
-        pop hl
-        ld a,0CDh
-        jp emit_jabs
-
-bi_int: call bi_arg_any         ; INT: parte intera (floor) per i float, invariato per gli interi
-        ld a,(etype)
-        cp 2
-        jr nz,.i
-        EM3 0CDh,low RT_FINT,high RT_FINT
-        ret
-.i:     jp want_int
-bi_fix: call bi_arg_any
-        ld a,(etype)
-        cp 2
-        jr nz,.i
-        EM3 0CDh,low RT_FFIX,high RT_FFIX
-        ret
-.i:     jp want_int
-bi_cint: call bi_arg_any        ; CINT: arrotonda a intero
-        ld a,(etype)
-        cp 2
-        jr nz,.i
-        EM3 0CDh,low RT_FRND,high RT_FRND
-        xor a
-        ld (etype),a
-        ret
-.i:     jp want_int
-bi_csng: call bi_arg_any        ; CSNG, CDBL: converte in float
-        jp to_float
-bi_fval: call next_tok          ; VAL!(s$): stringa -> float
-        call open_paren
-        call expr
-        call want_str
-        call close_paren
-        EM3 0CDh,low RT_FVAL,high RT_FVAL
-        ld a,2
-        ld (etype),a
-        ret
-
 bi_arg_int:
         call next_tok
         call open_paren
@@ -4280,7 +3875,9 @@ st_assign:
         push hl
         call kind_type
         ld b,a
-        call coerce
+        ld a,(etype)
+        cp b
+        jp nz,err_type
         pop hl
         pop af
         jp emit_stv
@@ -4296,15 +3893,12 @@ st_assign:
         call expr
         pop af
         ld b,a
-        call coerce
+        ld a,(etype)
+        cp b
+        jp nz,err_type
         EM1 0D1h                ; pop de = indirizzo
         ld a,(etype)
-        cp 2
-        jr nz,.nfl
-        EM1 0EBh                ; float: ex de,hl ; call RT_FST
-        EM3 0CDh,low RT_FST,high RT_FST
-        ret
-.nfl:   or a
+        or a
         jr nz,.astr
         call emit_i
         db 5,7Dh,12h,13h,7Ch,12h        ; ld a,l ; ld (de),a ; inc de ; ld a,h ; ld (de),a
@@ -4340,14 +3934,10 @@ st_print0:
         call expr
         ld a,(etype)
         or a
-        jr z,.pi
-        cp 2
-        jr z,.pf
-        EM3 0CDh,low RT_PSTR,high RT_PSTR
+        jr nz,.ps
+        EM3 0CDh,low RT_PINT,high RT_PINT
         jr .pd
-.pi:    EM3 0CDh,low RT_PINT,high RT_PINT
-        jr .pd
-.pf:    EM3 0CDh,low RT_PFLT,high RT_PFLT
+.ps:    EM3 0CDh,low RT_PSTR,high RT_PSTR
 .pd:    pop bc
         ld c,1
         jr .l
@@ -4842,12 +4432,8 @@ st_input:
         ld a,(tmpk)
         call kind_type
         or a
-        jr nz,.nint
-        EM3 0CDh,low RT_VAL,high RT_VAL
-        jr .istr
-.nint:  cp 2
         jr nz,.istr
-        EM3 0CDh,low RT_FVAL,high RT_FVAL
+        EM3 0CDh,low RT_VAL,high RT_VAL
 .istr:  ld a,(tmpk)
         ld hl,(tmpv)
         jp emit_stv
@@ -4899,17 +4485,7 @@ st_dim:
         ld l,e
         or a
         jr z,.int
-        cp 2
-        jr nz,.nfa
         ld a,(mapf)
-        or a
-        jp nz,err_type
-        add hl,hl               ; float: 4 byte per elemento
-        add hl,hl
-        ld b,h
-        ld c,l
-        jr .go
-.nfa:   ld a,(mapf)
         or a
         jp nz,err_type          ; solo array di interi
         ld a,d                  ; stringhe: massimo 255 elementi da 256 byte

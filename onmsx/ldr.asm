@@ -38,7 +38,7 @@ ldr_main: ld hl,ldr_fn
         ld c,1Ah                ; DMA
         call 5
         ld de,ldr_fcb
-        ld hl,0B000h
+        ld hl,7000h
         ld c,27h                ; lettura a blocchi
         call 5
         jp 0100h

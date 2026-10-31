@@ -155,36 +155,6 @@ inbuf   equ RTRAM+20
         jp rt_mki
         jp rt_cvi
         jp rt_rset
-        jp fp_itof
-        jp fp_push
-        jp fp_pop
-        jp fp_ipop
-        jp fp_add
-        jp fp_sub
-        jp fp_mul
-        jp fp_div
-        jp fp_cmp
-        jp fp_neg
-        jp rt_fpow
-        jp rt_frnd
-        jp rt_ftrunc
-        jp fp_load
-        jp fp_st
-        jp rt_pflt
-        jp rt_fstr
-        jp rt_fval
-        jp rt_fsqr
-        jp rt_fsin
-        jp rt_fcos
-        jp rt_ftan
-        jp rt_fatn
-        jp rt_flog
-        jp rt_fexp
-        jp fp_abs
-        jp rt_fsgn
-        jp fp_int
-        jp fp_fix
-        jp rt_flit
         ASSERT $ == RT_EMPTY
 rt_empty: db 0
         ASSERT $ == RT_NAME
@@ -1108,14 +1078,6 @@ rt_datawin: ld hl,0
         INCLUDE "rtvram.asm"
         INCLUDE "rtsnd.asm"
         INCLUDE "rtmap.asm"
-        IFDEF ROMMODE
-        INCLUDE "rtnofloat.asm"
-        ELSE
-        INCLUDE "rtfloat.asm"
-        INCLUDE "rtfunc.asm"
-        INCLUDE "rtfconst.inc"
-        INCLUDE "rtfwrap.asm"
-        ENDIF
         IFDEF ROMMODE
         INCLUDE "rtrom.asm"
         ELSE
