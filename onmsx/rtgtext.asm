@@ -254,13 +254,20 @@ gdraw:                          ; A = carattere 32..: disegna il glifo nella cel
         djnz .row
         ret
 
-vram_set:                       ; HL = indirizzo VRAM (16 bit), A = 0 lettura / 40h scrittura
+vram_set:                       ; HL = indirizzo VRAM (16 bit + VA16 = A16), A = 0 lettura / 40h scrittura
         ld c,a
-        di
+        push de
+        ld a,(VA16)
+        add a,a
+        add a,a
+        ld d,a
         ld a,h
         rlca
         rlca
         and 3
+        or d
+        pop de
+        di
         out (VDPC),a
         ld a,8Eh                ; R#14
         out (VDPC),a

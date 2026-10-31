@@ -94,6 +94,23 @@ inbuf   equ RTRAM+20
         jp rt_wr
         jp rt_window
         jp rt_winres
+        jp rt_vbank
+        jp rt_vfill
+        jp rt_vwrite
+        jp rt_vread
+        jp rt_base
+        jp rt_vdp
+        jp rt_vdpset
+        jp rt_stick
+        jp rt_strig
+        jp rt_sprcol
+        jp rt_sprcols
+        jp rt_nyi
+        jp rt_nyi
+        jp rt_nyi
+        jp rt_nyi
+        jp rt_nyi
+        jp rt_nyi
         ASSERT $ == RT_EMPTY
 rt_empty: db 0
         ASSERT $ == RT_NAME
@@ -943,23 +960,7 @@ rt_wait:                    ; HL = frame da attendere
         dec hl
         jr .l
 
-rt_vpeek:                   ; HL = indirizzo VRAM (0-16383) -> HL = byte
-        push ix
-        ld ix,RDVRM
-        call rt_bios
-        pop ix
-        ld l,a
-        ld h,0
-        ret
-
-rt_vpoke:                   ; DE = indirizzo VRAM (0-16383), HL = valore
-        ld a,l
-        ex de,hl
-        push ix
-        ld ix,WRTVRM
-        call rt_bios
-        pop ix
-        ret
+rt_nyi: ret                 ; voci riservate per i prossimi stadi
 
         INCLUDE "rtgfx.asm"
         INCLUDE "rtgtext.asm"
@@ -967,6 +968,7 @@ rt_vpoke:                   ; DE = indirizzo VRAM (0-16383), HL = valore
         INCLUDE "rtgx.asm"
         INCLUDE "rtcirc.asm"
         INCLUDE "rtwin.asm"
+        INCLUDE "rtvram.asm"
 
 ldr_img: INCBIN "build/ldr.bin"
 ldr_size equ $-ldr_img

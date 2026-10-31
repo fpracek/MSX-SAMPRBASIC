@@ -164,6 +164,9 @@ K_GET   equ 55
 K_DRAW  equ 56
 K_VIEW  equ 57
 K_WINDOW equ 58
+K_VBANK equ 59
+K_VFILL equ 60
+K_VWRITE equ 61
 
 B_IF    equ 1
 B_FOR   equ 2
@@ -977,7 +980,7 @@ kwtab:  db "PRINT",0,"IF",0,"THEN",0,"ELSE",0,"ELSEIF",0,"END",0,"FOR",0,"TO",0
         db "CLS",0,"LOCATE",0,"AND",0,"OR",0,"XOR",0,"NOT",0,"MOD",0,"LET",0
         db "OPTION",0,"INPUT",0,"DIM",0,"POKE",0,"SUB",0,"FUNCTION",0,"CALL",0,"DECLARE",0,"SHARED",0
         db "EXIT",0,"DO",0,"LOOP",0,"UNTIL",0,"SELECT",0,"CASE",0,"IS",0,"CONST",0,"COLOR",0,"RANDOMIZE",0,"VPOKE",0,"OUT",0,"SLEEP",0,"STOP",0,"SCREEN",0,"PSET",0,"PRESET",0,"LINE",0,"CIRCLE",0
-        db "PALETTE",0,"PAINT",0,"PUT",0,"SPRITE",0,"GET",0,"DRAW",0,"VIEW",0,"WINDOW",0,0
+        db "PALETTE",0,"PAINT",0,"PUT",0,"SPRITE",0,"GET",0,"DRAW",0,"VIEW",0,"WINDOW",0,"VBANK",0,"VFILL",0,"VWRITE",0,0
 
 ; ---------------------------------------------------------------- helper del parser
 is_p:                           ; A = carattere: Z se il token e' quella punteggiatura
@@ -2058,6 +2061,7 @@ kwjump: dw st_print, st_if, err_syntax, st_else, st_elseif, st_end, st_for, err_
         dw st_exit, st_do, st_loop, err_syntax, st_select, st_case, err_syntax
         dw st_const, st_color, st_randomize, st_vpoke, st_out, st_sleep, st_stop
         dw st_screen, st_pset, st_preset, st_line, st_circle, st_palette, st_paint, st_put, err_syntax, st_get, st_draw, st_view, st_window
+        dw st_vbank, st_vfill, st_vwrite
 
 ; ---------------------------------------------------------------- espressioni
 want_int:
@@ -2438,9 +2442,10 @@ make_nbuf:                      ; tbuf -> nbuf (testo normale, "CHR$" ecc.)
 
 ; --- funzioni predefinite (il token corrente e' il nome)
 bitab:  db "LEN",0,"ASC",0,"VAL",0,"ABS",0,"SGN",0,"RND",0,"PEEK",0,"CHR$",0,"STR$",0
-        db "LEFT$",0,"RIGHT$",0,"MID$",0,"INKEY$",0,"TIMER",0,"VPEEK",0,"INP",0,"UBOUND",0,"POINT",0,"COLLISION",0,0
+        db "LEFT$",0,"RIGHT$",0,"MID$",0,"INKEY$",0,"TIMER",0,"VPEEK",0,"INP",0,"UBOUND",0,"POINT",0,"COLLISION",0,"BASE",0,"VDP",0,"STICK",0,"STRIG",0,"VREAD$",0,0
 bijump: dw bi_len, bi_asc, bi_val, bi_abs, bi_sgn, bi_rnd, bi_peek, bi_chr, bi_str
         dw bi_left, bi_right, bi_mid, bi_inkey, bi_timer, bi_vpeek, bi_inp, bi_ubound, bi_point, bi_coll
+        dw bi_base, bi_vdp, bi_stick, bi_strig, bi_vread
 
 open_paren:
         ld a,'('
@@ -2609,6 +2614,10 @@ st_idstmt:                      ; identificatore all'inizio dell'istruzione: SUB
         ld de,s_spritedol
         call str_eq
         jp z,st_sprdef
+        ld hl,nbuf
+        ld de,s_vdp
+        call str_eq
+        jp z,st_vdpset
         call find_func
         jr c,st_assign
         push hl
@@ -4411,7 +4420,21 @@ st_out: call two_ints
         ret
 
 st_color:
-        call expr
+        ld a,'='
+        call is_p
+        jp z,st_colpal
+        ld a,K_SPRITE
+        call is_kw
+        jp z,st_colspr
+        ld a,(ttype)
+        cp T_ID
+        jr nz,.n
+        call make_nbuf
+        ld hl,nbuf
+        ld de,s_spritedol
+        call str_eq
+        jp z,st_colsprs
+.n:     call expr
         call want_int
         EM1 0E5h
         ld a,','
@@ -4425,6 +4448,133 @@ st_color:
         db 6,3Ah,low 0F3EAh,high 0F3EAh,6Fh,26h,0
 .go:    EM1 0D1h
         EM3 0CDh,low RT_COLOR,high RT_COLOR
+        ret
+
+st_colpal:                      ; COLOR = (n, r, g, b)  oppure  COLOR = RESTORE
+        call next_tok
+        ld a,'('
+        call is_p
+        jr nz,.rs
+        call next_tok
+        call st_palette
+        jp close_paren
+.rs:    call next_tok
+        EM3 0CDh,low RT_PALINIT,high RT_PALINIT
+        ret
+
+colspr_head:                    ; (n) = : piano in GX1
+        call next_tok
+        call open_paren
+        call expr
+        call want_int
+        ld hl,GX1
+        call emit_st
+        call close_paren
+        ld a,'='
+        jp expect_p
+
+st_colspr:                      ; COLOR SPRITE(n) = colore
+        call colspr_head
+        call expr
+        call want_int
+        ld hl,GCOL
+        call emit_st
+        EM3 0CDh,low RT_SPRCOL,high RT_SPRCOL
+        ret
+
+st_colsprs:                     ; COLOR SPRITE$(n) = colori per riga
+        call colspr_head
+        call expr
+        call want_str
+        EM3 0CDh,low RT_SPRCOLS,high RT_SPRCOLS
+        ret
+
+st_vbank:
+        call expr
+        call want_int
+        EM3 0CDh,low RT_VBANK,high RT_VBANK
+        ret
+
+st_vfill:                       ; VFILL indirizzo, quanti, valore
+        call expr
+        call want_int
+        ld hl,GX1
+        call emit_st
+        ld a,','
+        call expect_p
+        call expr
+        call want_int
+        ld hl,GY1
+        call emit_st
+        ld a,','
+        call expect_p
+        call expr
+        call want_int
+        ld hl,GX2
+        call emit_st
+        EM3 0CDh,low RT_VFILL,high RT_VFILL
+        ret
+
+st_vwrite:                      ; VWRITE indirizzo, stringa
+        call expr
+        call want_int
+        ld hl,GX1
+        call emit_st
+        ld a,','
+        call expect_p
+        call expr
+        call want_str
+        EM3 0CDh,low RT_VWRITE,high RT_VWRITE
+        ret
+
+st_vdpset:                      ; VDP(n) = valore
+        call next_tok
+        call open_paren
+        call expr
+        call want_int
+        ld hl,GX1
+        call emit_st
+        call close_paren
+        ld a,'='
+        call expect_p
+        call expr
+        call want_int
+        ld hl,GY1
+        call emit_st
+        EM3 0CDh,low RT_VDPSET,high RT_VDPSET
+        ret
+
+bi_base: ld hl,RT_BASE
+        jr bi_one
+bi_vdp: ld hl,RT_VDP
+        jr bi_one
+bi_stick: ld hl,RT_STICK
+        jr bi_one
+bi_strig: ld hl,RT_STRIG
+bi_one: push hl
+        call bi_arg_int
+        pop hl
+        ld a,0CDh
+        call emit_jabs
+        xor a
+        ld (etype),a
+        ret
+
+bi_vread:                       ; VREAD$(indirizzo, quanti)
+        call next_tok
+        call open_paren
+        call expr
+        call want_int
+        ld hl,GX1
+        call emit_st
+        ld a,','
+        call expect_p
+        call expr
+        call want_int
+        call close_paren
+        EM3 0CDh,low RT_VREAD,high RT_VREAD
+        ld a,1
+        ld (etype),a
         ret
 
 bi_ubound:                      ; UBOUND(array): massimo indice (anche per un parametro array)
@@ -4735,6 +4885,7 @@ st_paint:                       ; PAINT (x,y)[, colore[, bordo]]
         ret
 
 s_spritedol: db "SPRITE$",0
+s_vdp:  db "VDP",0
 
 arr_ref_stmt:                   ; array di interi (con o senza "()") -> ARRB, ARRC
         ld a,(ttype)

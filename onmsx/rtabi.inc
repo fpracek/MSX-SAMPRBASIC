@@ -60,9 +60,26 @@ RT_WY     equ 01AEh
 RT_WR     equ 01B1h
 RT_WINDOW equ 01B4h
 RT_WINRES equ 01B7h
-RT_EMPTY  equ 01BAh             ; byte 0 (stringa vuota)
-RT_NAME   equ 01BBh             ; 16 byte: nome del sorgente (0-terminato)
-RT_DSIZE  equ 01CBh             ; word: byte di dati del programma (scritta dal compilatore)
+RT_VBANK  equ 01BAh
+RT_VFILL  equ 01BDh
+RT_VWRITE equ 01C0h
+RT_VREAD  equ 01C3h
+RT_BASE   equ 01C6h
+RT_VDP    equ 01C9h
+RT_VDPSET equ 01CCh
+RT_STICK  equ 01CFh
+RT_STRIG  equ 01D2h
+RT_SPRCOL equ 01D5h
+RT_SPRCOLS equ 01D8h
+RT_COPY   equ 01DBh
+RT_SETPAGE equ 01DEh
+RT_SCROLL equ 01E1h
+RT_READ   equ 01E4h
+RT_RESTORE equ 01E7h
+RT_LOGOP  equ 01EAh
+RT_EMPTY  equ 01EDh             ; byte 0 (stringa vuota)
+RT_NAME   equ 01EEh             ; 16 byte: nome del sorgente (0-terminato)
+RT_DSIZE  equ 01FEh             ; word: byte di dati del programma (scritta dal compilatore)
 RTRAM     equ 0C100h            ; RAM del runtime (C000h-C086h: caricatore)
 HEAPP     equ RTRAM+0
 HEAP0     equ RTRAM+10
@@ -147,4 +164,9 @@ WDV       equ RTRAM+1B3h
 WREM      equ RTRAM+1B5h
 WCNT      equ RTRAM+1B7h
 WSG       equ RTRAM+1B8h
-DATA_BASE equ 0C2D0h
+UBANK     equ RTRAM+1B9h        ; VBANK: 64 KB della VRAM usati da VPOKE/VPEEK/VFILL/VWRITE/VREAD
+VA16      equ RTRAM+1BAh        ; A16 usato da vram_set
+APAGE     equ RTRAM+1BBh        ; pagina attiva (SET PAGE)
+GOP       equ RTRAM+1BCh        ; operatore logico dei comandi VDP
+DPTR      equ RTRAM+1BDh        ; puntatore DATA/READ
+DATA_BASE equ 0C2E0h

@@ -18,8 +18,11 @@ class Msx:
     def __init__(self, files):
         self.files = dict(files)            # NOME.EXT -> bytes
         self.m = Z80Machine()
-        self.m.set_input_callback(lambda p: 0x00 if (p & 0xFF) in (0x98, 0x99) else 0xFF)
-        self.m.set_output_callback(lambda *a: None)
+        self.vlatch = None
+        self.vptr = 0
+        self.vr14 = 0
+        self.m.set_input_callback(self._in)
+        self.m.set_output_callback(self._out)
         self.m.set_get_int_vector_callback(lambda *a: 0xFF)
         self.dma = 0x80
         self.open = {}
@@ -27,6 +30,30 @@ class Msx:
         self.row = self.col = 0
         self.keys = []
         self.vram = {}
+
+    def _in(self, p):                       # VDP minimo: porta dati a 17 bit
+        p &= 0xFF
+        if p == 0x98:
+            v = self.vram.get(self.vptr, 0)
+            self.vptr += 1
+            return v
+        return 0x00 if p == 0x99 else 0xFF
+
+    def _out(self, p, v):
+        p &= 0xFF
+        if p == 0x98:
+            self.vram[self.vptr] = v
+            self.vptr += 1
+        elif p == 0x99:
+            if self.vlatch is None:
+                self.vlatch = v
+            else:
+                if v & 0x80:
+                    if v & 0x3F == 14:
+                        self.vr14 = self.vlatch & 7
+                else:
+                    self.vptr = (self.vr14 << 14) | ((v & 0x3F) << 8) | self.vlatch
+                self.vlatch = None
 
     def w(self, addr, data):
         for i, b in enumerate(data):

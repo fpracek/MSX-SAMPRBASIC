@@ -1,0 +1,22 @@
+mode 5
+vb 100 77
+vb 0x10064 99
+vb 0x100C8 33
+vb 0x100CC 33
+vb 0x100CD 0
+vb 0x1012C 65
+vb 0x1012D 66
+vb 400 77
+vb 0x10191 99
+vb 402 65
+vb 403 2
+vb 404 0x76
+reg 7 9
+vb 406 9
+vb 407 0
+vb 408 0
+pal 3 7 0 5
+spcol 0 16 9
+vb 0x7410 1
+vb 0x7411 2
+vb 0x7412 3

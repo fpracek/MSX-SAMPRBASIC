@@ -64,5 +64,6 @@ Limiti: sorgente 14 KB, programma 16 KB, 96 etichette, 100 variabili/array, 20 S
 ## Risultati
 `zrun.py` 47/47 (anche con RAM iniziale casuale), `qtest.py` 47/47 (openMSX), `gtest.py` 23/23 (grafica: pixel, palette e testo letti dalla VRAM) (openMSX; INPUT con tasti battuti dal test),
 `../editor/erun.py` 12/12, `ecom.py` 25/25.
-Non ancora supportati: float, sprite, suono, file.
+Grafica per i giochi (stadio 14): `VBANK`, `VPOKE`/`VPEEK` a 17 bit, `VFILL`, `VWRITE`, `VREAD$`, `BASE(n)`, `VDP(n)` / `VDP(n)=v`, `STICK`, `STRIG`, `COLOR=(n,r,g,b)`, `COLOR=RESTORE`, `COLOR SPRITE(n)=c`, `COLOR SPRITE$(n)=colori` (gtest 250 controlli).
+Non ancora supportati: float, suono, file.
 Non provato su MSX reale (disco fisico, Nextor/DOS2).

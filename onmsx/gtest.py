@@ -13,7 +13,7 @@ from qtest import BUILD, DISK, HERE, OPENMSX, DOSDIR, build_all
 
 GTESTS = os.path.join(HERE, 'gtests')
 FAILS = 0
-VRAM_BYTES = 0x10000
+VRAM_BYTES = 0x20000
 
 
 def check(c, m):
@@ -158,6 +158,13 @@ def main():
                 else:
                     lo, hi = int(w[6]), int(w[7])
                     check(lo <= n_ <= hi, f'rettangolo ({x0},{y0})-({x1},{y1}): {n_} pixel di colore {c} (attesi {lo}-{hi})')
+            elif w[0] == 'vb':                          # byte di VRAM (anche 64K-128K)
+                a, want = int(w[1], 0), int(w[2], 0)
+                check(v[a] == want, f'VRAM[{a:05X}] = {v[a]} (atteso {want})')
+            elif w[0] == 'reg':                         # registro del VDP
+                rg = open(os.path.join(BUILD, n + '.reg'), 'rb').read()
+                r_, want = int(w[1]), int(w[2], 0)
+                check(rg[r_] == want, f'R#{r_} = {rg[r_]} (atteso {want})')
             elif w[0] == 'px':
                 x, y = int(w[1]), int(w[2])
                 neg = w[3].startswith('!')
