@@ -30,6 +30,7 @@ def sj(*args):
 
 def build_all():
     sj('--raw=build/ldr.bin', 'ldr.asm')
+    sj('--raw=build/qasm.ovl', 'qasm.asm')
     sj('--raw=build/rt.bin', 'rtcom.asm')
     sj('-DROMMODE', '--raw=build/rtrom.bin', 'rtcom.asm')
     sj('-DDBGRT', '--raw=build/rtd.bin', 'rtcom.asm')
@@ -73,6 +74,7 @@ def run_cases(cases, wait_run=float(os.environ.get('QWAIT', '42'))):
     shutil.copy(os.path.join(BUILD, 'rt.bin'), os.path.join(DISK, 'RT.BIN'))
     shutil.copy(os.path.join(BUILD, 'rtrom.bin'), os.path.join(DISK, 'RTROM.BIN'))
     shutil.copy(os.path.join(BUILD, 'rtd.bin'), os.path.join(DISK, 'RTD.BIN'))
+    shutil.copy(os.path.join(BUILD, 'qasm.ovl'), os.path.join(DISK, 'QASM.OVL'))
     shutil.copy(os.path.join(BUILD, 'rtromd.bin'), os.path.join(DISK, 'RTROMD.BIN'))
     tf = os.path.join(HERE, 'testfiles')              # file di dati per i test (INCBIN)
     if os.path.isdir(tf):

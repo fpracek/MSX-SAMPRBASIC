@@ -612,7 +612,7 @@ err_message:                    ; "Line N: testo" dal codice di errore
         ld a,(errcode)
         or a
         jr z,.gen
-        cp 17
+        cp 21
         jr nc,.gen
         dec a
         add a,a
@@ -634,7 +634,7 @@ err_message:                    ; "Line N: testo" dal codice di errore
         ret
 
 s_line:  db "Line ",0
-errtab:  dw e_1,e_2,e_3,e_4,e_5,e_6,e_7,e_8,e_9,e_10,e_11,e_12,e_13,e_14,e_15,e_16
+errtab:  dw e_1,e_2,e_3,e_4,e_5,e_6,e_7,e_8,e_9,e_10,e_11,e_12,e_13,e_14,e_15,e_16,e_17,e_18,e_19,e_20
 e_gen:   db "Compile error",0
 e_1:     db "Syntax error",0
 e_2:     db "Undefined line number or label",0
@@ -652,6 +652,10 @@ e_13:    db "Not allowed in this OPTION mode",0
 e_14:    db "Type mismatch or array not DIMed",0
 e_15:    db "Out of data memory",0
 e_16:    db "Cannot read RT.BIN (runtime)",0
+e_17:    db "Inline assembler: syntax error or bad operand",0
+e_18:    db "Inline assembler: value or jump out of range",0
+e_19:    db "Inline assembler: duplicate symbol or no __ENDASM",0
+e_20:    db "Cannot read QASM.OVL (inline assembler)",0
 
 ldr_img: INCBIN "../onmsx/build/ldr.bin"
 ldr_size equ $-ldr_img

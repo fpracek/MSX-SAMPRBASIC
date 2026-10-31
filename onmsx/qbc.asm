@@ -4,7 +4,7 @@
 ; Una passata, emissione diretta; HL = accumulatore, operando sinistro sullo stack.
 ; Input: riga di comando " NOME.BAS"  ->  scrive NOME.COM e lo avvia.
 ; Errore: ricarica l'editor con " NOME.BAS E<riga> <codice>".
-; Memoria: codice 0100h-3AFFh, tabelle 3B00h-4AFFh, sorgente 4B00h-7FFFh,
+; Memoria: codice 0100h-3BFFh, tabelle 3C00h-4BFFh, sorgente 4C00h-7FFFh,
 ;          output 8000h-BEFFh (indirizzi virtuali da 0100h: virt = fisico - 7F00h).
 ; =====================================================================
         INCLUDE "rtabi.inc"
@@ -21,8 +21,8 @@ F_BRD   equ 27h
 SRC     equ 4400h               ; il compilatore per cartucce non ha OPTION NUMBERED: le tabelle stanno nella RAM alta
 SRCMAX  equ 3BFEh
         ELSE
-SRC     equ 4B00h
-SRCMAX  equ 34FEh
+SRC     equ 4C00h
+SRCMAX  equ 33FEh
         ENDIF
 OUT0    equ 8000h
         IFDEF ROMMODE
@@ -47,21 +47,21 @@ LDR     equ 0C000h
         IFDEF ROMMODE
 LABT    equ 0CA00h
         ELSE
-LABT    equ 3B00h               ; etichette: 96 x 20 byte
+LABT    equ 3C00h               ; etichette: 96 x 20 byte
         ENDIF
 LABREC  equ 20
 MAXLAB  equ 96
         IFDEF ROMMODE
 VART    equ 0D180h
         ELSE
-VART    equ 4280h               ; variabili/array: 100 x 16 byte
+VART    equ 4380h               ; variabili/array: 100 x 16 byte
         ENDIF
 VARREC  equ 16
 MAXVAR  equ 100
         IFDEF ROMMODE
 BLKS    equ 0D7C0h
         ELSE
-BLKS    equ 48C0h               ; stack dei blocchi: 24 x 10 byte
+BLKS    equ 49C0h               ; stack dei blocchi: 24 x 10 byte
         ENDIF
 BLKREC  equ 10
 MAXBLK  equ 24
@@ -112,18 +112,19 @@ pseg    equ ST+225              ; b  segmento corrente durante la pre-scansione
 nfar    equ ST+226              ; b  voci usate in FARTAB
 romopen equ ST+227              ; b  il file ROM e' gia' stato creato
         IFDEF ROMMODE
-FARTABC equ 3C00h
-SEGT    equ 3C80h
-FCBSV   equ 3CA8h
-FARX    equ 3C94h
+FARTABC equ 4000h
+SEGT    equ 4080h
+FCBSV   equ 40A8h
+FARX    equ 4094h
         ELSE
 FARTABC equ 48C0h               ; FARTAB in costruzione: 32 x 4 byte (banco, 0, indirizzo)
 SEGT    equ 4940h               ; segmento di ogni SUB/FUNCTION (indice nel record)
-FCBSV   equ 4A68h               ; copia dell'FCB di uscita durante INCBIN
+FCBSV   equ 4B68h               ; copia dell'FCB di uscita durante INCBIN
 FARX    equ 4954h               ; indice FARTAB di ogni SUB/FUNCTION (FFh = nessuno)
         ENDIF
 dbgpa   equ ST+217              ; w  operando (fisico) da correggere con l'indirizzo della tabella delle variabili
 dbgf    equ ST+219              ; b  OPTION DEBUG attivo
+asmbase equ ST+60               ; w  inizio del blocco di assembler in linea (indirizzo virtuale)
 usewin  equ ST+216              ; b  il sorgente usa WINDOW: le coordinate grafiche vengono convertite
 nfunc   equ ST+192              ; b
 npart   equ ST+193              ; b
@@ -309,6 +310,7 @@ start:
         IFNDEF ROMMODE
         call chk_rom
         ENDIF
+        call chk_asm
         call compile
         IFDEF ROMMODE
         call rom_finish
@@ -3120,8 +3122,15 @@ line_loop:
         call restore_lex
 .stmt:  ld a,(dbgf)
         or a
-        call nz,emit_dbg
-        call statement
+        jr z,.go
+        ld a,(ttype)
+        cp T_P
+        jr nz,.hk
+        ld a,(tval)
+        cp '#'
+        jr z,.go                ; dentro i blocchi di assembler in linea non si inseriscono ganci
+.hk:    call emit_dbg
+.go:    call statement
         ld a,(ttype)
         or a
         jr z,.line
@@ -3328,10 +3337,14 @@ statement0:
         cp T_P
         jp nz,err_syntax
         ld a,(tval)
+        cp '#'
+        jr z,.asm
         cp '?'
         jp nz,err_syntax
         call next_tok
         jp st_print
+.asm:   call next_tok
+        jp st_asmb
 .kw:    ld a,(tval)
         add a,a
         ld e,a
@@ -3893,15 +3906,133 @@ bi_mid: call next_tok
         ret
 
 ; ---------------------------------------------------------------- istruzioni
-emit_dbg:                       ; OPTION DEBUG: ld hl,<riga> ; call RT_DBG
+emit_dbg:                       ; OPTION DEBUG: push hl ; ld hl,<riga> ; call RT_DBG ; pop hl
+        EM1 0E5h
         ld a,21h
         call emit_a
         ld hl,(tline)
         call emit_w
         EM3 0CDh,low RT_DBG,high RT_DBG
+        EM1 0E1h
         ret
 
 s_debug: db "DEBUG",0
+
+st_asmb:                        ; "# [*] elementi": byte preparati da QASM.OVL (assembler in linea)
+        ld a,'*'
+        call is_p
+        jr nz,.l
+        call get_pc
+        ld (asmbase),hl
+        call next_tok
+.l:     ld a,(ttype)
+        or a
+        ret z
+        cp T_NUM
+        jr z,.num
+        cp T_ID
+        jr z,.var
+        ld a,'+'
+        call is_p
+        jp nz,err_syntax
+        call next_tok           ; +k: inizio del blocco + k
+        ld a,(ttype)
+        cp T_NUM
+        jp nz,err_syntax
+        ld hl,(tval)
+        ld de,(asmbase)
+        add hl,de
+        call emit_w
+        jr .nx
+.num:   ld a,(tval)
+        push af
+        call next_tok
+        ld a,':'
+        call is_p
+        jr nz,.byte
+        call next_tok           ; n:NOME -> n + indirizzo dell'etichetta BASIC
+        ld a,(ttype)
+        cp T_ID
+        jp nz,err_syntax
+        pop af
+        call label_jump
+.nx:    call next_tok
+        jr .sep
+.byte:  pop af
+        call emit_a
+        jr .sep
+.var:   call resolve_var        ; indirizzo di una variabile globale intera o stringa
+        cp 2
+        jp nc,err_type
+        push hl
+        call next_tok
+        pop hl
+        ld a,'+'
+        call is_p
+        jr nz,.vw
+        push hl
+        call next_tok
+        ld a,(ttype)
+        cp T_NUM
+        jp nz,err_syntax
+        ld de,(tval)
+        pop hl
+        add hl,de
+        push hl
+        call next_tok
+        pop hl
+.vw:    call emit_w
+.sep:   ld a,(ttype)
+        or a
+        ret z
+        ld a,','
+        call expect_p
+        jp st_asmb.l
+
+chk_asm:                        ; il sorgente ha "__ASM": QASM.OVL (a 8000h) riscrive i blocchi
+        ld hl,SRC
+.l:     ld a,(hl)
+        or a
+        ret z
+        cp '_'
+        jr nz,.n
+        push hl
+        ld de,s_asmk
+        call match_ci
+        pop hl
+        jr z,.go
+.n:     inc hl
+        jr .l
+.go:    ld hl,s_ovl
+        ld (namep),hl
+        call mk_fcb
+        ld de,fcb
+        ld c,F_OPEN
+        call BDOS
+        or a
+        jr z,.o
+        ld de,0
+        ld (tline),de
+        ERR 20
+.o:     call fcb_rec1
+        ld de,OUT0
+        ld c,F_DMA
+        call BDOS
+        ld de,fcb
+        ld hl,3000h
+        ld c,F_BRD
+        call BDOS
+        ld de,fcb
+        ld c,F_CLOSE
+        call BDOS
+        ld hl,SRC
+        ld bc,SRCMAX
+        call OUT0
+        ret nc
+        ld (tline),de
+        jp error
+s_asmk: db 7Fh,7Fh,"asm",0
+s_ovl:  db "QASM.OVL",0
 
 st_option:
         ld a,(ttype)
