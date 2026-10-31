@@ -1204,6 +1204,8 @@ resolve_var:                    ; tbuf -> A = tipo di riferimento, HL = indirizz
         jr z,.m3
         cp 3
         jr z,.m2
+        cp 4
+        jp nz,err_type          ; parametro array usato come scalare
         ld a,4                  ; parametro stringa
         ret
 .m2:    ld a,2
@@ -1404,7 +1406,59 @@ find_var:                       ; variabile scalare (tbuf) -> HL = indirizzo; vt
         jp new_rec
 
 arr_elem:                       ; tbuf = array, token = nome: emette il calcolo dell'indirizzo dell'elemento in HL
-        call find_rec
+        call find_arrparam
+        jr c,.glob
+        ld a,(tsuf)             ; parametro array: numero elementi a (ix+d), base a (ix+d+2)
+        push hl
+        push af
+        call next_tok
+        ld a,'('
+        call expect_p
+        call expr
+        call want_int
+        ld a,')'
+        call expect_p
+        pop af
+        ld (etype),a
+        pop hl
+        ld c,l
+        ld a,0DDh               ; ld e,(ix+d) ; ld d,(ix+d+1) ; call rt_chk
+        call emit_a
+        ld a,5Eh
+        call emit_a
+        ld a,c
+        call emit_a
+        ld a,0DDh
+        call emit_a
+        ld a,56h
+        call emit_a
+        ld a,c
+        inc a
+        call emit_a
+        EM3 0CDh,low RT_CHK,high RT_CHK
+        ld a,(etype)
+        or a
+        jr nz,.pstr
+        EM1 29h
+        jr .pbase
+.pstr:  EM3 65h,2Eh,0
+.pbase: ld a,0DDh               ; ld e,(ix+d+2) ; ld d,(ix+d+3) ; add hl,de
+        call emit_a
+        ld a,5Eh
+        call emit_a
+        ld a,c
+        add a,2
+        call emit_a
+        ld a,0DDh
+        call emit_a
+        ld a,56h
+        call emit_a
+        ld a,c
+        add a,3
+        call emit_a
+        EM1 19h
+        ret
+.glob:  call find_rec
         jp c,err_type           ; array non dichiarato
         ld de,12
         add hl,de
@@ -2340,9 +2394,9 @@ make_nbuf:                      ; tbuf -> nbuf (testo normale, "CHR$" ecc.)
 
 ; --- funzioni predefinite (il token corrente e' il nome)
 bitab:  db "LEN",0,"ASC",0,"VAL",0,"ABS",0,"SGN",0,"RND",0,"PEEK",0,"CHR$",0,"STR$",0
-        db "LEFT$",0,"RIGHT$",0,"MID$",0,"INKEY$",0,"TIMER",0,"VPEEK",0,"INP",0,0
+        db "LEFT$",0,"RIGHT$",0,"MID$",0,"INKEY$",0,"TIMER",0,"VPEEK",0,"INP",0,"UBOUND",0,0
 bijump: dw bi_len, bi_asc, bi_val, bi_abs, bi_sgn, bi_rnd, bi_peek, bi_chr, bi_str
-        dw bi_left, bi_right, bi_mid, bi_inkey, bi_timer, bi_vpeek, bi_inp
+        dw bi_left, bi_right, bi_mid, bi_inkey, bi_timer, bi_vpeek, bi_inp, bi_ubound
 
 open_paren:
         ld a,'('
@@ -3130,12 +3184,14 @@ st_dim:
 .int:   add hl,hl
         ld b,h
         ld c,l
-.go:    ld hl,nbuf              ; ripristina il nome
+.go:    push de                 ; numero di elementi
+        ld hl,nbuf              ; ripristina il nome
         ld de,tbuf
         push bc
         ld bc,16
         ldir
         pop bc
+        pop de
         pop hl
         call new_rec
         ld a,','
@@ -3254,7 +3310,7 @@ reg_func:                       ; token = SUB/FUNCTION: crea il record con nome 
         call next_tok
 .pl:    ld a,')'
         call is_p
-        jr z,.close
+        jp z,.close
         ld a,(ttype)
         cp T_ID
         jp nz,err_syntax
@@ -3262,7 +3318,16 @@ reg_func:                       ; token = SUB/FUNCTION: crea il record con nome 
         cp MAXPAR
         jr c,.pok
         ERR E_MANY
-.pok:   ld hl,(rf_rec)
+.pok:   call save_lex           ; parametro array: nome seguito da "()"
+        call next_tok
+        ld a,'('
+        call is_p
+        ld a,0
+        jr nz,.na
+        inc a
+.na:    ld (tmpk),a
+        call restore_lex
+        ld hl,(rf_rec)
         ld de,13
         add hl,de
         ld a,(hl)
@@ -3290,13 +3355,57 @@ reg_func:                       ; token = SUB/FUNCTION: crea il record con nome 
         pop bc
         ld a,(tsuf)
         ld (de),a               ; tipo del parametro
+        inc de
+        ld a,(tmpk)
+        ld (de),a               ; +13 = 1 se array
         ld a,(npart)
         inc a
         ld (npart),a
         ld a,(tsuf)
         or a
-        jr z,.nm
-        ld b,c                  ; maschera |= 1 << indice
+        jr z,.nms
+        ld e,21                 ; maschera dei tipi stringa
+        push bc
+        call rf_bit
+        pop bc
+.nms:   ld a,(tmpk)
+        or a
+        jr z,.nma
+        ld e,22                 ; maschera dei parametri array
+        push bc
+        call rf_bit
+        pop bc
+.nma:   ld hl,(rf_rec)          ; parole sullo stack: 1 (scalare) o 2 (array: base e numero elementi)
+        ld de,23
+        add hl,de
+        ld a,(tmpk)
+        inc a
+        add a,(hl)
+        ld (hl),a
+.nm:    call next_tok
+        ld a,(tmpk)
+        or a
+        jr z,.nn
+        ld a,'('
+        call is_p
+        jp nz,err_syntax
+        call next_tok
+        ld a,')'
+        call is_p
+        jp nz,err_syntax
+        call next_tok
+.nn:    ld a,','
+        call is_p
+        jp nz,.pl
+        call next_tok
+        jp .pl
+.close: call next_tok
+.done:  ret
+err_dup2:
+        ERR E_DUP
+
+rf_bit:                         ; C = indice, E = scostamento nel record: imposta il bit
+        ld b,c
         ld a,1
         inc b
 .sh:    dec b
@@ -3305,21 +3414,27 @@ reg_func:                       ; token = SUB/FUNCTION: crea il record con nome 
         jr .sh
 .sd:    ld c,a
         ld hl,(rf_rec)
-        ld de,21
+        ld d,0
         add hl,de
         ld a,(hl)
         or c
         ld (hl),a
-.nm:    call next_tok
-        ld a,','
-        call is_p
-        jr nz,.pl
-        call next_tok
-        jr .pl
-.close: call next_tok
-.done:  ret
-err_dup2:
-        ERR E_DUP
+        ret
+
+ca_bit:                         ; DE = scostamento di una maschera nel record -> A = bit dell'argomento corrente
+        ld hl,(ca_rec)
+        add hl,de
+        ld b,(hl)
+        ld a,(ca_i)
+        ld c,a
+        ld a,b
+        inc c
+.s:     dec c
+        jr z,.d
+        rrca
+        jr .s
+.d:     and 1
+        ret
 
 emit_args:                      ; HL = record; legge gli argomenti (anche fra parentesi) ed emette i push; ritorna HL = record
         ld de,(ca_rec)
@@ -3344,34 +3459,29 @@ emit_args:                      ; HL = record; legge gli argomenti (anche fra pa
         add hl,de
         ld a,(ca_i)
         cp (hl)
-        jr nc,.done
+        jp nc,.done
         or a
         jr z,.first
         ld a,','
         call expect_p
-.first: call expr
-        ld hl,(ca_rec)
+.first: ld de,22
+        call ca_bit
+        or a
+        jr z,.sc
+        call emit_arrarg        ; parametro array: nome (con o senza "()")
+        jr .nx
+.sc:    call expr
         ld de,21
-        add hl,de
-        ld b,(hl)               ; maschera dei tipi
-        ld a,(ca_i)
-        ld c,a
-        ld a,b
-        inc c
-.sh:    dec c
-        jr z,.sd
-        rrca
-        jr .sh
-.sd:    and 1
+        call ca_bit
         ld b,a
         ld a,(etype)
         cp b
         jp nz,err_type
         EM1 0E5h                ; push hl
-        ld a,(ca_i)
+.nx:    ld a,(ca_i)
         inc a
         ld (ca_i),a
-        jr .l
+        jp .l
 .done:  ld a,(ca_paren)
         or a
         jr z,.np
@@ -3385,6 +3495,124 @@ emit_args:                      ; HL = record; legge gli argomenti (anche fra pa
         ld (ca_i),a
         pop de
         ld (ca_rec),de
+        ret
+
+emit_arrarg:                    ; argomento array: emette push base ; push numero elementi
+        ld a,(ttype)
+        cp T_ID
+        jp nz,err_syntax
+        ld de,21
+        call ca_bit
+        ld b,a
+        ld a,(tsuf)
+        cp b
+        jp nz,err_type          ; tipo degli elementi diverso da quello del parametro
+        call find_arrparam
+        jr c,.glob
+        ld c,l                  ; array parametro di questa funzione: copia la coppia dal frame
+        ld a,0DDh
+        call emit_a
+        ld a,6Eh
+        call emit_a
+        ld a,c
+        add a,2
+        call emit_a
+        ld a,0DDh
+        call emit_a
+        ld a,66h
+        call emit_a
+        ld a,c
+        add a,3
+        call emit_a
+        EM1 0E5h                ; push base
+        ld a,0DDh
+        call emit_a
+        ld a,6Eh
+        call emit_a
+        ld a,c
+        call emit_a
+        ld a,0DDh
+        call emit_a
+        ld a,66h
+        call emit_a
+        ld a,c
+        inc a
+        call emit_a
+        EM1 0E5h                ; push numero elementi
+        jr .end
+.glob:  call find_rec
+        jp c,err_type
+        ld de,12
+        add hl,de
+        ld e,(hl)
+        inc hl
+        ld d,(hl)
+        inc hl
+        ld c,(hl)
+        inc hl
+        ld b,(hl)
+        ld a,b
+        or c
+        jp z,err_type           ; non e' un array
+        ld a,b
+        and c
+        inc a
+        jp z,err_type           ; e' una CONST
+        push bc
+        ex de,hl
+        ld a,21h                ; ld hl,base ; push hl
+        push hl
+        call emit_a
+        pop hl
+        call emit_w
+        EM1 0E5h
+        pop hl
+        ld a,21h                ; ld hl,numero ; push hl
+        push hl
+        call emit_a
+        pop hl
+        call emit_w
+        EM1 0E5h
+.end:   call next_tok           ; nome
+        ld a,'('
+        call is_p
+        ret nz
+        call next_tok
+        ld a,')'
+        jp expect_p
+
+find_arrparam:                  ; tbuf = nome: NC se e' un parametro array della funzione corrente (A = tipo, HL = scostamento)
+        ld hl,(fcur)
+        ld a,h
+        or l
+        jr z,.no
+        ld a,(nloc)
+        or a
+        jr z,.no
+        ld b,a
+        ld hl,LOCT
+.l:     call name_eq
+        jr z,.f
+        ld de,16
+        add hl,de
+        djnz .l
+.no:    scf
+        ret
+.f:     ld de,12
+        add hl,de
+        ld a,(hl)
+        cp 5
+        jr c,.no
+        cp 7
+        jr nc,.no
+        push af
+        inc hl
+        ld e,(hl)
+        inc hl
+        ld d,(hl)
+        ex de,hl
+        pop af
+        or a
         ret
 
 emit_callrec:                   ; HL = record: call della routine (o catena di fixup se non ancora definita)
@@ -3407,9 +3635,9 @@ emit_callrec:                   ; HL = record: call della routine (o catena di f
 
 emit_cleanup:                   ; HL = record: toglie gli argomenti dallo stack (preserva HL del programma)
         push hl
-        ld de,13
+        ld de,23
         add hl,de
-        ld a,(hl)
+        ld a,(hl)               ; parole sullo stack
         pop hl
         or a
         ret z
@@ -3525,16 +3753,18 @@ begin_func:                     ; token = nome; C = 1 SUB / 2 FUNCTION
         EM2 39h,0F9h
         call emit_i             ; salva heapp: ld hl,(heapp) ; ld (ix-2),l ; ld (ix-1),h
         db 9,2Ah,low HEAPP,high HEAPP,0DDh,75h,0FEh,0DDh,74h,0FFh
-        ; parametri come variabili: tipo 3 (intero) / 4 (stringa), scostamento 4 + 2*(n-1-i)
+        ; parametri come variabili: tipo 3 (intero) / 4 (stringa) / 5, 6 (array di interi / stringhe)
         ld hl,(fcur)
         ld de,13
         add hl,de
         ld a,(hl)
         or a
         jr z,.np
-        ld b,a                  ; B = n
-        ld c,0                  ; C = i
-.pl:    push bc
+        ld c,a                  ; C = indice (si scende dall'ultimo: il primo argomento e' il piu' profondo)
+        ld hl,4
+        ld (tmps),hl            ; scostamento corrente
+.pl:    dec c
+        push bc
         ld hl,(fcur)
         ld de,14
         add hl,de
@@ -3555,32 +3785,29 @@ begin_func:                     ; token = nome; C = 1 SUB / 2 FUNCTION
         pop hl
         ld de,12
         add hl,de
-        ld a,(hl)               ; tipo (0 int / 1 str)
-        pop bc
-        push bc
-        ld hl,tbuf+11
+        ld b,(hl)               ; tipo (0 int / 1 str)
+        inc hl
+        ld a,(hl)               ; 1 = array
         or a
-        jr z,.ti
-        ld (hl),'$'
-        ld a,4
-        jr .td
-.ti:    ld a,3
-.td:    ld e,b                  ; scostamento = 4 + 2*(n-1-i)
-        dec e
-        ld d,a
-        ld a,e
-        sub c
-        add a,a
-        add a,4
-        ld e,a
-        ld a,d
-        ld d,0
+        ld a,3
+        jr z,.k
+        ld a,5
+.k:     add a,b
+        ld (tmpk),a
+        ld de,(tmps)
         call loct_add
+        ld a,(tmpk)
+        ld de,2
+        cp 5
+        jr c,.s1
+        ld de,4
+.s1:    ld hl,(tmps)
+        add hl,de
+        ld (tmps),hl
         pop bc
-        inc c
         ld a,c
-        cp b
-        jr c,.pl
+        or a
+        jr nz,.pl
 .np:    ld hl,(fcur)            ; variabile risultato delle FUNCTION
         ld de,12
         add hl,de
@@ -4093,6 +4320,55 @@ st_color:
         db 6,3Ah,low 0F3EAh,high 0F3EAh,6Fh,26h,0
 .go:    EM1 0D1h
         EM3 0CDh,low RT_COLOR,high RT_COLOR
+        ret
+
+bi_ubound:                      ; UBOUND(array): massimo indice (anche per un parametro array)
+        call next_tok
+        call open_paren
+        ld a,(ttype)
+        cp T_ID
+        jp nz,err_syntax
+        call find_arrparam
+        jr c,.glob
+        ld c,l                  ; ld l,(ix+d) ; ld h,(ix+d+1) ; dec hl
+        ld a,0DDh
+        call emit_a
+        ld a,6Eh
+        call emit_a
+        ld a,c
+        call emit_a
+        ld a,0DDh
+        call emit_a
+        ld a,66h
+        call emit_a
+        ld a,c
+        inc a
+        call emit_a
+        EM1 2Bh
+        jr .done
+.glob:  call find_rec
+        jp c,err_type
+        ld de,14
+        add hl,de
+        ld e,(hl)
+        inc hl
+        ld d,(hl)
+        ld a,d
+        or e
+        jp z,err_type
+        ld a,d
+        and e
+        inc a
+        jp z,err_type
+        dec de
+        ld a,21h
+        call emit_a
+        ex de,hl
+        call emit_w
+.done:  call next_tok
+        call close_paren
+        xor a
+        ld (etype),a
         ret
 
 bi_vpeek:

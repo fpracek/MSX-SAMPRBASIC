@@ -20,7 +20,7 @@ a 0080h come mailbox (`" NOME.BAS"`, in caso di errore `" NOME.BAS E<riga> <codi
 - `qtests/` — q1..q3 (IF a blocchi, cicli, operatori, hex/bin, LOCATE) ed e1..e5 (codici di errore).
 - Test dell'editor con F5: `../editor/erun.py`.
 
-## Linguaggio (stadi 1, 2a, 2b e 2c)
+## Linguaggio (stadi 1, 2a, 2b, 2c e 2d)
 Interi 16 bit e stringhe (max 255). `PRINT` (`;` `,` `?`), assegnamenti (`LET` opzionale), `IF/THEN/ELSE` su riga,
 `IF/ELSEIF/ELSE/END IF`, `FOR/NEXT` (STEP costante, anche negativo), `WHILE/WEND`, `GOTO/GOSUB/RETURN`, `CLS`,
 `LOCATE r,c`, `END`, `REM` e `'`, `INPUT ["testo";|,] var` (intera o stringa), `DIM a(n), b$(m)` (array di interi e di
@@ -34,6 +34,10 @@ Funzioni: `LEN ASC VAL ABS SGN RND PEEK TIMER CHR$ STR$ LEFT$ RIGHT$ MID$ INKEY$
 `CASE 4 TO 6`, `CASE IS >= 7`, `CASE ELSE`).
 Frame IX: parametri sullo stack (il primo piu' in profondita'), salvataggio di heapp in (ix-2), 29 interi locali, 256 byte per
 ogni stringa locale; i temporanei delle stringhe si liberano a fine istruzione fino al valore salvato all'ingresso.
+**Array come parametri**: nella firma `SUB f(a(), n)` / `FUNCTION g$(s$())`, nella chiamata `f v(), 6` o `g$(w$())`;
+l'array passa per riferimento (base e numero di elementi: due parole sullo stack), si puo' leggere e scrivere `a(i)` con
+controllo dei limiti, si puo' ripassare ad altre routine, e `UBOUND(a)` da' il massimo indice (anche per array globali).
+Il tipo degli elementi deve coincidere; un array parametro usato senza indice e' un errore di tipo.
 `CONST nome = [-]numero {, ...}` (usabile in espressioni e come dimensione di `DIM`; assegnarla e' un errore),
 `COLOR fg[, bg]`, `RANDOMIZE n`, `SLEEP frame`, `STOP`, `VPOKE addr, v` / `VPEEK(addr)` (VRAM 0-16383 via BIOS),
 `OUT porta, v` / `INP(porta)`.
@@ -49,7 +53,7 @@ Limiti: sorgente 16 KB, programma 16 KB, 96 etichette, 100 variabili/array, 20 S
 · 9 programma troppo grande · 10 sorgente troppo grande · 11 lettura · 12 scrittura · 13 non ammesso con l'OPTION scelta · 14 tipi incompatibili o array non dichiarato · 15 dati del programma troppo grandi.
 
 ## Risultati
-`zrun.py` 31/31 (anche con RAM iniziale casuale), `qtest.py` 31/31 (openMSX; INPUT con tasti battuti dal test),
+`zrun.py` 36/36 (anche con RAM iniziale casuale), `qtest.py` 36/36 (openMSX; INPUT con tasti battuti dal test),
 `../editor/erun.py` 12/12, `ecom.py` 25/25.
-Non ancora supportati: `SELECT CASE` su stringhe, array come parametri, float, grafica (SCREEN/LINE/PSET), suono, file.
+Non ancora supportati: `SELECT CASE` su stringhe, float, grafica (SCREEN/LINE/PSET), suono, file.
 Non provato su MSX reale (disco fisico, Nextor/DOS2).

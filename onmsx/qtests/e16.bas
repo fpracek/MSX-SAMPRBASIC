@@ -1,0 +1,3 @@
+SUB f(a())
+PRINT a
+END SUB

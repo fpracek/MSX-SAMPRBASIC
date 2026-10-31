@@ -184,8 +184,8 @@ rt_fatal:
         call rt_pstr
         jp rt_end
 
-msg_oom: db 19,"Out of string space"
-msg_sub: db 22,"Subscript out of range"
+msg_oom: db 26,"Error: Out of string space"
+msg_sub: db 29,"Error: Subscript out of range"
 
 msg_div: db 24,"Error: Division by zero"
 msg_press: db 15,"Press any key..."
