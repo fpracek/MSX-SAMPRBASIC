@@ -45,21 +45,34 @@ TV      equ 20                  ; celle di binario verticale (righe 2..21)
 TH      equ 77                  ; celle di binario orizzontale (colonne 1..77)
 MAXCOL  equ 254
 HMAX    equ MAXCOL-VCOLS+1      ; massimo scroll orizzontale (176)
+KWCOL   equ 0B4h               ; parole chiave: giallo chiaro su blu
+KWBLINK equ 010h               ; R#13
 MPAD    equ 12                  ; GTPAD: 12 = mouse porta 1 (16 = porta 2)
 
         IFDEF COM
-BUF     equ 2A00h               ; gap buffer: 2A00h-BFFFh (TPA, pagine 0-2)
-UNDO    equ RAMB+0400h          ; registro di annullamento: C400h-CFFFh
-UNDOSZ  equ 0C00h
+BUF     equ 3300h               ; gap buffer: 3300h-BFFFh (TPA, pagine 0-2)
+UNDO    equ RAMB+0440h          ; registro di annullamento: C440h-CFFFh
+UNDOSZ  equ 0BC0h
 CLIP    equ UNDO+UNDOSZ         ; clipboard: D000h fino a (0006h)-0300h
         ELSE
-BUF     equ RAMB+0400h          ; gap buffer (fino a bufend)
+BUF     equ RAMB+0440h          ; gap buffer (fino a bufend)
 UNDO    equ 0DE00h              ; registro di annullamento di 2 KB (solo build ROM)
 UNDOSZ  equ 0800h
 CLIP    equ 0E600h              ; clipboard di 2.5 KB (solo build ROM)
         ENDIF
 
 ; ---- RAM
+kwf     equ RAMB+0400h              ; 10 byte: flag di colore della riga (un bit per colonna)
+kwword  equ RAMB+040Ah              ; 16 byte: parola in esame (maiuscola)
+kwptr   equ RAMB+041Ah              ; w
+kwq     equ RAMB+041Ch              ; b  dentro una stringa tra virgolette
+kwlen   equ RAMB+041Dh              ; b
+kwcol   equ RAMB+041Eh              ; b
+curch   equ RAMB+041Fh              ; b  carattere sotto il cursore
+cph     equ RAMB+0420h              ; b  fase del cursore (1 = visibile)
+blcnt   equ RAMB+0421h              ; b  contatore di quadri
+curdr   equ RAMB+0422h              ; b  il glifo del cursore e' disegnato
+kwnext  equ RAMB+0423h              ; b  prossima riga schermo (0..) da colorare nei tempi morti (VROWS = fatto)
 cur     equ RAMB+0000h              ; w  offset logico del cursore
 len     equ RAMB+0002h              ; w  lunghezza del testo
 gs      equ RAMB+0004h              ; w  inizio gap (offset logico)
@@ -239,10 +252,17 @@ start:
         ld (dirty),a
         call refresh
 main:   halt
+        ld hl,blcnt
+        inc (hl)
+        ld a,(hl)
+        and 1Fh
+        call z,cur_blink
         call mouse_poll
         BIOS CHSNS
-        jr z,main
-        BIOS CHGET
+        jr nz,.key
+        call kw_idle
+        jr main
+.key:   BIOS CHGET
         call handle_key
         jr main
 
@@ -287,11 +307,11 @@ vdp_init:
         out (VDPC),a
         ld a,87h
         out (VDPC),a
-        ld a,04Fh               ; R#12: colori di blink (blu su bianco)
+        ld a,KWCOL              ; R#12: colori alternativi (parole chiave)
         out (VDPC),a
         ld a,8Ch
         out (VDPC),a
-        ld a,055h               ; R#13: periodi di blink
+        ld a,KWBLINK            ; R#13: nessuna alternanza, i caratteri flaggati restano nel colore alternativo
         out (VDPC),a
         ld a,8Dh
         out (VDPC),a
@@ -378,6 +398,7 @@ gl_write:                       ; HL = 8 byte, DE = indirizzo VRAM, A = maschera
         djnz .l
         ret
 
+        INCLUDE "kwtab.inc"
 glyphs: db 000h,000h,030h,078h,0FCh,000h,000h,000h     ; 1 freccia su
         db 000h,000h,0FCh,078h,030h,000h,000h,000h     ; 2 freccia giu
         db 000h,00Ch,01Ch,03Ch,07Ch,03Ch,01Ch,00Ch     ; 3 freccia sinistra
@@ -400,6 +421,13 @@ blink_clear:
         djnz .l
         ld a,0FFh
         ld (blx),a
+        xor a
+        ld (curdr),a
+        ld (blcnt),a
+        inc a
+        ld (cph),a
+        ld a,VROWS
+        ld (kwnext),a
         ret
 
 cell_addr:                      ; D = riga, E = colonna -> HL; clobbera D, BC
@@ -3120,8 +3148,14 @@ refresh:
         call ptr_hide
         ld a,(dirty)
         and 1
-        call nz,redraw_text
+        jr z,.nr
+        xor a                   ; il ridisegno del testo cancella il cursore disegnato
+        ld (curdr),a
+        call redraw_text
+.nr:    ld a,1
+        ld (cph),a
         xor a
+        ld (blcnt),a
         ld (dirty),a
         call draw_vbar
         call draw_hbar
@@ -3299,7 +3333,7 @@ redraw_text:
         ld (rrow),a
         cp VROWS
         jr nz,.row
-        ret
+        jp kw_reset
 
 vthumb_idx:                     ; -> A = posizione del pollice (0..TV-1)
         ld hl,(nlines)
@@ -3462,18 +3496,29 @@ s_title: db "SamPr Basic",0
 s_ln:   db "Ln ",0
 s_col:  db "  Col ",0
 
-cursor_show:
-        ld a,(blx)
-        cp 0FFh
+cur_blink:                      ; ogni 32 quadri: il cursore appare/scompare
+        ld a,(cph)
+        xor 1
+        ld (cph),a
+        call ptr_hide
+        call cursor_show
+        jp ptr_show
+
+cursor_show:                    ; il cursore e' il glifo inverso (bit 7) della cella; (blx, bly) = cella del cursore
+        ld a,(curdr)
+        or a
         jr z,.nc
+        ld a,(blx)
         ld e,a
         ld a,(bly)
         ld d,a
-        ld c,0
-        call blink_op
-        ld a,0FFh
+        ld a,(curch)
+        call put_cell
+        xor a
+        ld (curdr),a
+.nc:    ld a,0FFh
         ld (blx),a
-.nc:    ld a,(menuopen)
+        ld a,(menuopen)
         or a
         ret nz                  ; con il menu aperto il cursore non si mostra
         call cur_col
@@ -3506,8 +3551,275 @@ cursor_show:
         ld (blx),a
         ld a,d
         ld (bly),a
-        ld c,1
-        jp blink_op
+        ld a,(cph)
+        or a
+        ret z
+        call get_cell
+        ld (curch),a
+        or 80h
+        call put_cell
+        ld a,1
+        ld (curdr),a
+        ret
+
+kw_isw:                         ; A -> CF = 1 se e' 0-9 A-Z a-z _ $
+        cp '$'
+        jr z,.y
+        cp '_'
+        jr z,.y
+        cp '0'
+        jr c,.n
+        cp '9'+1
+        jr c,.y
+        and 0DFh
+        cp 'A'
+        jr c,.n
+        cp 'Z'+1
+        jr c,.y
+.n:     or a
+        ret
+.y:     scf
+        ret
+
+kw_up:                          ; A -> maiuscola (senza bit 7)
+        and 7Fh
+        cp 'a'
+        ret c
+        cp '{'
+        ret nc
+        sub 20h
+        ret
+
+kw_find:                        ; HL = parola, C = lunghezza (2..10) -> Z se e' una parola chiave (HL conservato)
+        ld a,(hl)
+        call kw_up
+        cp '_'
+        jr nz,.l
+        ld a,26
+        jr .ix
+.l:     sub 'A'
+        jr c,.no
+        cp 26
+        jr nc,.no
+.ix:    ld e,a                  ; indice = iniziale * 9 + (lunghezza - 2)
+        ld d,0
+        push hl
+        ld h,d
+        ld l,e
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,de
+        ld a,c
+        sub 2
+        ld e,a
+        add hl,de
+        add hl,hl
+        ld de,kwidx
+        add hl,de
+        ld e,(hl)
+        inc hl
+        ld d,(hl)
+        push de
+        pop ix                  ; IX = parole di quella lunghezza che iniziano con la lettera
+        pop hl
+.e:     ld a,(ix+0)
+        or a
+        jr z,.no
+        push hl
+        ld b,c
+.c:     ld a,(hl)
+        call kw_up
+        cp (ix+0)
+        jr nz,.mm
+        inc hl
+        inc ix
+        djnz .c
+        pop hl
+        xor a
+        ret
+.mm:    pop hl                  ; IX dentro la voce: B caratteri (compreso questo) restano da saltare
+        push bc
+        ld c,b
+        ld b,0
+        add ix,bc
+        pop bc
+        jr .e
+.no:    or 1
+        ret
+
+kw_mark:                        ; flag per le colonne KWCOL .. KWCOL+KWLEN-1
+        ld a,(kwcol)
+        ld b,a
+        ld a,(kwlen)
+        ld c,a
+.m:     ld a,b
+        rrca
+        rrca
+        rrca
+        and 1Fh
+        ld e,a
+        ld d,0
+        ld hl,kwf
+        add hl,de
+        ld a,b
+        and 7
+        ld e,a
+        ld a,80h
+        inc e
+        dec e
+        jr z,.nm
+.sh:    srl a
+        dec e
+        jr nz,.sh
+.nm:    or (hl)
+        ld (hl),a
+        inc b
+        dec c
+        jr nz,.m
+        ret
+
+kw_scan:                        ; ROWBUF (VCOLS caratteri) -> flag di colore delle parole chiave in KWF
+        ld hl,kwf
+        ld de,kwf+1
+        ld (hl),0
+        ld bc,9
+        ldir
+        xor a
+        ld (rowbuf+VCOLS),a     ; sentinella (classe 4): la scansione non esce dalla riga
+        ld (kwq),a
+        ld hl,rowbuf-1
+        ld d,high kwcls
+.nx:    inc hl
+        ld e,(hl)
+        ld a,(de)
+        or a
+        jr z,.nx
+        cp 1
+        jr z,.word
+        cp 2
+        jr z,.quote
+        cp 3
+        jr nz,.out              ; sentinella
+        jr .out                 ; apostrofo: commento fino a fine riga
+.quote: ld a,(kwq)
+        xor 1
+        ld (kwq),a
+        jr .nx
+.word:  ld (kwptr),hl
+        ld c,0
+.wl:    inc hl
+        inc c
+        ld e,(hl)
+        ld a,(de)
+        cp 1
+        jr z,.wl
+        dec hl                  ; HL = ultimo carattere della parola
+        ld a,(kwq)
+        or a
+        jr nz,.nx               ; dentro una stringa: nessuna parola chiave
+        ld a,c
+        cp 2
+        jr c,.nx                ; una sola lettera
+        cp 11
+        jr nc,.nx               ; troppo lunga
+        push hl
+        ld hl,(kwptr)
+        ld a,(hl)
+        and 7Fh
+        cp 40h
+        jr c,.nokw              ; comincia con una cifra
+        call kw_find
+        jr nz,.nokw
+        ld a,l                  ; colonna = KWPTR - ROWBUF
+        sub low rowbuf
+        ld (kwcol),a
+        ld a,c
+        ld (kwlen),a
+        call kw_mark
+        ld a,(kwlen)
+        cp 3
+        jr nz,.nokw
+        ld hl,(kwptr)           ; REM: il resto della riga e' commento
+        ld a,(hl)
+        call kw_up
+        cp 'R'
+        jr nz,.nokw
+        inc hl
+        ld a,(hl)
+        call kw_up
+        cp 'E'
+        jr nz,.nokw
+        inc hl
+        ld a,(hl)
+        call kw_up
+        cp 'M'
+        jr nz,.nokw
+        pop hl
+        jr .out
+.nokw:  pop hl
+        ld d,high kwcls
+        jp .nx
+.out:   ret
+
+kw_put:                         ; A = riga schermo (1..22): KWF -> tabella di blink
+        ld l,a
+        ld h,0
+        ld d,h
+        ld e,l
+        add hl,hl
+        add hl,hl
+        add hl,de
+        add hl,hl               ; riga * 10
+        ld de,BLKT
+        add hl,de
+        call vsetw
+        ld hl,kwf
+        ld b,10
+        ld c,VDPD
+        otir
+        ret
+
+kw_reset:                       ; testo ridisegnato: i colori si azzerano e si ricalcolano nei tempi morti
+        ld hl,BLKT+10
+        call vsetw
+        ld b,220
+        xor a
+.z:     out (VDPD),a
+        djnz .z
+        ld (kwnext),a
+        ret
+
+kw_idle:                        ; nessun tasto in attesa: colora fino a 2 righe leggendole dalla VRAM
+        ld a,(menuopen)
+        or a
+        ret nz
+        ld a,(kwnext)
+        cp VROWS
+        ret nc
+        call kw_do1
+        ld a,(kwnext)
+        cp VROWS
+        ret nc
+kw_do1:
+        ld a,(kwnext)
+        inc a
+        ld d,a                  ; riga schermo 1..22
+        ld e,0
+        push de
+        call cell_addr
+        call vsetr
+        ld hl,rowbuf
+        ld b,VCOLS
+        ld c,VDPD
+        inir
+        call kw_scan
+        pop de
+        ld a,d
+        call kw_put
+        ld hl,kwnext
+        inc (hl)
+        ret
 
 ; ---------------------------------------------------------------- mouse
 mouse_init:

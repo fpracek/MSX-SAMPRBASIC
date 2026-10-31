@@ -123,6 +123,7 @@ def main():
     sc.dump('c10_big')
     chord(sc, *CTRL_Q, gap=1.0)
     sc.t += 1.0
+    sc.do('set ::nopatch 1', 0.1)        # l'editor e' uscito: la sua RAM non vale piu'
     sc.dump('c11_exit')
 
     tcl = os.path.join(BUILD, 'ecom.tcl')

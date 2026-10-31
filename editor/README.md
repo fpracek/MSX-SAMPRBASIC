@@ -8,7 +8,8 @@ ricostruisce PNG dalla VRAM salvata in `build\*.png`).
 Riga 0 titolo (inverso, `Ln riga/totale  Col n`) · righe 1-22 testo (colonne 0-78) ·
 colonna 79 barra verticale (▲ binario ▼) · riga 23 barra orizzontale (◄ binario ►).
 Video inverso = caratteri 128-255 (copie negate del font BIOS), glifi 1-5 ridefiniti,
-cursore = bit di blink hardware del VDP (R#12/R#13), puntatore del mouse = XOR 80h sulla cella.
+cursore = glifo inverso (bit 7) della cella con lampeggio a software (32 quadri), puntatore del mouse = XOR 80h sulla cella;
+la tabella di blink del VDP (R#12/R#13, 10 byte per riga) serve ai colori delle parole chiave (vedi sotto).
 
 ## Tastiera
 Frecce, Home, SELECT (= Fine), Ctrl+P / Ctrl+N (pagina su/giù), Invio, BS, DEL, TAB (a 4),
@@ -77,7 +78,7 @@ Test: `python emenu.py` (build ROM, 34 controlli); `ecom.py` prova anche File > 
 - **Voci**: File: New, Open..., Save, Save As..., Exit · Edit: Cut, Copy, Paste, Delete, Select all · Help: Shortcuts, About.
   Nella build ROM (senza DOS) le voci di File mostrano «No disk access in this build».
 - **Disegno**: riquadro in video inverso con cornice di glifi propri (codici 6-12: linee e angoli, con le copie inverse a 134-140);
-  con il menu aperto il cursore a blink è nascosto; alla chiusura o al cambio di menu il testo sotto viene ridisegnato.
+  con il menu aperto il cursore è nascosto; alla chiusura o al cambio di menu il testo sotto viene ridisegnato.
 - **File > New** chiede conferma se ci sono modifiche (stesso meccanismo di Open/Exit: si ripete il comando).
 - Non fatto: separatori e voci disattivate (grigie), sottomenu, menu View/Search, Alt/GRAPH per aprire i menu.
 
@@ -122,7 +123,7 @@ Tutte le suite: `etest` 41 · `esel` 30 · `emenu` 34 · `esrch` 34 · `eundo` 4
 - I test girano ora con `set renderer none` (nessuna finestra di openMSX): prima la finestra si apriva in primo piano ad ogni prova
   e sembrava ricevere tasti veri della tastiera del PC (comparivano ripetizioni di una sola lettera nei prompt o nel testo,
   circa 2 volte su 40). Senza finestra: 0 fallimenti in 60 + 140 esecuzioni.
-- Il `.COM` ora ha il buffer testo a 2800h-BFFFh (~38 KB); `ed.com` è 8,9 KB.
+- Il `.COM` ora ha il buffer testo a 3300h-BFFFh (~35 KB); `ed.com` è 12,4 KB.
 
 
 ## Run (F5) — collegamento al compilatore
@@ -132,3 +133,15 @@ In caso di errore l'editor riparte con il cursore sulla riga e il messaggio `Lin
 F5 e' un tasto funzione MSX: all'avvio l'editor imposta la stringa di F5 a un solo byte (15h) e lo gestisce come comando.
 Il file deve chiamarsi `QB.COM` sul disco (il compilatore lo ricarica per nome). Vedi `../onmsx/README.md`.
 Test: `python erun.py` (usa `../onmsx/qbc.asm`).
+
+## Colori delle parole chiave (stadio 24)
+Le parole chiave del BASIC (istruzioni, funzioni, `REM`, `__ASM`/`__ENDASM`, `TARGET`...: 143 parole, tabella generata da `gen_kw.py`
+a partire da `../onmsx/qbc.asm`) appaiono in giallo chiaro su blu, il resto in bianco. Nello SCREEN 0 a 80 colonne i colori sono solo due
+(R#7 e R#12), ma la tabella di blink assegna a ogni cella uno dei due: con R#13 = 10h le celle col bit acceso restano sempre nel colore di R#12
+(KWCOL = 0B4h). Regole (stesse del modello Python di `ekw.py`): parole di 2-10 caratteri fatte di lettere, cifre, `_` e `$`, non fra virgolette
+e non iniziate da una cifra; un apostrofo o `REM` fanno finire la colorazione sulla riga; maiuscole e minuscole sono equivalenti.
+Il calcolo non rallenta la digitazione: dopo ogni ridisegno i colori si azzerano e si ricalcolano nei tempi morti (due righe per quadro,
+leggendo il testo dalla VRAM), quindi appaiono una frazione di secondo dopo il testo; con un tasto in attesa non si calcola nulla.
+Il cursore, che prima usava il blink hardware, ora e' il glifo inverso della cella (stesso lampeggio: 32 quadri).
+Test: `python ekw.py` (il modello Python confronta i flag di tutte le 22 righe, anche dopo lo scorrimento); gli altri test leggono la cella del cursore
+da `blx`/`bly`/`curch`. Attenzione: la build ROM dei test (con il testo demo) ha ora solo ~90 byte liberi nei 16 KB.

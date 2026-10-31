@@ -16,7 +16,7 @@ MACHINE = 'Philips_NMS_8250'
 BUILD = os.path.join(HERE, 'build')
 
 VARS = ['cur', 'len', 'gs', 'gsz', 'top', 'topline', 'curline', 'nlines', 'hscroll',
-        'wantcol', 'mpx', 'mpy', 'mcx', 'mcy', 'mdrag', 'mshown', 'mmode', 'selanc', 'cliplen', 'menuopen', 'menusel', 'mcase']
+        'wantcol', 'mpx', 'mpy', 'mcx', 'mcy', 'mdrag', 'mshown', 'mmode', 'selanc', 'cliplen', 'menuopen', 'menusel', 'mcase', 'blx', 'bly', 'curch', 'cph', 'curdr']
 
 
 def demo_lines():
@@ -60,6 +60,15 @@ proc dump {name} {
     set f [open "$OUTDIR/$name.txt" w]
     set data [debug read_block VRAM 0 1920]
     binary scan $data c* bytes
+    set cbx [debug read memory [dict get $VARADDR blx]]
+    set cby [debug read memory [dict get $VARADDR bly]]
+    if {$cbx < 80 && $cby < 24 && ![info exists ::nopatch]} {
+        if {[debug read memory [dict get $VARADDR curdr]] != 0} {
+            set cch [debug read memory [dict get $VARADDR curch]]
+            lset bytes [expr {$cby * 80 + $cbx}] $cch
+        }
+        puts $f "CURSOR $cby $cbx"
+    }
     set row ""; set n 0; set r 0
     foreach b $bytes {
         set b [expr {$b & 255}]
@@ -158,18 +167,18 @@ def render(name):
     """ricostruisce lo schermo (SCREEN 0 W80, 6x8 px, blink = inverso) dalla VRAM salvata"""
     from PIL import Image
     v = open(os.path.join(BUILD, name + '.vram'), 'rb').read()
-    FG, BG = (255, 255, 255), (36, 36, 170)
+    FG, BG, KW = (255, 255, 255), (36, 36, 170), (255, 255, 120)
     img = Image.new('RGB', (480, 192), BG)
     px = img.load()
     for r in range(24):
         for c in range(80):
             ch = v[r * 80 + c]
-            blink = v[0x800 + r * 10 + (c >> 3)] & (0x80 >> (c & 7))
+            alt = v[0x800 + r * 10 + (c >> 3)] & (0x80 >> (c & 7))
             pat = v[0x1000 + ch * 8: 0x1000 + ch * 8 + 8]
             for y in range(8):
                 for x in range(6):
-                    on = bool(pat[y] & (0x80 >> x)) != bool(blink)
-                    px[c * 6 + x, r * 8 + y] = FG if on else BG
+                    on = bool(pat[y] & (0x80 >> x))
+                    px[c * 6 + x, r * 8 + y] = (KW if alt else FG) if on else BG
     img.resize((960, 384), Image.NEAREST).save(os.path.join(BUILD, name + '.png'))
 
 
@@ -181,9 +190,10 @@ def load(name):
             rows[int(p[1])] = p[2]
         elif p[0] == 'VAR':
             vs[p[1]] = int(p[2])
-        elif p[0] == 'BLINK':
+        elif p[0] == 'CURSOR':
             q = ln.split()
-            bl.append((int(q[1]), int(q[2]), int(q[3])))
+            r_, c_ = int(q[1]), int(q[2])
+            bl.append((r_, (c_ // 8) * 8, 0x80 >> (c_ % 8)))
     return rows, vs, bl
 
 
