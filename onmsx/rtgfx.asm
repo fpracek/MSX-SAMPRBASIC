@@ -60,11 +60,27 @@ rt_screen:                      ; HL = modo 0..8 (CHGMOD del BIOS), 10..12 solo 
         ld (APLO),hl
         ld (APHI),hl
         ld (VA16),hl
-        push ix
+        cp 10
+        jr c,.n1
+        ld a,8                  ; SCREEN 10-12: come lo SCREEN 8, poi R#25 abilita YJK (V9958)
+.n1:    push ix
         ld ix,CHGMOD
         call rt_bios
         pop ix
         ld a,(SCRREAL)
+        cp 10
+        jr c,.cm
+        cp 12
+        ld a,08h                ; SCREEN 12: YJK
+        jr z,.y
+        ld a,18h                ; SCREEN 10-11: YJK + YAE
+.y:     ld (0FFFAh),a           ; RG25SAV
+        di
+        out (VDPC),a
+        ld a,80h+25
+        out (VDPC),a
+        ei
+.cm:    ld a,(SCRREAL)
         cp 4
         jr z,.m2
         cp 3

@@ -94,12 +94,13 @@ def run_cases(names, wait=50.0):
         p = os.path.join(BUILD, n + '.vram')
         if os.path.exists(p):
             os.remove(p)
-    subprocess.run([OPENMSX, '-machine', 'Philips_NMS_8250', '-diska', DISK, '-script', tcl], timeout=1500)
+    subprocess.run([OPENMSX, '-machine', os.environ.get('GMACHINE', 'Philips_NMS_8250'), '-diska', DISK, '-script', tcl], timeout=1500)
 
 
 def main():
     build_all()
-    names = sys.argv[1:] or sorted(f[:-4] for f in os.listdir(GTESTS) if f.endswith('.bas'))
+    plus = 'GMACHINE' in os.environ              # i test p*.bas servono un MSX2+ (es. Panasonic_FS-A1ST)
+    names = sys.argv[1:] or sorted(f[:-4] for f in os.listdir(GTESTS) if f.endswith('.bas') and (plus or not f.startswith('p')))
     run_cases(names)
     for n in names:
         print('---', n)
