@@ -31,7 +31,17 @@ heap0   equ HEAP0
 numbuf  equ RTRAM+12
 inbuf   equ RTRAM+20
 
-        ORG 0100h
+        IFDEF ROMMODE
+        ORG 4000h
+        db "AB"
+        dw rom_init
+        dw 0,0,0
+        ds 6,0
+        INCLUDE "rtrominit.asm"
+        ASSERT $ <= RTB
+        ds RTB-$,0
+        ENDIF
+        ORG RTB
         jp rt_start
         jp rt_pstr
         jp rt_pint
@@ -130,6 +140,8 @@ rt_name: ds 16
 rt_dsize: dw 0
         ASSERT $ == RT_DATA0
 rt_data0: dw 0
+        ASSERT $ == RT_TARGET
+rt_target: db 0
 
 rt_bios:
         ld iy,(EXPTBL-1)
@@ -138,7 +150,11 @@ rt_bios:
         ret
 
 rt_start:
+        IFDEF ROMMODE
+        ld hl,(0FC4Ah)          ; HIMEM
+        ELSE
         ld hl,(0006h)
+        ENDIF
         ld sp,hl
         ld a,80
         ld (LINL40),a
@@ -166,7 +182,11 @@ rt_start:
         add hl,de
         ld (heapp),hl
         ld (heap0),hl
+        IFDEF ROMMODE
+        ld hl,(0FC4Ah)
+        ELSE
         ld hl,(0006h)
+        ENDIF
         ld de,-0400h
         add hl,de
         ld (heapend),hl
@@ -352,6 +372,9 @@ rt_end:
         ld ix,CHGET
         call rt_bios
         pop ix
+        IFDEF ROMMODE
+        jp 0                    ; cartuccia: dopo un tasto si riavvia la macchina
+        ELSE
         ld hl,rt_name           ; riga di comando per l'editor: " NOME.BAS"
         ld de,0082h
         ld bc,16
@@ -375,6 +398,7 @@ rt_end:
         ld bc,ldr_size
         ldir
         jp 0C000h
+        ENDIF
 
 rt_zone:                    ; virgola nel PRINT: prossima zona da 14
 .l:     ld a,' '
@@ -1021,8 +1045,12 @@ rt_nyi: ret                 ; voci riservate per i prossimi stadi
         INCLUDE "rtwin.asm"
         INCLUDE "rtvram.asm"
         INCLUDE "rtsnd.asm"
+        IFDEF ROMMODE
+        INCLUDE "rtrom.asm"
+        ELSE
         INCLUDE "rtfile.asm"
 
 ldr_img: INCBIN "build/ldr.bin"
 ldr_size equ $-ldr_img
+        ENDIF
 rt_prog:

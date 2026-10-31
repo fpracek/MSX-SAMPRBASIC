@@ -31,7 +31,9 @@ def sj(*args):
 def build_all():
     sj('--raw=build/ldr.bin', 'ldr.asm')
     sj('--raw=build/rt.bin', 'rtcom.asm')
+    sj('-DROMMODE', '--raw=build/rtrom.bin', 'rtcom.asm')
     sj('--sym=build/qbc.sym', 'qbc.asm')
+    sj('-DROMMODE', '--sym=build/qbcr.sym', 'qbc.asm')
     sj('--raw=build/qbstub.com', 'qbstub.asm')
 
 
@@ -67,6 +69,8 @@ def run_cases(cases, wait_run=float(os.environ.get('QWAIT', '28'))):
     shutil.copy(os.path.join(BUILD, 'qbc.com'), os.path.join(DISK, 'QBC.COM'))
     shutil.copy(os.path.join(BUILD, 'qbstub.com'), os.path.join(DISK, 'QB.COM'))
     shutil.copy(os.path.join(BUILD, 'rt.bin'), os.path.join(DISK, 'RT.BIN'))
+    shutil.copy(os.path.join(BUILD, 'rtrom.bin'), os.path.join(DISK, 'RTROM.BIN'))
+    shutil.copy(os.path.join(BUILD, 'qbcr.com'), os.path.join(DISK, 'QBCR.COM'))
     lines = [TCL, 'set OUTDIR "%s"' % BUILD.replace(chr(92), '/')]
     t = 20.0
     for name, src in cases:

@@ -4,7 +4,7 @@
 ; Una passata, emissione diretta; HL = accumulatore, operando sinistro sullo stack.
 ; Input: riga di comando " NOME.BAS"  ->  scrive NOME.COM e lo avvia.
 ; Errore: ricarica l'editor con " NOME.BAS E<riga> <codice>".
-; Memoria: codice 0100h-33FFh, tabelle 3400h-42FFh, sorgente 4400h-7FFFh,
+; Memoria: codice 0100h-37FFh, tabelle 3800h-46FFh, sorgente 4800h-7FFFh,
 ;          output 8000h-BEFFh (indirizzi virtuali da 0100h: virt = fisico - 7F00h).
 ; =====================================================================
         INCLUDE "rtabi.inc"
@@ -17,20 +17,24 @@ F_DMA   equ 1Ah
 F_BWR   equ 26h
 F_BRD   equ 27h
 
-SRC     equ 4400h
-SRCMAX  equ 3BFEh
+SRC     equ 4800h
+SRCMAX  equ 37FEh
 OUT0    equ 8000h
-VOFF    equ 7F00h
+        IFDEF ROMMODE
+IMGBASE equ 4000h               ; indirizzo virtuale dell'inizio dell'immagine (cartuccia in pagina 1)
+        ELSE
+IMGBASE equ 0100h
+        ENDIF
 OUTLIM  equ 0BFh                ; alto byte: oltre BF00h il programma e' troppo grande
 LDR     equ 0C000h
 
-LABT    equ 3400h               ; etichette: 96 x 20 byte
+LABT    equ 3800h               ; etichette: 96 x 20 byte
 LABREC  equ 20
 MAXLAB  equ 96
-VART    equ 3B80h               ; variabili/array: 100 x 16 byte
+VART    equ 3F80h               ; variabili/array: 100 x 16 byte
 VARREC  equ 16
 MAXVAR  equ 100
-BLKS    equ 4210h               ; stack dei blocchi: 24 x 10 byte
+BLKS    equ 45C0h               ; stack dei blocchi: 24 x 10 byte
 BLKREC  equ 10
 MAXBLK  equ 24
 
@@ -72,6 +76,9 @@ dlim    equ ST+168              ; w  limite dell'area dati
 nbuf    equ ST+170              ; 16 byte: nome normalizzato (per le funzioni predefinite)
 vtyp    equ ST+186              ; b  tipo dell'ultima variabile cercata
 fi_s    equ ST+188              ; w
+voff    equ ST+220              ; w  fisico - virtuale (cambia con il segmento)
+outlim  equ ST+222              ; b  alto byte oltre il quale l'output e' troppo grande
+target  equ ST+223              ; b  tipo di cartuccia (0 COM)
 usewin  equ ST+216              ; b  il sorgente usa WINDOW: le coordinate grafiche vengono convertite
 nfunc   equ ST+192              ; b
 npart   equ ST+193              ; b
@@ -239,8 +246,14 @@ start:
         ld sp,hl
         call getname
         call read_source
+        IFNDEF ROMMODE
+        call chk_rom
+        ENDIF
         call compile
         call write_output
+        IFDEF ROMMODE
+        jp rom_done
+        ENDIF
         ; avvia il programma: copia il caricatore a C000h e usa ldr_copy
         ld hl,ldr_img
         ld de,LDR
@@ -498,7 +511,11 @@ load_rt:                        ; RT.BIN -> OUT0 (immagine del runtime); outp = 
         add hl,de
         ld (outp),hl
         ret
+        IFDEF ROMMODE
+s_rtbin: db "RTROM.BIN",0
+        ELSE
 s_rtbin: db "RT.BIN",0
+        ENDIF
 
 write_output:                   ; NOME.COM <- immagine
         ld hl,fname
@@ -512,7 +529,11 @@ write_output:                   ; NOME.COM <- immagine
         inc hl
         inc de
         jr .c
-.x:     ld hl,s_com
+.x:     IFDEF ROMMODE
+        ld hl,s_rom
+        ELSE
+        ld hl,s_com
+        ENDIF
         ld bc,5
         ldir
         ld hl,oname
@@ -540,14 +561,64 @@ write_output:                   ; NOME.COM <- immagine
         ld de,fcb
         ld c,F_BWR
         call BDOS
-        push af
+        or a
+        jr nz,.err
+        IFDEF ROMMODE
+        call rom_pad
+        ENDIF
         ld de,fcb
         ld c,F_CLOSE
         call BDOS
-        pop af
-        or a
-        jr nz,.err
         ret
+        IFDEF ROMMODE
+rom_pad:                        ; riempie con zeri fino a 16 KB (ROM16) o 32 KB (le altre)
+        ld hl,16384
+        ld a,(target)
+        cp 1
+        jr z,.t
+        ld hl,32768
+.t:     ex de,hl
+        ld hl,(outp)
+        push de
+        ld de,-OUT0
+        add hl,de
+        pop de
+        ex de,hl                ; HL = totale, DE = scritto
+        or a
+        sbc hl,de
+        jr c,.big               ; l'immagine supera la dimensione scelta
+        ld (tmpv),hl            ; HL = riempimento
+        ld hl,OUT0
+        ld de,OUT0+1
+        ld bc,16383
+        ld (hl),0
+        ldir
+.z:     ld hl,(tmpv)
+        ld a,h
+        or l
+        ret z
+        ld de,16384
+        or a
+        sbc hl,de
+        jr c,.last
+        ld (tmpv),hl
+        ld hl,16384
+        jr .w
+.last:  ld hl,(tmpv)
+        ld de,0
+        ld (tmpv),de
+.w:     ld de,fcb
+        ld c,F_BWR
+        call BDOS
+        or a
+        jr z,.z
+        ld hl,0
+        ld (tline),hl
+        ERR E_WRITE
+.big:   ld hl,0
+        ld (tline),hl
+        ERR E_BIG
+        ENDIF
 s_com:  db ".COM",0
 
 ; ---------------------------------------------------------------- emissione
@@ -558,7 +629,8 @@ emit_a:                         ; A -> output (clobbera solo A)
         inc hl
         ld (outp),hl
         ld a,h
-        cp OUTLIM
+        ld hl,outlim
+        cp (hl)
         jp nc,err_big
         pop hl
         ret
@@ -589,8 +661,9 @@ emit_i:                         ; byte inline: db n, b1..bn  (dopo la call)
 
 get_pc:                         ; HL = indirizzo virtuale corrente (clobbera DE)
         ld hl,(outp)
-        ld de,-VOFF
-        add hl,de
+        ld de,(voff)
+        or a
+        sbc hl,de
         ret
 
 emit_jchain:                    ; A = opcode, HL = &testa: jp con operando = catena di fixup
@@ -633,7 +706,7 @@ patch_chain:                    ; HL = &testa: tutti i salti della catena puntan
 .l:     ld a,h
         or l
         ret z
-        ld bc,VOFF
+        ld bc,(voff)
         add hl,bc
         ld c,(hl)
         ld (hl),e
@@ -1650,14 +1723,24 @@ compile:
         ld (tmpf),a
         ld (etype),a
         ld (usewin),a
+        ld (target),a
+        ld hl,OUT0-IMGBASE
+        ld (voff),hl
+        ld a,OUTLIM
+        ld (outlim),a
+        xor a
         ld h,a
         ld l,a
         ld (dlast),hl
         ld hl,DATA_BASE
         ld (dptr),hl
+        IFDEF ROMMODE
+        ld hl,0DC00h
+        ELSE
         ld hl,(0006h)
         ld de,-0C00h
         add hl,de
+        ENDIF
         ld (dlim),hl
         ld (nfunc),a
         ld (npart),a
@@ -1677,7 +1760,7 @@ compile:
         xor a
         ld (iseof),a
         ld hl,fname             ; nome del sorgente nell'immagine (per il ritorno all'editor)
-        ld de,OUT0+(RT_NAME-0100h)
+        ld de,OUT0+(RT_NAME-IMGBASE)
         ld bc,16
         ldir
         call next_tok
@@ -1699,10 +1782,28 @@ compile:
         call str_eq
         ld a,2
         jr z,.setm
+        IFDEF ROMMODE
+        ld hl,tbuf
+        ld de,s_target
+        call str_eq
+        jr nz,.ropt
+        call next_tok
+        call parse_target
+        ENDIF
 .ropt:  xor a
 .setm:  ld (mode),a
         call restore_lex
-.nopt:  ld a,(mode)
+.nopt:
+        IFDEF ROMMODE
+        ld a,(target)
+        or a
+        jr nz,.tok
+        ld a,2                  ; senza OPTION TARGET: ROM32
+        ld (target),a
+        ld (OUT0+(RT_TARGET-IMGBASE)),a
+.tok:
+        ENDIF
+        ld a,(mode)
         cp 1
         jr nz,.plain
         call sort_lines         ; NUMBERED: le righe si compilano in ordine di numero
@@ -1794,10 +1895,153 @@ compile:
 .fin:   ld hl,(dptr)             ; dimensione dei dati nell'immagine del runtime
         ld de,-DATA_BASE
         add hl,de
-        ld (OUT0+(RT_DSIZE-0100h)),hl
+        ld (OUT0+(RT_DSIZE-IMGBASE)),hl
         ld hl,RT_END
         ld a,0C3h
         jp emit_jabs
+
+
+        IFDEF ROMMODE
+s_target: db "TARGET",0
+tgtnames: db "ROM16",0,1,"ROM32",0,2,"ASCII8",0,3,"ASCII16",0,4,"KONAMI",0,5,"SCC",0,6,0
+
+parse_target:                   ; token = nome del tipo di cartuccia
+        ld a,(ttype)
+        cp T_ID
+        jp nz,err_syntax
+        ld de,tgtnames
+.nx:    ld a,(de)
+        or a
+        jp z,err_syntax
+        push de
+        ld hl,tbuf
+        call str_eq
+        jr z,.hit
+        pop de
+.sk:    ld a,(de)
+        inc de
+        or a
+        jr nz,.sk
+        inc de
+        jr .nx
+.hit:   pop hl
+        inc de
+        ld a,(de)
+        ld (target),a
+        ld (OUT0+(RT_TARGET-IMGBASE)),a
+        ret
+
+s_rom:  db ".ROM",0
+msg_romw: db 13,10,"ROM written: $"
+msg_romk: db 13,10,"Press any key...$"
+
+rom_done:                       ; messaggio, attesa di un tasto e ritorno all'editor
+        ld de,msg_romw
+        ld c,9
+        call BDOS
+        ld hl,oname
+.p:     ld a,(hl)
+        or a
+        jr z,.pd
+        push hl
+        ld e,a
+        ld c,2
+        call BDOS
+        pop hl
+        inc hl
+        jr .p
+.pd:    ld de,msg_romk
+        ld c,9
+        call BDOS
+        ld c,1
+        call BDOS
+        ld de,0081h
+        ld a,' '
+        ld (de),a
+        inc de
+        ld hl,fname
+.n:     ld a,(hl)
+        or a
+        jr z,.e
+        ld (de),a
+        inc hl
+        inc de
+        jr .n
+.e:     ld a,0Dh
+        ld (de),a
+        inc de
+        ld hl,0081h
+        ex de,hl
+        or a
+        sbc hl,de
+        ld a,l
+        ld (0080h),a
+        ld hl,ldr_img
+        ld de,LDR
+        ld bc,ldr_size
+        ldir
+        jp LDR
+        ENDIF
+
+        IFNDEF ROMMODE
+chk_rom:                        ; il sorgente ha "OPTION TARGET <cartuccia>": si passa al compilatore per cartucce
+        ld hl,SRC
+.l:     ld a,(hl)
+        or a
+        ret z
+        or 20h
+        cp 'o'
+        jr nz,.n
+        push hl
+        ld de,s_optionl
+        call match_ci
+        jr nz,.f
+        call skip_sp
+        ld de,s_targetl
+        call match_ci
+        jr nz,.f
+        call skip_sp
+        ld a,(hl)
+        or 20h
+        cp 'c'
+        jr z,.f                 ; TARGET COM: compilazione normale
+        pop hl
+        ld hl,ldr_img           ; carica QBCR.COM con la stessa riga di comando
+        ld de,LDR
+        ld bc,ldr_size
+        ldir
+        ld hl,s_qbcr
+        ld de,LDR+3
+        ld bc,11
+        ldir
+        jp LDR
+.f:     pop hl
+.n:     inc hl
+        jr .l
+match_ci:                       ; HL = testo, DE = modello minuscolo 0-terminato: Z se coincide (HL avanza)
+.m:     ld a,(de)
+        or a
+        ret z
+        ld b,a
+        ld a,(hl)
+        or 20h
+        cp b
+        ret nz
+        inc hl
+        inc de
+        jr .m
+skip_sp:
+.s:     ld a,(hl)
+        cp ' '
+        jr z,.a
+        cp 9
+        ret nz
+.a:     inc hl
+        jr .s
+s_optionl: db "option",0
+s_targetl: db "target",0
+s_qbcr: db "QBCR    COM"
+        ENDIF
 
 str_eq:                         ; HL = tbuf, DE = stringa 0-terminata: Z se uguali
 .l:     ld a,(de)
@@ -4804,14 +5048,14 @@ st_data:                        ; DATA elementi: blocco nel codice (jp oltre, el
         inc hl
         inc hl
         inc hl
-        ld (OUT0+(RT_DATA0-0100h)),hl
+        ld (OUT0+(RT_DATA0-IMGBASE)),hl
         jr .it
 .lk:    pop de
         push de
         inc de
         inc de
         inc de
-        ld bc,7F00h
+        ld bc,(voff)
         add hl,bc
         ld (hl),e
         inc hl
@@ -4881,7 +5125,7 @@ st_data:                        ; DATA elementi: blocco nel codice (jp oltre, el
         pop de
         inc de
         ex de,hl
-        ld bc,7F00h
+        ld bc,(voff)
         add hl,bc
         ld (hl),e
         inc hl
@@ -5777,4 +6021,8 @@ ldr_img: INCBIN "build/ldr.bin"
 ldr_size equ $-ldr_img
 comend:
         ASSERT comend < LABT
+        IFDEF ROMMODE
+        SAVEBIN "build/qbcr.com",0100h,comend-0100h
+        ELSE
         SAVEBIN "build/qbc.com",0100h,comend-0100h
+        ENDIF
