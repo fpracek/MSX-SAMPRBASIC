@@ -72,6 +72,7 @@ dlim    equ ST+168              ; w  limite dell'area dati
 nbuf    equ ST+170              ; 16 byte: nome normalizzato (per le funzioni predefinite)
 vtyp    equ ST+186              ; b  tipo dell'ultima variabile cercata
 fi_s    equ ST+188              ; w
+usewin  equ ST+216              ; b  il sorgente usa WINDOW: le coordinate grafiche vengono convertite
 nfunc   equ ST+192              ; b
 npart   equ ST+193              ; b
 nloc    equ ST+194              ; b
@@ -162,6 +163,7 @@ K_SPRITE equ 54
 K_GET   equ 55
 K_DRAW  equ 56
 K_VIEW  equ 57
+K_WINDOW equ 58
 
 B_IF    equ 1
 B_FOR   equ 2
@@ -975,7 +977,7 @@ kwtab:  db "PRINT",0,"IF",0,"THEN",0,"ELSE",0,"ELSEIF",0,"END",0,"FOR",0,"TO",0
         db "CLS",0,"LOCATE",0,"AND",0,"OR",0,"XOR",0,"NOT",0,"MOD",0,"LET",0
         db "OPTION",0,"INPUT",0,"DIM",0,"POKE",0,"SUB",0,"FUNCTION",0,"CALL",0,"DECLARE",0,"SHARED",0
         db "EXIT",0,"DO",0,"LOOP",0,"UNTIL",0,"SELECT",0,"CASE",0,"IS",0,"CONST",0,"COLOR",0,"RANDOMIZE",0,"VPOKE",0,"OUT",0,"SLEEP",0,"STOP",0,"SCREEN",0,"PSET",0,"PRESET",0,"LINE",0,"CIRCLE",0
-        db "PALETTE",0,"PAINT",0,"PUT",0,"SPRITE",0,"GET",0,"DRAW",0,"VIEW",0,0
+        db "PALETTE",0,"PAINT",0,"PUT",0,"SPRITE",0,"GET",0,"DRAW",0,"VIEW",0,"WINDOW",0,0
 
 ; ---------------------------------------------------------------- helper del parser
 is_p:                           ; A = carattere: Z se il token e' quella punteggiatura
@@ -1631,6 +1633,7 @@ compile:
         ld (mode),a
         ld (tmpf),a
         ld (etype),a
+        ld (usewin),a
         ld hl,DATA_BASE
         ld (dptr),hl
         ld hl,(0006h)
@@ -2054,7 +2057,7 @@ kwjump: dw st_print, st_if, err_syntax, st_else, st_elseif, st_end, st_for, err_
         dw st_input, st_dim, st_poke, st_sub, st_function, st_call, st_skip, st_shared
         dw st_exit, st_do, st_loop, err_syntax, st_select, st_case, err_syntax
         dw st_const, st_color, st_randomize, st_vpoke, st_out, st_sleep, st_stop
-        dw st_screen, st_pset, st_preset, st_line, st_circle, st_palette, st_paint, st_put, err_syntax, st_get, st_draw, st_view
+        dw st_screen, st_pset, st_preset, st_line, st_circle, st_palette, st_paint, st_put, err_syntax, st_get, st_draw, st_view, st_window
 
 ; ---------------------------------------------------------------- espressioni
 want_int:
@@ -3306,7 +3309,14 @@ prescan:                        ; registra le firme di SUB/FUNCTION di tutto il 
 .skip:  ld a,(ttype)
         or a
         jr z,.t
-        call next_tok
+        cp T_KW
+        jr nz,.adv
+        ld a,(tval)
+        cp K_WINDOW
+        jr nz,.adv
+        ld a,1
+        ld (usewin),a           ; il programma usa WINDOW
+.adv:   call next_tok
         jr .skip
 
 reg_func:                       ; token = SUB/FUNCTION: crea il record con nome e parametri
@@ -4483,7 +4493,41 @@ emit_st:                        ; HL = indirizzo: emette ld (nn),hl
         pop hl
         jp emit_w
 
-emit_xy:                        ; "(x, y)": valuta e memorizza in (DE) e (BC)
+emit_xy:                        ; "(x, y)" con conversione WINDOW (se il sorgente la usa): in (DE) e (BC)
+        push de
+        push bc
+        call emit_xy_raw
+        pop bc
+        pop de
+        ld a,(usewin)
+        or a
+        ret z
+        push bc
+        ld h,d
+        ld l,e
+        ld de,RT_WX
+        call emit_map
+        pop hl
+        ld de,RT_WY
+        jp emit_map
+
+emit_map:                       ; HL = &variabile, DE = routine: emette ld hl,(var) ; call routine ; ld (var),hl
+        ld (tmpv),hl
+        ld (tmps),de
+        ld a,2Ah
+        call emit_a
+        ld hl,(tmpv)
+        call emit_w
+        ld a,0CDh
+        call emit_a
+        ld hl,(tmps)
+        call emit_w
+        ld a,22h
+        call emit_a
+        ld hl,(tmpv)
+        jp emit_w
+
+emit_xy_raw:                    ; "(x, y)" senza conversione: valuta e memorizza in (DE) e (BC)
         push bc
         push de
         ld a,'('
@@ -4555,7 +4599,13 @@ st_circle:                      ; CIRCLE (x,y), r[, colore[, inizio[, fine[, asp
         call want_int
         ld hl,GX2
         call emit_st
-        call emit_defcol
+        ld a,(usewin)
+        or a
+        jr z,.nw
+        ld hl,GX2
+        ld de,RT_WR
+        call emit_map
+.nw:    call emit_defcol
         call emit_i             ; inizio = 0, fine = 360, aspetto = 100, GFLG = 0
         db 22,21h,0,0,22h,low GY2,high GY2,21h,68h,1,22h,low CEND,high CEND,21h,64h,0,22h,low CASP,high CASP,0AFh,32h,low GFLG,high GFLG
         ld a,','
@@ -4764,13 +4814,45 @@ st_view:                        ; VIEW (x1,y1)-(x2,y2)  oppure  VIEW (finestra =
         ret
 .args:  ld de,GX1
         ld bc,GY1
-        call emit_xy
+        call emit_xy_raw
         ld a,'-'
         call expect_p
         ld de,GX2
         ld bc,GY2
-        call emit_xy
+        call emit_xy_raw
         EM3 0CDh,low RT_VIEW,high RT_VIEW
+        ret
+
+st_window:                      ; WINDOW [SCREEN] (x1,y1)-(x2,y2)  oppure  WINDOW (coordinate = pixel)
+        call at_send
+        jr nz,.args
+        EM3 0CDh,low RT_WINRES,high RT_WINRES
+        ret
+.args:  ld c,0                  ; 1 con SCREEN: asse y verso il basso
+        ld a,K_SCREEN
+        call is_kw
+        jr nz,.n1
+        ld c,1
+        push bc
+        call next_tok
+        pop bc
+.n1:    ld a,3Eh                ; ld a,n ; ld (GFLG),a
+        call emit_a
+        ld a,c
+        call emit_a
+        ld a,32h
+        call emit_a
+        ld hl,GFLG
+        call emit_w
+        ld de,GX1
+        ld bc,GY1
+        call emit_xy_raw
+        ld a,'-'
+        call expect_p
+        ld de,GX2
+        ld bc,GY2
+        call emit_xy_raw
+        EM3 0CDh,low RT_WINDOW,high RT_WINDOW
         ret
 
 st_draw:                        ; DRAW "comandi"
@@ -4820,7 +4902,7 @@ st_put:                         ; PUT SPRITE piano, (x,y)[, colore[, pattern]]  
         call expect_p
         ld de,GX2
         ld bc,GY2
-        call emit_xy
+        call emit_xy_raw
         call emit_defcol
         call emit_i             ; pattern = -1 (come il numero del piano)
         db 6,21h,0FFh,0FFh,22h,low GY1,high GY1
@@ -4890,7 +4972,16 @@ bi_point:                       ; POINT(x, y) -> colore (-1 fuori dallo schermo)
         ld hl,GY1
         call emit_st
         call close_paren
-        EM3 0CDh,low RT_GPOINT,high RT_GPOINT
+        ld a,(usewin)
+        or a
+        jr z,.nw
+        ld hl,GX1
+        ld de,RT_WX
+        call emit_map
+        ld hl,GY1
+        ld de,RT_WY
+        call emit_map
+.nw:    EM3 0CDh,low RT_GPOINT,high RT_GPOINT
         xor a
         ld (etype),a
         ret

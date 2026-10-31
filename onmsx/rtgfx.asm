@@ -44,11 +44,17 @@ rt_screen:                      ; HL = modo 0..8 (CHGMOD del BIOS)
         ld (LINLEN),a
         xor a
 .go:    ld (SCRMODE),a
+        ld (SCRREAL),a
         push ix
         ld ix,CHGMOD
         call rt_bios
         pop ix
-        ld a,(SCRMODE)
+        ld a,(SCRREAL)
+        cp 4
+        jr nz,.nm
+        ld a,2                  ; SCREEN 4 ha lo stesso layout (pattern + colori) dello SCREEN 2
+        ld (SCRMODE),a
+.nm:    ld a,(SCRMODE)
         cp 2
         jr z,.g
         cp 5

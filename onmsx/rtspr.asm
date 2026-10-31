@@ -8,7 +8,7 @@ RG6SAV  equ 0F3E5h
 RG11SAV equ 0FFEAh
 
 spr_attr:                       ; -> HL = tabella degli attributi (negli schermi 5-8 la tabella dei colori sta 200h prima)
-        ld a,(SCRMODE)
+        ld a,(SCRREAL)
         cp 4
         jr nc,.reg
         cp 2
@@ -33,7 +33,7 @@ spr_attr:                       ; -> HL = tabella degli attributi (negli schermi
         ret
 
 spr_gen:                        ; -> DE = generatore dei pattern
-        ld a,(SCRMODE)
+        ld a,(SCRREAL)
         cp 4
         jr nc,.reg
         cp 2
@@ -200,7 +200,7 @@ rt_sprput:                      ; GX1 = piano (0-31), GX2 = x, GY2 = y, GCOL = c
         out (VDPD),a
         ld a,(S2)
         out (VDPD),a
-        ld a,(SCRMODE)
+        ld a,(SCRREAL)
         cp 4
         jr nc,.m2
         ld a,(S3)               ; modo sprite 1: il colore (con EC) e' nell'attributo

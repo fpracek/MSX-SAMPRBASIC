@@ -89,6 +89,11 @@ inbuf   equ RTRAM+20
         jp rt_coll
         jp rt_view
         jp rt_viewr
+        jp rt_wx
+        jp rt_wy
+        jp rt_wr
+        jp rt_window
+        jp rt_winres
         ASSERT $ == RT_EMPTY
 rt_empty: db 0
         ASSERT $ == RT_NAME
@@ -961,6 +966,7 @@ rt_vpoke:                   ; DE = indirizzo VRAM (0-16383), HL = valore
         INCLUDE "rtspr.asm"
         INCLUDE "rtgx.asm"
         INCLUDE "rtcirc.asm"
+        INCLUDE "rtwin.asm"
 
 ldr_img: INCBIN "build/ldr.bin"
 ldr_size equ $-ldr_img

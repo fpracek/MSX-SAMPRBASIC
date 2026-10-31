@@ -62,7 +62,7 @@ Limiti: sorgente 14 KB, programma 16 KB, 96 etichette, 100 variabili/array, 20 S
 · 9 programma troppo grande · 10 sorgente troppo grande · 11 lettura · 12 scrittura · 13 non ammesso con l'OPTION scelta · 14 tipi incompatibili o array non dichiarato · 15 dati del programma troppo grandi.
 
 ## Risultati
-`zrun.py` 47/47 (anche con RAM iniziale casuale), `qtest.py` 47/47 (openMSX), `gtest.py` 20/20 (grafica: pixel, palette e testo letti dalla VRAM) (openMSX; INPUT con tasti battuti dal test),
+`zrun.py` 47/47 (anche con RAM iniziale casuale), `qtest.py` 47/47 (openMSX), `gtest.py` 23/23 (grafica: pixel, palette e testo letti dalla VRAM) (openMSX; INPUT con tasti battuti dal test),
 `../editor/erun.py` 12/12, `ecom.py` 25/25.
 Non ancora supportati: float, sprite, suono, file.
 Non provato su MSX reale (disco fisico, Nextor/DOS2).

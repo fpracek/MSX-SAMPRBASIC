@@ -55,9 +55,14 @@ RT_DRAW   equ 019Fh
 RT_COLL   equ 01A2h
 RT_VIEW   equ 01A5h
 RT_VIEWR  equ 01A8h
-RT_EMPTY  equ 01ABh             ; byte 0 (stringa vuota)
-RT_NAME   equ 01ACh             ; 16 byte: nome del sorgente (0-terminato)
-RT_DSIZE  equ 01BCh             ; word: byte di dati del programma (scritta dal compilatore)
+RT_WX     equ 01ABh
+RT_WY     equ 01AEh
+RT_WR     equ 01B1h
+RT_WINDOW equ 01B4h
+RT_WINRES equ 01B7h
+RT_EMPTY  equ 01BAh             ; byte 0 (stringa vuota)
+RT_NAME   equ 01BBh             ; 16 byte: nome del sorgente (0-terminato)
+RT_DSIZE  equ 01CBh             ; word: byte di dati del programma (scritta dal compilatore)
 RTRAM     equ 0C100h            ; RAM del runtime (C000h-C086h: caricatore)
 HEAPP     equ RTRAM+0
 HEAP0     equ RTRAM+10
@@ -127,4 +132,19 @@ VX2       equ RTRAM+196h
 VY2       equ RTRAM+198h
 VXW       equ RTRAM+19Ah
 VYH       equ RTRAM+19Ch
-DATA_BASE equ 0C2B0h
+SCRREAL   equ RTRAM+19Eh        ; numero dello SCREEN richiesto (SCRMODE vale 2 anche per lo SCREEN 4: stesso layout)
+WACT      equ RTRAM+19Fh        ; WINDOW: attivo, asse y verso l'alto, origine logica, estensioni, fattori
+WYUP      equ RTRAM+1A0h
+WWX1      equ RTRAM+1A1h
+WWY1      equ RTRAM+1A3h
+WDX       equ RTRAM+1A5h
+WDY       equ RTRAM+1A7h
+WMX       equ RTRAM+1A9h
+WMY       equ RTRAM+1ABh
+W4        equ RTRAM+1ADh        ; accumulatore a 32 bit
+WMU       equ RTRAM+1B1h
+WDV       equ RTRAM+1B3h
+WREM      equ RTRAM+1B5h
+WCNT      equ RTRAM+1B7h
+WSG       equ RTRAM+1B8h
+DATA_BASE equ 0C2D0h
