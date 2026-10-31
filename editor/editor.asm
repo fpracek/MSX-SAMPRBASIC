@@ -74,6 +74,8 @@ blcnt   equ RAMB+0421h              ; b  contatore di quadri
 curdr   equ RAMB+0422h              ; b  il glifo del cursore e' disegnato
 compiled equ RAMB+0424h             ; b  NOME.COM e' la compilazione del testo attuale (marcatore " +" dal programma)
 onfile  equ RAMB+0425h              ; b  il testo corrisponde a un file su disco (caricato o salvato)
+oldsz   equ RAMB+0427h              ; w  dimensione del file prima di una sovrascrittura in posto
+inplace equ RAMB+0429h              ; b  il salvataggio sovrascrive il file esistente
 cmdok   equ RAMB+0426h              ; b  la riga di comando aveva il marcatore " +"
 kwnext  equ RAMB+0423h              ; b  prossima riga schermo (0..) da colorare nei tempi morti (VROWS = fatto)
 cur     equ RAMB+0000h              ; w  offset logico del cursore

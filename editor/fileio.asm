@@ -329,6 +329,36 @@ save_file:                      ; -> C se errore (messaggio in msgptr)
         xor a
         ld (compiled),a        ; il testo e' cambiato dopo l'ultima compilazione
 .ncl:   call mk_fcb
+        xor a
+        ld (inplace),a
+        ld de,fcb               ; sovrascrittura in posto: niente cancellazione e creazione (risparmia ~2 s di disco)
+        ld c,F_OPEN
+        call BDOS
+        or a
+        jr nz,.create           ; il file non esiste
+        ld hl,(fcb+18)          ; dimensione vecchia (FCB+16, 4 byte): oltre 64 KB si ricrea
+        ld a,h
+        or l
+        jr nz,.recreate
+        ld hl,(fcb+16)
+        ld (oldsz),hl
+        ex de,hl
+        ld hl,(len)             ; stima della nuova dimensione: testo + CR + ^Z + 1 KB di tolleranza
+        ld bc,(nlines)
+        add hl,bc
+        ld bc,1025
+        add hl,bc
+        or a
+        sbc hl,de
+        jr c,.recreate          ; il file e' molto piu' lungo del testo: meglio ricrearlo
+        ld a,1
+        ld (inplace),a
+        jr .ok
+.recreate:
+        ld de,fcb
+        ld c,F_CLOSE
+        call BDOS
+.create: call mk_fcb
         ld de,fcb
         ld c,F_DEL
         call BDOS               ; l'errore (file inesistente) e' ignorato
@@ -365,7 +395,21 @@ save_file:                      ; -> C se errore (messaggio in msgptr)
         add hl,de
         call emit_seg
         call flush_io
-        ld de,fcb
+        ld a,(inplace)
+        or a
+        jr z,.cl
+        ld hl,(nbytes)          ; sovrascrittura piu' corta del file di prima: ^Z dopo il testo (il resto si ignora)
+        ld de,(oldsz)
+        or a
+        sbc hl,de
+        jr nc,.cl               ; nuova dimensione >= vecchia
+        ld a,1Ah
+        call put_io
+        call flush_io
+        ld hl,(nbytes)
+        dec hl
+        ld (nbytes),hl
+.cl:    ld de,fcb
         ld c,F_CLOSE
         call BDOS
         ld a,(ioerr)

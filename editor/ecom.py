@@ -171,7 +171,7 @@ def main():
     rows, vs, bl = load('c7b_cutpaste')
     exp2 = b'    indented line\r\nthird line\r\nXHello MSX\r\n'
     got2 = open(os.path.join(DISK, 'HELLO.TXT'), 'rb').read()
-    check(got2 == exp2, f'taglia+incolla+salva: HELLO.TXT = {got2!r}')
+    check(got2.split(b'')[0] == exp2, f'taglia+incolla+salva: HELLO.TXT = {got2!r}')   # (salvataggio in posto: ^Z e residuo ammessi)
     check('Saved' in title(rows), 'messaggio: ' + title(rows)[:40].strip())
 
     rows, vs, bl = load('c7b2_undone')

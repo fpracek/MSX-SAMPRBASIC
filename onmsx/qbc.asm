@@ -547,6 +547,15 @@ read_source:
 .ok:    ld de,SRC
         add hl,de
         ld (hl),0
+        ld hl,SRC
+.z:     ld a,(hl)               ; ^Z: il resto del file (residuo di un salvataggio in posto piu' corto) si ignora
+        or a
+        ret z
+        cp 1Ah
+        jr z,.cut
+        inc hl
+        jr .z
+.cut:   ld (hl),0
         ret
 
         IFDEF ROMMODE

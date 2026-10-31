@@ -151,3 +151,6 @@ da `blx`/`bly`/`curch`. Attenzione: la build ROM dei test (con il testo demo) ha
 - Se in piu' il programma e' appena stato eseguito da questa compilazione (`compiled` = 1: l'editor e' stato riaperto da NOME.COM con la riga di comando `NOME.BAS +`)
   F5 non ricompila: carica direttamente NOME.COM col caricatore (`run_only`; se il file manca, ricompila). `compiled` si azzera quando il testo cambia
   (all'atto del salvataggio con `modified` = 1), con Open e con New. Test: `erun.py` (F5 senza modifiche entro 12 s).
+- **Salvataggio in posto**: se il file esiste e non e' molto piu' lungo del testo, `save_file` lo apre e lo sovrascrive (senza cancellarlo e ricrearlo: 1,3 s invece di 3,1 s su DOS 1);
+  se il testo nuovo e' piu' corto scrive ^Z dopo il testo e il resto resta come residuo (il caricamento si ferma al ^Z; il compilatore tronca il sorgente al ^Z).
+  Se il file e' piu' lungo del testo di oltre 1 KB (o supera 64 KB) si cancella e ricrea come prima. Test: `python esave.py`.

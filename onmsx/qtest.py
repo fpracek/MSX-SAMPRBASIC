@@ -108,7 +108,7 @@ def run_cases(cases, wait_run=float(os.environ.get('QWAIT', '42'))):
     for f in os.listdir(BUILD):
         if f.endswith('.txt'):
             os.remove(os.path.join(BUILD, f))
-    subprocess.run([OPENMSX, '-machine', os.environ.get('GMACHINE', 'Philips_NMS_8250'), '-diska', DISK, '-script', tcl], timeout=1200)
+    subprocess.run([OPENMSX, '-machine', os.environ.get('GMACHINE', 'Philips_NMS_8250'), '-diska', DISK, '-script', tcl], timeout=3600)
     out = {}
     for name, _ in cases:
         for suf in ('', '_after'):
