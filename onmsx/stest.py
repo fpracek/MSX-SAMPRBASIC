@@ -90,6 +90,13 @@ def main():
                 cnt = sum(1 for r in regs if (r[2 * c] | ((r[2 * c + 1] & 15) << 8)) == per and r[8 + c] & 15)
                 d = cnt * STEP
                 check(lo <= d <= hi, f'voce {c} periodo {per}: {d:.2f} s (attesi {lo}-{hi})')
+            elif w[0] == 'maxvol':                      # volume massimo raggiunto dalla voce C
+                c, v = int(w[1]), int(w[2])
+                got = max(r[8 + c] & 15 for r in regs)
+                check(got == v, f'voce {c}: volume massimo {got} (atteso {v})')
+            elif w[0] == 'anysound':                    # almeno una voce ha volume > 0 in qualche istante (BEEP)
+                ok = any(any(r[8 + i] & 31 for i in range(3)) for r in regs)
+                check(ok, 'suono udibile')
             elif w[0] == 'chord':                       # tutte le voci suonano contemporaneamente: periodi alla stessa riga
                 want = [int(x) for x in w[1:4]]
                 ok = any([r[0] | ((r[1] & 15) << 8), r[2] | ((r[3] & 15) << 8), r[4] | ((r[5] & 15) << 8)] == want and
