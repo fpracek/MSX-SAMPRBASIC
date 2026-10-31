@@ -96,11 +96,14 @@ RT_KILL   equ RTB+(0205h-0100h)
 RT_WINT   equ RTB+(0208h-0100h)
 RT_WSTR   equ RTB+(020Bh-0100h)
 RT_FARCALL equ RTB+(020Eh-0100h)
-RT_EMPTY  equ RTB+(0211h-0100h)             ; byte 0 (stringa vuota)
-RT_NAME   equ RTB+(0212h-0100h)             ; 16 byte: nome del sorgente (0-terminato)
-RT_DSIZE  equ RTB+(0222h-0100h)             ; word: byte di dati del programma (scritta dal compilatore)
-RT_DATA0  equ RTB+(0224h-0100h)             ; word: primo elemento DATA (0 = nessun DATA)
-RT_TARGET equ RTB+(0226h-0100h)             ; byte: tipo di cartuccia (1 ROM16, 2 ROM32, 3 ASCII8, 4 ASCII16, 5 KONAMI, 6 SCC)
+RT_SETBANK equ RTB+(0211h-0100h)
+RT_DATAWIN equ RTB+(0214h-0100h)
+RT_VCOPY  equ RTB+(0217h-0100h)
+RT_EMPTY  equ RTB+(021Ah-0100h)             ; byte 0 (stringa vuota)
+RT_NAME   equ RTB+(021Bh-0100h)             ; 16 byte: nome del sorgente (0-terminato)
+RT_DSIZE  equ RTB+(022Bh-0100h)             ; word: byte di dati del programma (scritta dal compilatore)
+RT_DATA0  equ RTB+(022Dh-0100h)             ; word: primo elemento DATA (0 = nessun DATA)
+RT_TARGET equ RTB+(022Fh-0100h)             ; byte: tipo di cartuccia (1 ROM16, 2 ROM32, 3 ASCII8, 4 ASCII16, 5 KONAMI, 6 SCC)
 RTRAM     equ 0C090h            ; RAM del runtime (C000h-C086h: caricatore)
 HEAPP     equ RTRAM+0
 HEAP0     equ RTRAM+10
@@ -207,4 +210,5 @@ OUTSEL    equ RTRAM+1FDh        ; file di PRINT# (0 = schermo)
 FARSP     equ RTRAM+1FEh        ; ROM: pila software delle chiamate fra segmenti
 CURBANK   equ RTRAM+200h        ; ROM: banco nella finestra di codice
 CWREG     equ RTRAM+201h        ; ROM: registro di banco della finestra di codice
+DWREG     equ RTRAM+203h        ; ROM: registro di banco della finestra dati (A000h per i banchi da 8 KB)
 DATA_BASE equ 0C2A0h

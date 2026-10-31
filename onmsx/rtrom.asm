@@ -113,6 +113,18 @@ rom_vars:                       ; dopo l'azzeramento della RAM: pila delle chiam
         inc hl
         ld d,(hl)
         ld (CWREG),de
+        ld hl,dwregs
+        ld e,a
+        ld a,(rt_target)
+        sub 3
+        add a,a
+        ld e,a
+        ld d,0
+        add hl,de
+        ld e,(hl)
+        inc hl
+        ld d,(hl)
+        ld (DWREG),de
         ld a,(rt_target)
         cp 4
         ld a,2                  ; banchi da 8 KB: la finestra di codice parte dal banco 2
@@ -121,3 +133,39 @@ rom_vars:                       ; dopo l'azzeramento della RAM: pila delle chiam
 .b:     ld (CURBANK),a
         ret
 cwregs: dw 7000h, 7000h, 8000h, 9000h
+
+dwregs: dw 7800h, 7000h, 0A000h, 0B000h
+
+rt_setbank:                     ; SETBANK n: il segmento n compare nella finestra dati
+        ld a,(rt_target)
+        cp 3
+        jp c,rt_eifc
+        ld a,h
+        or a
+        jp nz,rt_eifc
+        ld a,l
+        or a
+        jp z,rt_eifc
+        ld b,a
+        ld a,(rt_target)
+        cp 4
+        ld a,b
+        jr z,.w                 ; ASCII16: banco = segmento, nella stessa finestra del codice
+        inc a                   ; banchi da 8 KB: il segmento n e' il banco n+1
+.w:     ld hl,(DWREG)
+        ld (hl),a
+        ld hl,(CWREG)
+        ld de,(DWREG)
+        or a
+        sbc hl,de
+        ret nz
+        ld (CURBANK),a          ; stessa finestra: il banco corrente cambia
+        ret
+
+rt_datawin:                     ; DATAWIN -> indirizzo della finestra dati (8000h per ASCII16, A000h per gli altri)
+        ld hl,8000h
+        ld a,(rt_target)
+        cp 4
+        ret z
+        ld hl,0A000h
+        ret

@@ -133,6 +133,9 @@ inbuf   equ RTRAM+20
         jp rt_wint
         jp rt_wstr
         jp rt_farcall
+        jp rt_setbank
+        jp rt_datawin
+        jp rt_vcopy
         ASSERT $ == RT_EMPTY
 rt_empty: db 0
         ASSERT $ == RT_NAME
@@ -1042,6 +1045,9 @@ rt_wait:                    ; HL = frame da attendere
 rt_nyi: ret
         IFNDEF ROMMODE
 rt_farcall: ret                 ; solo per le cartucce
+rt_setbank: ret
+rt_datawin: ld hl,0
+        ret
         ENDIF                 ; voci riservate per i prossimi stadi
 
         INCLUDE "rtgfx.asm"

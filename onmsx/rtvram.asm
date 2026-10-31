@@ -599,3 +599,19 @@ rt_restore:                     ; HL = 0: dall'inizio; altrimenti indirizzo di u
         inc hl
         ld (DPTR),hl
         ret
+
+rt_vcopy:                       ; VCOPY GX1 = indirizzo in memoria, GY1 = indirizzo VRAM, GX2 = quanti byte
+        call ubank_on
+        ld hl,(GY1)
+        ld a,40h
+        call vram_set
+        ld hl,(GX1)
+        ld bc,(GX2)
+.l:     ld a,b
+        or c
+        jp z,ubank_off
+        ld a,(hl)
+        out (VDPD),a
+        inc hl
+        dec bc
+        jr .l

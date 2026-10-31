@@ -70,6 +70,10 @@ def run_cases(cases, wait_run=float(os.environ.get('QWAIT', '28'))):
     shutil.copy(os.path.join(BUILD, 'qbstub.com'), os.path.join(DISK, 'QB.COM'))
     shutil.copy(os.path.join(BUILD, 'rt.bin'), os.path.join(DISK, 'RT.BIN'))
     shutil.copy(os.path.join(BUILD, 'rtrom.bin'), os.path.join(DISK, 'RTROM.BIN'))
+    tf = os.path.join(HERE, 'testfiles')              # file di dati per i test (INCBIN)
+    if os.path.isdir(tf):
+        for f in os.listdir(tf):
+            shutil.copy(os.path.join(tf, f), DISK)
     shutil.copy(os.path.join(BUILD, 'qbcr.com'), os.path.join(DISK, 'QBCR.COM'))
     lines = [TCL, 'set OUTDIR "%s"' % BUILD.replace(chr(92), '/')]
     t = 20.0

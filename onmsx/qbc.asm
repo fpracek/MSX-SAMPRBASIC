@@ -85,6 +85,7 @@ nfar    equ ST+226              ; b  voci usate in FARTAB
 romopen equ ST+227              ; b  il file ROM e' gia' stato creato
 FARTABC equ 46C0h               ; FARTAB in costruzione: 32 x 4 byte (banco, 0, indirizzo)
 SEGT    equ 4740h               ; segmento di ogni SUB/FUNCTION (indice nel record)
+FCBSV   equ 4768h               ; copia dell'FCB di uscita durante INCBIN
 FARX    equ 4754h               ; indice FARTAB di ogni SUB/FUNCTION (FFh = nessuno)
 usewin  equ ST+216              ; b  il sorgente usa WINDOW: le coordinate grafiche vengono convertite
 nfunc   equ ST+192              ; b
@@ -194,6 +195,9 @@ K_CLOSE equ 71
 K_KILL equ 72
 K_WRITE equ 73
 K_SEGMENT equ 74
+K_INCBIN equ 75
+K_SETBANK equ 76
+K_VCOPY equ 77
 
 B_IF    equ 1
 B_FOR   equ 2
@@ -908,6 +912,112 @@ st_segment:                     ; SEGMENT n: da qui il codice va nel segmento n 
 st_segment:
         jp err_syntax
         ENDIF
+
+st_setbank:                     ; SETBANK n: il segmento n compare nella finestra dati (DATAWIN)
+        call expr
+        call want_int
+        EM3 0CDh,low RT_SETBANK,high RT_SETBANK
+        ret
+
+st_vcopy:                       ; VCOPY memoria, vram, quanti
+        call expr
+        call want_int
+        ld hl,GX1
+        call emit_st
+        ld a,','
+        call expect_p
+        call expr
+        call want_int
+        ld hl,GY1
+        call emit_st
+        ld a,','
+        call expect_p
+        call expr
+        call want_int
+        ld hl,GX2
+        call emit_st
+        EM3 0CDh,low RT_VCOPY,high RT_VCOPY
+        ret
+
+bi_datawin:                     ; DATAWIN: indirizzo della finestra dati
+        call next_tok
+        EM3 0CDh,low RT_DATAWIN,high RT_DATAWIN
+        xor a
+        ld (etype),a
+        ret
+
+        IFDEF ROMMODE
+st_incbin:                      ; INCBIN "file": i byte del file entrano nel segmento corrente
+        ld a,(ttype)
+        cp T_STR
+        jp nz,err_syntax
+        ld a,(tlen)
+        cp 13
+        jp nc,err_syntax
+        ld c,a
+        ld b,0
+        ld hl,(tval)
+        ld de,nbuf
+        or a
+        jr z,.e
+        ldir
+.e:     xor a
+        ld (de),a
+        ld hl,nbuf
+        ld (namep),hl
+        ld hl,fcb               ; l'FCB del file di uscita si salva
+        ld de,FCBSV
+        ld bc,37
+        ldir
+        call mk_fcb
+        ld de,fcb
+        ld c,F_OPEN
+        call BDOS
+        or a
+        jr z,.o
+        ERR E_READ
+.o:     call fcb_rec1
+        ld de,(outp)
+        ld c,F_DMA
+        call BDOS
+        ld a,(outlim)
+        ld h,a
+        ld l,0
+        ld de,(outp)
+        or a
+        sbc hl,de
+        push hl
+        ld de,fcb
+        ld c,F_BRD
+        call BDOS
+        ld (tmpv),hl
+        pop de
+        or a
+        sbc hl,de
+        push af
+        ld de,fcb
+        ld c,F_CLOSE
+        call BDOS
+        ld hl,FCBSV
+        ld de,fcb
+        ld bc,37
+        ldir
+        ld de,OUT0
+        ld c,F_DMA
+        call BDOS
+        pop af
+        jp z,err_big            ; riempie tutto lo spazio: troppo grande
+        ld hl,(outp)
+        ld de,(tmpv)
+        add hl,de
+        ld (outp),hl
+        jp next_tok
+        ENDIF
+        IFNDEF ROMMODE
+st_incbin:
+        jp err_syntax
+        ENDIF
+
 s_com:  db ".COM",0
 
 ; ---------------------------------------------------------------- emissione
@@ -1355,7 +1465,8 @@ kwtab:  db "PRINT",0,"IF",0,"THEN",0,"ELSE",0,"ELSEIF",0,"END",0,"FOR",0,"TO",0
         db "OPTION",0,"INPUT",0,"DIM",0,"POKE",0,"SUB",0,"FUNCTION",0,"CALL",0,"DECLARE",0,"SHARED",0
         db "EXIT",0,"DO",0,"LOOP",0,"UNTIL",0,"SELECT",0,"CASE",0,"IS",0,"CONST",0,"COLOR",0,"RANDOMIZE",0,"VPOKE",0,"OUT",0,"SLEEP",0,"STOP",0,"SCREEN",0,"PSET",0,"PRESET",0,"LINE",0,"CIRCLE",0
         db "PALETTE",0,"PAINT",0,"PUT",0,"SPRITE",0,"GET",0,"DRAW",0,"VIEW",0,"WINDOW",0,"VBANK",0,"VFILL",0,"VWRITE",0,"SET",0,"COPY",0,"DATA",0,"READ",0,"RESTORE",0,"BEEP",0,"SOUND",0,"PLAY",0
-        db "OPEN",0,"CLOSE",0,"KILL",0,"WRITE",0,"SEGMENT",0,0
+        db "OPEN",0,"CLOSE",0,"KILL",0,"WRITE",0,"SEGMENT",0,"INCBIN",0
+        db "SETBANK",0,"VCOPY",0,0
 
 ; ---------------------------------------------------------------- helper del parser
 is_p:                           ; A = carattere: Z se il token e' quella punteggiatura
@@ -2639,7 +2750,7 @@ kwjump: dw st_print, st_if, err_syntax, st_else, st_elseif, st_end, st_for, err_
         dw st_exit, st_do, st_loop, err_syntax, st_select, st_case, err_syntax
         dw st_const, st_color, st_randomize, st_vpoke, st_out, st_sleep, st_stop
         dw st_screen, st_pset, st_preset, st_line, st_circle, st_palette, st_paint, st_put, err_syntax, st_get, st_draw, st_view, st_window
-        dw st_vbank, st_vfill, st_vwrite, st_set, st_copy, st_data, st_read, st_restore, st_beep, st_sound, st_play, st_open, st_close, st_kill, st_write, st_segment
+        dw st_vbank, st_vfill, st_vwrite, st_set, st_copy, st_data, st_read, st_restore, st_beep, st_sound, st_play, st_open, st_close, st_kill, st_write, st_segment, st_incbin, st_setbank, st_vcopy
 
 ; ---------------------------------------------------------------- espressioni
 want_int:
@@ -3020,10 +3131,10 @@ make_nbuf:                      ; tbuf -> nbuf (testo normale, "CHR$" ecc.)
 
 ; --- funzioni predefinite (il token corrente e' il nome)
 bitab:  db "LEN",0,"ASC",0,"VAL",0,"ABS",0,"SGN",0,"RND",0,"PEEK",0,"CHR$",0,"STR$",0
-        db "LEFT$",0,"RIGHT$",0,"MID$",0,"INKEY$",0,"TIMER",0,"VPEEK",0,"INP",0,"UBOUND",0,"POINT",0,"COLLISION",0,"BASE",0,"VDP",0,"STICK",0,"STRIG",0,"VREAD$",0,"EOF",0,0
+        db "LEFT$",0,"RIGHT$",0,"MID$",0,"INKEY$",0,"TIMER",0,"VPEEK",0,"INP",0,"UBOUND",0,"POINT",0,"COLLISION",0,"BASE",0,"VDP",0,"STICK",0,"STRIG",0,"VREAD$",0,"EOF",0,"DATAWIN",0,0
 bijump: dw bi_len, bi_asc, bi_val, bi_abs, bi_sgn, bi_rnd, bi_peek, bi_chr, bi_str
         dw bi_left, bi_right, bi_mid, bi_inkey, bi_timer, bi_vpeek, bi_inp, bi_ubound, bi_point, bi_coll
-        dw bi_base, bi_vdp, bi_stick, bi_strig, bi_vread, bi_eof
+        dw bi_base, bi_vdp, bi_stick, bi_strig, bi_vread, bi_eof, bi_datawin
 
 open_paren:
         ld a,'('
