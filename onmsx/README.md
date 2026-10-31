@@ -30,8 +30,9 @@ Funzioni: `LEN ASC VAL ABS SGN RND PEEK TIMER CHR$ STR$ LEFT$ RIGHT$ MID$ INKEY$
 `SUB`/`FUNCTION` con parametri per valore (interi e stringhe), variabili locali, ricorsione, `CALL`, chiamata di SUB senza
 `CALL`, `DECLARE` (ignorata: le firme si leggono con una pre-scansione, quindi si puo' chiamare prima della definizione),
 `SHARED`, `EXIT SUB/FUNCTION`, risultato di FUNCTION assegnando al suo nome (`f = ...`, `f$ = ...`).
-`DO/LOOP` (`DO WHILE|UNTIL`, `LOOP WHILE|UNTIL`), `EXIT DO/FOR/WHILE`, `SELECT CASE` intero (`CASE 1`, `CASE 2, 3`,
-`CASE 4 TO 6`, `CASE IS >= 7`, `CASE ELSE`).
+`DO/LOOP` (`DO WHILE|UNTIL`, `LOOP WHILE|UNTIL`), `EXIT DO/FOR/WHILE`, `SELECT CASE` intero o stringa (`CASE 1`, `CASE 2, 3`,
+`CASE 4 TO 6`, `CASE IS >= 7`, `CASE "a", "b" TO "m"`, `CASE IS < "a"`, `CASE ELSE`; il valore dei CASE deve avere il
+tipo del selettore). Il selettore stringa si copia sullo stack (256 byte) per tutto il blocco: ricorsione sicura.
 Frame IX: parametri sullo stack (il primo piu' in profondita'), salvataggio di heapp in (ix-2), 29 interi locali, 256 byte per
 ogni stringa locale; i temporanei delle stringhe si liberano a fine istruzione fino al valore salvato all'ingresso.
 **Array come parametri**: nella firma `SUB f(a(), n)` / `FUNCTION g$(s$())`, nella chiamata `f v(), 6` o `g$(w$())`;
@@ -53,7 +54,7 @@ Limiti: sorgente 16 KB, programma 16 KB, 96 etichette, 100 variabili/array, 20 S
 · 9 programma troppo grande · 10 sorgente troppo grande · 11 lettura · 12 scrittura · 13 non ammesso con l'OPTION scelta · 14 tipi incompatibili o array non dichiarato · 15 dati del programma troppo grandi.
 
 ## Risultati
-`zrun.py` 36/36 (anche con RAM iniziale casuale), `qtest.py` 36/36 (openMSX; INPUT con tasti battuti dal test),
+`zrun.py` 38/38 (anche con RAM iniziale casuale), `qtest.py` 38/38 (ultima suite completa 36/36; poi s6 ed e17 verificati a parte) (openMSX; INPUT con tasti battuti dal test),
 `../editor/erun.py` 12/12, `ecom.py` 25/25.
-Non ancora supportati: `SELECT CASE` su stringhe, float, grafica (SCREEN/LINE/PSET), suono, file.
+Non ancora supportati: float, grafica (SCREEN/LINE/PSET), suono, file.
 Non provato su MSX reale (disco fisico, Nextor/DOS2).

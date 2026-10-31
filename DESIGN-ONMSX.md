@@ -49,6 +49,7 @@ Sintassi decisa ora, implementazione per stadi:
 2b. **Fatto**: SUB/FUNCTION (parametri, locali, ricorsione, SHARED, EXIT), CALL, DECLARE, DO/LOOP, SELECT CASE.
 2c. **Fatto**: CONST, COLOR, RANDOMIZE, VPOKE/VPEEK, OUT/INP, SLEEP, STOP.
 2d. **Fatto**: array come parametri (per riferimento) e UBOUND.
-2e. SELECT CASE su stringhe, grafica/suono/file (da decidere).
+2e. **Fatto**: SELECT CASE su stringhe.
+2f. Grafica/suono/file (da decidere).
 3. Target ROM + `SEGMENT`/`CALL FAR` (ASCII8/16, Konami, SCC).
 4. Mapper RAM.

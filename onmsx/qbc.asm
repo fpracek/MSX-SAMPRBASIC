@@ -2905,7 +2905,18 @@ st_end: ld a,K_IF
         inc hl
         inc hl
         call patch_chain        ; fine dei CASE
+        ld a,B_SEL
+        call need_blk
+        ld de,9
+        add hl,de
+        ld a,(hl)
+        or a
+        jr nz,.sstr
         EM1 0D1h                ; pop de (scarta il valore del SELECT)
+        jr .sdone
+.sstr:  call emit_i             ; libera la copia da 256 byte: ld hl,256 ; add hl,sp ; ld sp,hl
+        db 5,21h,0,1,39h,0F9h
+.sdone:
         ld hl,nblk
         dec (hl)
         ret
@@ -4059,16 +4070,57 @@ st_select:
         ld a,K_CASE
         call expect_kw
         call expr
-        call want_int
-        ld a,(tmpf)
+        ld a,(etype)
+        ld (tmpk),a             ; 0 = selettore intero, 1 = stringa
+        or a
+        jr z,.tmp
+        call emit_i             ; stringa: copia di 256 byte sullo stack (resta valida per tutto il blocco)
+        db 7,0EBh,21h,0,0FFh,39h,0F9h,0EBh
+        EM3 0CDh,low RT_SCOPY,high RT_SCOPY
+.tmp:   ld a,(tmpf)
         or a
         jr z,.nt
         xor a
         ld (tmpf),a
         call emit_reset
-.nt:    EM1 0E5h                ; push hl (il valore resta sullo stack per tutto il blocco)
+.nt:    ld a,(tmpk)
+        or a
+        jr nz,.blk
+        EM1 0E5h                ; intero: push hl (il valore resta sullo stack per tutto il blocco)
+.blk:   ld a,B_SEL
+        call push_blk
+        ld de,9
+        add hl,de
+        ld a,(tmpk)
+        ld (hl),a               ; +9 = tipo del selettore
+        ret
+
+want_sel:                       ; il valore del CASE deve avere il tipo del selettore
         ld a,B_SEL
-        jp push_blk
+        call need_blk
+        ld de,9
+        add hl,de
+        ld b,(hl)
+        ld a,(etype)
+        cp b
+        ret z
+        jp err_type
+
+emit_seltest:                   ; confronta selettore (sullo stack) con HL (valore del CASE): flag come rt_cmp/rt_scmp
+        ld a,B_SEL
+        call need_blk
+        ld de,9
+        add hl,de
+        ld a,(hl)
+        or a
+        jr nz,.s
+        EM2 0D1h,0D5h           ; pop de ; push de
+        EM3 0CDh,low RT_CMP,high RT_CMP
+        ret
+.s:     call emit_i             ; DE = copia del selettore (SP), HL = valore del CASE
+        db 6,0EBh,21h,0,0,39h,0EBh
+        EM3 0CDh,low RT_SCMP,high RT_SCMP
+        ret
 
 st_case:
         ld a,B_SEL
@@ -4123,9 +4175,8 @@ st_case:
         push de
         call next_tok
         call expr
-        call want_int
-        EM2 0D1h,0D5h           ; pop de ; push de
-        EM3 0CDh,low RT_CMP,high RT_CMP
+        call want_sel
+        call emit_seltest
         pop hl
         ld a,0CDh
         call emit_jabs          ; call b_xx
@@ -4138,12 +4189,11 @@ st_case:
         call emit_jchain
         jr .more
 .val:   call expr
-        call want_int
+        call want_sel
         ld a,K_TO
         call is_kw
         jr z,.range
-        EM2 0D1h,0D5h
-        EM3 0CDh,low RT_CMP,high RT_CMP
+        call emit_seltest
         ld a,B_SEL
         call need_blk
         ld de,5
@@ -4152,15 +4202,13 @@ st_case:
         call emit_jchain
         jr .more
 .range: call next_tok
-        EM2 0D1h,0D5h
-        EM3 0CDh,low RT_CMP,high RT_CMP
+        call emit_seltest
         ld hl,chfail
         ld a,0DAh               ; jp c,fallito (valore < inizio)
         call emit_jchain
         call expr
-        call want_int
-        EM2 0D1h,0D5h
-        EM3 0CDh,low RT_CMP,high RT_CMP
+        call want_sel
+        call emit_seltest
         ld a,B_SEL
         call need_blk
         ld de,5
