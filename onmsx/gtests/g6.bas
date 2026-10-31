@@ -1,0 +1,6 @@
+COLOR 15, 0
+SCREEN 5
+CLS
+FOR i = 1 TO 30
+  PRINT i
+NEXT i

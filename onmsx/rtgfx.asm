@@ -62,14 +62,40 @@ rt_screen:                      ; HL = modo 0..8 (CHGMOD del BIOS)
         ld hl,0
         ld (LASTX),hl
         ld (LASTY),hl
+        call gmode_init
+        ld hl,(FONTPTR)         ; il font (768 byte) si riserva una volta sola in cima allo heap
+        ld a,h
+        or l
+        jr nz,.hf
+        ld hl,(heapend)
+        ld de,-768
+        add hl,de
+        push hl
+        ld de,(heapp)
+        inc d
+        inc d
+        inc d
+        inc d                   ; almeno 1 KB di heap resta libero
+        or a
+        sbc hl,de
+        pop hl
+        jp c,rt_oom
+        ld (FONTPTR),hl
+        ld (heapend),hl
+.hf:    call load_font
+        xor a
+        ld (TCX),a
+        ld (TCY),a
+        inc a
+        ld (CSRX),a
         ret
 
 chk_gfx:                        ; solo SCREEN 5-8
         ld a,(SCRMODE)
         cp 5
-        jr c,rt_egfx
+        jp c,rt_egfx
         cp 9
-        jr nc,rt_egfx
+        jp nc,rt_egfx
         ret
 
 gwidth:                         ; -> BC = larghezza dello schermo

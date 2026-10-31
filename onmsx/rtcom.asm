@@ -77,6 +77,9 @@ inbuf   equ RTRAM+20
         jp rt_gpoint
         jp rt_gline
         jp rt_gcircle
+        jp rt_palette
+        jp rt_palinit
+        jp rt_paint
         ASSERT $ == RT_EMPTY
 rt_empty: db 0
         ASSERT $ == RT_NAME
@@ -129,7 +132,30 @@ rt_start:
         jp rt_prog
 
 rt_locate:                  ; DE = riga, HL = colonna
-        ld h,l
+        ld a,(SCRMODE)
+        cp 5
+        jr c,.txt
+        ld a,e                  ; grafica: cursore di testo su celle 8x8
+        dec a
+        cp 26
+        jr c,.r
+        ld a,25
+.r:     ld (TCY),a
+        ld a,l
+        dec a
+        ld b,a
+        call gcols
+        ld c,a
+        ld a,b
+        cp c
+        jr c,.c
+        ld a,c
+        dec a
+.c:     ld (TCX),a
+        inc a
+        ld (CSRX),a
+        ret
+.txt:   ld h,l
         ld l,e
         push ix
         ld ix,POSIT
@@ -143,12 +169,31 @@ rt_cls:
         ld ix,CLS
         call rt_bios
         pop ix
+        ld a,(SCRMODE)
+        cp 5
+        ret c
+        xor a                   ; grafica: cursore di testo in alto a sinistra
+        ld (TCX),a
+        ld (TCY),a
+        inc a
+        ld (CSRX),a
         ret
 
 rt_putc:
         push hl
         push de
         push bc
+        ld b,a
+        ld a,(SCRMODE)
+        cp 5
+        ld a,b
+        jr c,.txt
+        call gputc              ; schermi grafici: disegna il carattere
+        pop bc
+        pop de
+        pop hl
+        ret
+.txt:
         push ix                 ; la BIOS (CALSLT) distrugge IX: il frame delle SUB/FUNCTION va salvato
         ld ix,CHPUT
         call rt_bios
@@ -887,6 +932,7 @@ rt_vpoke:                   ; DE = indirizzo VRAM (0-16383), HL = valore
         ret
 
         INCLUDE "rtgfx.asm"
+        INCLUDE "rtgtext.asm"
 
 ldr_img: INCBIN "build/ldr.bin"
 ldr_size equ $-ldr_img

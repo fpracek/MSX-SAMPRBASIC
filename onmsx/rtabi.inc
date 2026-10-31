@@ -43,9 +43,12 @@ RT_GPRESET equ 017Bh
 RT_GPOINT equ 017Eh
 RT_GLINE  equ 0181h
 RT_GCIRCLE equ 0184h
-RT_EMPTY  equ 0187h             ; byte 0 (stringa vuota)
-RT_NAME   equ 0188h             ; 16 byte: nome del sorgente (0-terminato)
-RT_DSIZE  equ 0198h             ; word: byte di dati del programma (scritta dal compilatore)
+RT_PALETTE equ 0187h
+RT_PALINIT equ 018Ah
+RT_PAINT  equ 018Dh
+RT_EMPTY  equ 0190h             ; byte 0 (stringa vuota)
+RT_NAME   equ 0191h             ; 16 byte: nome del sorgente (0-terminato)
+RT_DSIZE  equ 01A1h             ; word: byte di dati del programma (scritta dal compilatore)
 RTRAM     equ 0C100h            ; RAM del runtime (C000h-C086h: caricatore)
 HEAPP     equ RTRAM+0
 HEAP0     equ RTRAM+10
@@ -58,4 +61,26 @@ GFLG      equ RTRAM+122h        ; byte: 0 linea, 1 riquadro, 2 riquadro pieno
 SCRMODE   equ RTRAM+123h        ; byte: modo SCREEN corrente
 LASTX     equ RTRAM+124h        ; ultimo punto grafico
 LASTY     equ RTRAM+126h
-DATA_BASE equ 0C250h            ; variabili e array del programma
+FONTPTR   equ RTRAM+150h        ; puntatore al font 8x8 (768 byte in cima allo heap, riservato da SCREEN 5-8)
+ROWPTR    equ RTRAM+152h        ; puntatore alla riga di pixel di PAINT (256 byte in cima allo heap)
+TCX       equ RTRAM+154h        ; cursore di testo in grafica (colonna, riga)
+TCY       equ RTRAM+155h
+GBPP      equ RTRAM+156h        ; bit per pixel, pixel per byte, maschera del colore
+GPPB      equ RTRAM+157h
+GONES     equ RTRAM+158h
+GFGP      equ RTRAM+159h        ; colori replicati in un byte di VRAM
+GBGP      equ RTRAM+15Ah
+PCOL      equ RTRAM+15Bh        ; PAINT: colore, bordo, tratto in corso
+PBRD      equ RTRAM+15Ch
+PRUN      equ RTRAM+15Dh
+PSTK      equ RTRAM+15Eh        ; PAINT: pila dei semi e variabili
+PLIM      equ RTRAM+160h
+PXS       equ RTRAM+162h
+PY        equ RTRAM+164h
+PXL       equ RTRAM+166h
+PXR       equ RTRAM+168h
+PX        equ RTRAM+16Ah
+PSY       equ RTRAM+16Ch
+PTX       equ RTRAM+16Eh
+PTY       equ RTRAM+170h
+DATA_BASE equ 0C280h

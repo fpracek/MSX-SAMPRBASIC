@@ -21,7 +21,7 @@ a 0080h come mailbox (`" NOME.BAS"`, in caso di errore `" NOME.BAS E<riga> <codi
 - `qtests/` — q1..q3 (IF a blocchi, cicli, operatori, hex/bin, LOCATE) ed e1..e5 (codici di errore).
 - Test dell'editor con F5: `../editor/erun.py`.
 
-## Linguaggio (stadi 1, 2a-2d e 3a: grafica)
+## Linguaggio (stadi 1, 2a-2d, 3a-3b: grafica)
 Interi 16 bit e stringhe (max 255). `PRINT` (`;` `,` `?`), assegnamenti (`LET` opzionale), `IF/THEN/ELSE` su riga,
 `IF/ELSEIF/ELSE/END IF`, `FOR/NEXT` (STEP costante, anche negativo), `WHILE/WEND`, `GOTO/GOSUB/RETURN`, `CLS`,
 `LOCATE r,c`, `END`, `REM` e `'`, `INPUT ["testo";|,] var` (intera o stringa), `DIM a(n), b$(m)` (array di interi e di
@@ -54,7 +54,7 @@ La BIOS (CALSLT) distrugge IX: il runtime lo salva attorno a ogni chiamata BIOS.
 Stringhe: ogni variabile e' un buffer fisso da 256 byte; i temporanei stanno su uno heap a bump rilasciato a fine
 istruzione (e dopo le condizioni di IF/WHILE). Nomi `A$` e `A` distinti; `A%` = `A`.
 `OPTION NUMBERED` (righe ordinate per numero, solo numeri), `OPTION LABELS` (solo etichette), `OPTION MIXED` (default).
-Limiti: sorgente 15 KB, programma 16 KB, 96 etichette, 100 variabili/array, 20 SUB/FUNCTION (max 8 parametri, 64 in totale), 32 nomi locali per funzione, circa 590 righe in OPTION NUMBERED, 24 blocchi annidati, nomi significativi su 12 caratteri, dati del programma fino a (0006h)-0C00h.
+Limiti: sorgente 14 KB, programma 16 KB, 96 etichette, 100 variabili/array, 20 SUB/FUNCTION (max 8 parametri, 64 in totale), 32 nomi locali per funzione, circa 590 righe in OPTION NUMBERED, 24 blocchi annidati, nomi significativi su 12 caratteri, dati del programma fino a (0006h)-0C00h.
 
 ## Codici di errore (tail dell'editor)
 1 sintassi · 2 etichetta/riga inesistente · 3 non ancora supportato (stringhe, array, funzioni) · 4 carattere illegale
@@ -62,7 +62,7 @@ Limiti: sorgente 15 KB, programma 16 KB, 96 etichette, 100 variabili/array, 20 S
 · 9 programma troppo grande · 10 sorgente troppo grande · 11 lettura · 12 scrittura · 13 non ammesso con l'OPTION scelta · 14 tipi incompatibili o array non dichiarato · 15 dati del programma troppo grandi.
 
 ## Risultati
-`zrun.py` 39/39 (anche con RAM iniziale casuale), `qtest.py` 39/39 (openMSX), `gtest.py` 4/4 (grafica: legge i pixel dalla VRAM) (openMSX; INPUT con tasti battuti dal test),
+`zrun.py` 42/42 (anche con RAM iniziale casuale), `qtest.py` 42/42 (openMSX), `gtest.py` 8/8 (grafica: pixel, palette e testo letti dalla VRAM) (openMSX; INPUT con tasti battuti dal test),
 `../editor/erun.py` 12/12, `ecom.py` 25/25.
-Non ancora supportati: float, PAINT/testo in grafica/sprite, suono, file.
+Non ancora supportati: float, sprite, suono, file.
 Non provato su MSX reale (disco fisico, Nextor/DOS2).

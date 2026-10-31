@@ -17,20 +17,20 @@ F_DMA   equ 1Ah
 F_BWR   equ 26h
 F_BRD   equ 27h
 
-SRC     equ 4500h
-SRCMAX  equ 3AFEh
+SRC     equ 4900h
+SRCMAX  equ 36FEh
 OUT0    equ 8000h
 VOFF    equ 7F00h
 OUTLIM  equ 0BFh                ; alto byte: oltre BF00h il programma e' troppo grande
 LDR     equ 0C000h
 
-LABT    equ 3600h               ; etichette: 96 x 20 byte
+LABT    equ 3A00h               ; etichette: 96 x 20 byte
 LABREC  equ 20
 MAXLAB  equ 96
-VART    equ 3D80h               ; variabili/array: 100 x 16 byte
+VART    equ 4180h               ; variabili/array: 100 x 16 byte
 VARREC  equ 16
 MAXVAR  equ 100
-BLKS    equ 43C0h               ; stack dei blocchi: 24 x 10 byte
+BLKS    equ 47C0h               ; stack dei blocchi: 24 x 10 byte
 BLKREC  equ 10
 MAXBLK  equ 24
 
@@ -155,6 +155,8 @@ K_PSET  equ 47
 K_PRESET equ 48
 K_LINE  equ 49
 K_CIRCLE equ 50
+K_PALETTE equ 51
+K_PAINT equ 52
 
 B_IF    equ 1
 B_FOR   equ 2
@@ -936,7 +938,7 @@ kwtab:  db "PRINT",0,"IF",0,"THEN",0,"ELSE",0,"ELSEIF",0,"END",0,"FOR",0,"TO",0
         db "STEP",0,"NEXT",0,"WHILE",0,"WEND",0,"GOTO",0,"GOSUB",0,"RETURN",0
         db "CLS",0,"LOCATE",0,"AND",0,"OR",0,"XOR",0,"NOT",0,"MOD",0,"LET",0
         db "OPTION",0,"INPUT",0,"DIM",0,"POKE",0,"SUB",0,"FUNCTION",0,"CALL",0,"DECLARE",0,"SHARED",0
-        db "EXIT",0,"DO",0,"LOOP",0,"UNTIL",0,"SELECT",0,"CASE",0,"IS",0,"CONST",0,"COLOR",0,"RANDOMIZE",0,"VPOKE",0,"OUT",0,"SLEEP",0,"STOP",0,"SCREEN",0,"PSET",0,"PRESET",0,"LINE",0,"CIRCLE",0,0
+        db "EXIT",0,"DO",0,"LOOP",0,"UNTIL",0,"SELECT",0,"CASE",0,"IS",0,"CONST",0,"COLOR",0,"RANDOMIZE",0,"VPOKE",0,"OUT",0,"SLEEP",0,"STOP",0,"SCREEN",0,"PSET",0,"PRESET",0,"LINE",0,"CIRCLE",0,"PALETTE",0,"PAINT",0,0
 
 ; ---------------------------------------------------------------- helper del parser
 is_p:                           ; A = carattere: Z se il token e' quella punteggiatura
@@ -2019,7 +2021,7 @@ kwjump: dw st_print, st_if, err_syntax, st_else, st_elseif, st_end, st_for, err_
         dw st_input, st_dim, st_poke, st_sub, st_function, st_call, st_skip, st_shared
         dw st_exit, st_do, st_loop, err_syntax, st_select, st_case, err_syntax
         dw st_const, st_color, st_randomize, st_vpoke, st_out, st_sleep, st_stop
-        dw st_screen, st_pset, st_preset, st_line, st_circle
+        dw st_screen, st_pset, st_preset, st_line, st_circle, st_palette, st_paint
 
 ; ---------------------------------------------------------------- espressioni
 want_int:
@@ -4571,6 +4573,55 @@ st_line:                        ; LINE [(x1,y1)]-(x2,y2)[, colore[, B|BF]]
         call emit_w
         call next_tok
 .go:    EM3 0CDh,low RT_GLINE,high RT_GLINE
+        ret
+
+st_paint:                       ; PAINT (x,y)[, colore[, bordo]]
+        ld de,GX1
+        ld bc,GY1
+        call emit_xy
+        call emit_defcol
+        call emit_i             ; bordo = -1 (come il colore)
+        db 6,21h,0FFh,0FFh,22h,low GX2,high GX2
+        call emit_optcol
+        ld a,','
+        call is_p
+        jr nz,.go
+        call next_tok
+        call expr
+        call want_int
+        ld hl,GX2
+        call emit_st
+.go:    EM3 0CDh,low RT_PAINT,high RT_PAINT
+        ret
+
+st_palette:                     ; PALETTE [n, rosso, verde, blu]
+        call at_send
+        jr nz,.args
+        EM3 0CDh,low RT_PALINIT,high RT_PALINIT
+        ret
+.args:  call expr
+        call want_int
+        ld hl,GX1
+        call emit_st
+        ld a,','
+        call expect_p
+        call expr
+        call want_int
+        ld hl,GY1
+        call emit_st
+        ld a,','
+        call expect_p
+        call expr
+        call want_int
+        ld hl,GX2
+        call emit_st
+        ld a,','
+        call expect_p
+        call expr
+        call want_int
+        ld hl,GY2
+        call emit_st
+        EM3 0CDh,low RT_PALETTE,high RT_PALETTE
         ret
 
 bi_point:                       ; POINT(x, y) -> colore (-1 fuori dallo schermo)

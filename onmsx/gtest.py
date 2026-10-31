@@ -32,6 +32,10 @@ proc vdump {name} {
     set f [open "$OUTDIR/$name.vram" wb]
     puts -nonewline $f $data
     close $f
+    set data [debug read_block "VDP palette" 0 32]
+    set f [open "$OUTDIR/$name.pal" wb]
+    puts -nonewline $f $data
+    close $f
 }
 ''' % VRAM_BYTES
 
@@ -98,6 +102,21 @@ def main():
                 continue
             if w[0] == 'mode':
                 mode = int(w[1])
+            elif w[0] == 'pal':
+                pal = open(os.path.join(BUILD, n + '.pal'), 'rb').read()
+                i, r, g, b = (int(z) for z in w[1:5])
+                gr, rb = pal[2 * i + 1] & 7, pal[2 * i]
+                check(((rb >> 4) & 7, gr, rb & 7) == (r, g, b), f'palette {i} = {((rb >> 4) & 7, gr, rb & 7)} (atteso {(r, g, b)})')
+            elif w[0] in ('any', 'none', 'count'):
+                x0, y0, x1, y1, c = (int(z) for z in w[1:6])
+                n_ = sum(1 for yy in range(y0, y1 + 1) for xx in range(x0, x1 + 1) if pixel(v, mode, xx, yy) == c)
+                if w[0] == 'any':
+                    check(n_ > 0, f'rettangolo ({x0},{y0})-({x1},{y1}) contiene il colore {c} ({n_} pixel)')
+                elif w[0] == 'none':
+                    check(n_ == 0, f'rettangolo ({x0},{y0})-({x1},{y1}) senza il colore {c} ({n_} pixel)')
+                else:
+                    lo, hi = int(w[6]), int(w[7])
+                    check(lo <= n_ <= hi, f'rettangolo ({x0},{y0})-({x1},{y1}): {n_} pixel di colore {c} (attesi {lo}-{hi})')
             elif w[0] == 'px':
                 x, y = int(w[1]), int(w[2])
                 neg = w[3].startswith('!')

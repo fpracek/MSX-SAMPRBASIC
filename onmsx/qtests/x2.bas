@@ -1,0 +1,2 @@
+PRINT "a"
+PALETTE 1, 9, 0, 0

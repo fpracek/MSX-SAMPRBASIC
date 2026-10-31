@@ -57,7 +57,7 @@ proc dump {name} {
 '''
 
 
-def run_cases(cases, wait_run=float(os.environ.get('QWAIT', '14'))):
+def run_cases(cases, wait_run=float(os.environ.get('QWAIT', '28'))):
     """cases = [(basfile_contenuto, nome)]; ritorna {nome: [righe]}"""
     if os.path.isdir(DISK):
         shutil.rmtree(DISK)

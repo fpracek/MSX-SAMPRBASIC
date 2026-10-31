@@ -1,0 +1,8 @@
+' SCREEN 6: testo a 64 colonne e PAINT
+COLOR 3, 0
+SCREEN 6
+CLS
+CIRCLE (300, 100), 40, 2
+PAINT (300, 100), 1, 2
+LOCATE 1, 41
+PRINT "B";
