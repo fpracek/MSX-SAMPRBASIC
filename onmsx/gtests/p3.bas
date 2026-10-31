@@ -1,0 +1,6 @@
+' SCREEN 11 (YJK, solo MSX2+): un byte per pixel come lo SCREEN 8
+COLOR 15, 0
+SCREEN 11
+CLS
+PSET (100, 100), 200
+LINE (120, 120)-(160, 160), 100, BF
