@@ -21,8 +21,8 @@ Il caricatore a catena (open FCB + lettura a blocchi in 0100h + `jp 0100h`) è c
   strategia di `qbc.py`: HL = accumulatore, operando sinistro sullo stack.
 - Sorgente a 4000h (max 16 KB), codice generato a 8000h con indirizzi virtuali da 0100h
   (`vpc = outp - 7F00h`), tabelle simboli a 0C000h. Salti in avanti: catene di fixup nel codice stesso.
-- Il runtime (`rtcom.asm`, assemblato con PHASE 0100h) è incluso nell'immagine del compilatore e
-  copiato in testa all'output: i suoi punti d'ingresso sono una tabella di `jp` a indirizzi fissi
+- Il runtime (`rtcom.asm` -> `RT.BIN`, ORG 0100h) viene letto dal disco dal compilatore e messo in testa all'output
+  (non e' piu' incorporato in QBC.COM: cosi' puo' crescere, e si potranno avere varianti per target): i suoi punti d'ingresso sono una tabella di `jp` a indirizzi fissi
   (`rtabi.inc`), così il compilatore emette `call RT_xxx` come costanti.
 - Variabili intere a 0C000h in poi (azzerate all'avvio), heap stringhe sopra.
 
@@ -52,6 +52,7 @@ Sintassi decisa ora, implementazione per stadi:
 2e. **Fatto**: SELECT CASE su stringhe.
 3a. **Fatto**: grafica bitmap SCREEN 5-8 (PSET/PRESET/POINT/LINE/CIRCLE).
 3b. **Fatto**: PAINT, PRINT/INPUT/LOCATE/CLS in grafica, PALETTE.
-3c. Sprite, grafica MSX1 (schermi 2-3), GET/PUT/DRAW; poi suono e file.
+3c. **Fatto**: sprite (modo 2, SPRITE$, PUT SPRITE, dimensioni).
+3d. Collisioni, grafica MSX1 (schermi 2-3), GET/PUT/DRAW; poi suono e file.
 4. Target ROM + `SEGMENT`/`CALL FAR` (ASCII8/16, Konami, SCC).
 5. Mapper RAM.

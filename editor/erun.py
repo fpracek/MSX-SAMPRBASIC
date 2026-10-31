@@ -26,6 +26,7 @@ def main():
         print(r.stdout, r.stderr)
         sys.exit(2)
     shutil.copy(os.path.join(ONMSX, 'build', 'qbc.com'), os.path.join(DISK, 'QBC.COM'))
+    shutil.copy(os.path.join(ONMSX, 'build', 'rt.bin'), os.path.join(DISK, 'RT.BIN'))
     shutil.copy(os.path.join(HERE, 'ed.com'), os.path.join(DISK, 'QB.COM'))
     new = ['PRINT "Hello from MSXQB"', 'FOR i = 1 TO 3 : PRINT i; : NEXT', 'PRINT']
     err = ['PRINT "one"', 'PRINT "two"', 'x = 5', 'PRINT 1 +', 'PRINT "never"']

@@ -80,6 +80,9 @@ inbuf   equ RTRAM+20
         jp rt_palette
         jp rt_palinit
         jp rt_paint
+        jp rt_sprdef
+        jp rt_sprput
+        jp rt_sprsize
         ASSERT $ == RT_EMPTY
 rt_empty: db 0
         ASSERT $ == RT_NAME
@@ -933,6 +936,7 @@ rt_vpoke:                   ; DE = indirizzo VRAM (0-16383), HL = valore
 
         INCLUDE "rtgfx.asm"
         INCLUDE "rtgtext.asm"
+        INCLUDE "rtspr.asm"
 
 ldr_img: INCBIN "build/ldr.bin"
 ldr_size equ $-ldr_img

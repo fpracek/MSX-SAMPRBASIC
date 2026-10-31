@@ -66,6 +66,7 @@ def run_cases(cases, wait_run=float(os.environ.get('QWAIT', '28'))):
         shutil.copy(os.path.join(DOSDIR, f), DISK)
     shutil.copy(os.path.join(BUILD, 'qbc.com'), os.path.join(DISK, 'QBC.COM'))
     shutil.copy(os.path.join(BUILD, 'qbstub.com'), os.path.join(DISK, 'QB.COM'))
+    shutil.copy(os.path.join(BUILD, 'rt.bin'), os.path.join(DISK, 'RT.BIN'))
     lines = [TCL, 'set OUTDIR "%s"' % BUILD.replace(chr(92), '/')]
     t = 20.0
     for name, src in cases:

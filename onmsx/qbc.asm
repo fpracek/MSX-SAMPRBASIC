@@ -17,20 +17,20 @@ F_DMA   equ 1Ah
 F_BWR   equ 26h
 F_BRD   equ 27h
 
-SRC     equ 4900h
-SRCMAX  equ 36FEh
+SRC     equ 4000h
+SRCMAX  equ 3FFEh
 OUT0    equ 8000h
 VOFF    equ 7F00h
 OUTLIM  equ 0BFh                ; alto byte: oltre BF00h il programma e' troppo grande
 LDR     equ 0C000h
 
-LABT    equ 3A00h               ; etichette: 96 x 20 byte
+LABT    equ 3000h               ; etichette: 96 x 20 byte
 LABREC  equ 20
 MAXLAB  equ 96
-VART    equ 4180h               ; variabili/array: 100 x 16 byte
+VART    equ 3780h               ; variabili/array: 100 x 16 byte
 VARREC  equ 16
 MAXVAR  equ 100
-BLKS    equ 47C0h               ; stack dei blocchi: 24 x 10 byte
+BLKS    equ 3E10h               ; stack dei blocchi: 24 x 10 byte
 BLKREC  equ 10
 MAXBLK  equ 24
 
@@ -157,6 +157,8 @@ K_LINE  equ 49
 K_CIRCLE equ 50
 K_PALETTE equ 51
 K_PAINT equ 52
+K_PUT   equ 53
+K_SPRITE equ 54
 
 B_IF    equ 1
 B_FOR   equ 2
@@ -179,7 +181,7 @@ E_WRITE equ 12
 E_MODE  equ 13
 E_TYPE  equ 14
 E_MEM   equ 15
-E_FUNC  equ 16
+E_RT    equ 16
 
         MACRO EM1 a
         call emit_i
@@ -446,6 +448,37 @@ read_source:
         add hl,de
         ld (hl),0
         ret
+
+load_rt:                        ; RT.BIN -> OUT0 (immagine del runtime); outp = fine
+        ld hl,s_rtbin
+        ld (namep),hl
+        call mk_fcb
+        ld de,fcb
+        ld c,F_OPEN
+        call BDOS
+        or a
+        jr z,.o
+        ld hl,0
+        ld (tline),hl
+        ERR E_RT
+.o:     call fcb_rec1
+        ld de,OUT0
+        ld c,F_DMA
+        call BDOS
+        ld de,fcb
+        ld hl,3000h
+        ld c,F_BRD
+        call BDOS
+        push hl
+        ld de,fcb
+        ld c,F_CLOSE
+        call BDOS
+        pop hl
+        ld de,OUT0
+        add hl,de
+        ld (outp),hl
+        ret
+s_rtbin: db "RT.BIN",0
 
 write_output:                   ; NOME.COM <- immagine
         ld hl,fname
@@ -938,7 +971,8 @@ kwtab:  db "PRINT",0,"IF",0,"THEN",0,"ELSE",0,"ELSEIF",0,"END",0,"FOR",0,"TO",0
         db "STEP",0,"NEXT",0,"WHILE",0,"WEND",0,"GOTO",0,"GOSUB",0,"RETURN",0
         db "CLS",0,"LOCATE",0,"AND",0,"OR",0,"XOR",0,"NOT",0,"MOD",0,"LET",0
         db "OPTION",0,"INPUT",0,"DIM",0,"POKE",0,"SUB",0,"FUNCTION",0,"CALL",0,"DECLARE",0,"SHARED",0
-        db "EXIT",0,"DO",0,"LOOP",0,"UNTIL",0,"SELECT",0,"CASE",0,"IS",0,"CONST",0,"COLOR",0,"RANDOMIZE",0,"VPOKE",0,"OUT",0,"SLEEP",0,"STOP",0,"SCREEN",0,"PSET",0,"PRESET",0,"LINE",0,"CIRCLE",0,"PALETTE",0,"PAINT",0,0
+        db "EXIT",0,"DO",0,"LOOP",0,"UNTIL",0,"SELECT",0,"CASE",0,"IS",0,"CONST",0,"COLOR",0,"RANDOMIZE",0,"VPOKE",0,"OUT",0,"SLEEP",0,"STOP",0,"SCREEN",0,"PSET",0,"PRESET",0,"LINE",0,"CIRCLE",0
+        db "PALETTE",0,"PAINT",0,"PUT",0,"SPRITE",0,0
 
 ; ---------------------------------------------------------------- helper del parser
 is_p:                           ; A = carattere: Z se il token e' quella punteggiatura
@@ -1608,11 +1642,7 @@ compile:
         ld (fcur),hl
         ld (fexit),hl
         ld (fskiph),hl
-        ld hl,rt_image          ; il runtime e' l'inizio dell'output
-        ld de,OUT0
-        ld bc,rt_size
-        ldir
-        ld (outp),de
+        call load_rt            ; il runtime (RT.BIN) e' l'inizio dell'output
         call prescan            ; firme di SUB/FUNCTION (riferimenti in avanti)
         ld hl,SRC
         ld (lp),hl
@@ -2021,7 +2051,7 @@ kwjump: dw st_print, st_if, err_syntax, st_else, st_elseif, st_end, st_for, err_
         dw st_input, st_dim, st_poke, st_sub, st_function, st_call, st_skip, st_shared
         dw st_exit, st_do, st_loop, err_syntax, st_select, st_case, err_syntax
         dw st_const, st_color, st_randomize, st_vpoke, st_out, st_sleep, st_stop
-        dw st_screen, st_pset, st_preset, st_line, st_circle, st_palette, st_paint
+        dw st_screen, st_pset, st_preset, st_line, st_circle, st_palette, st_paint, st_put, err_syntax
 
 ; ---------------------------------------------------------------- espressioni
 want_int:
@@ -2568,6 +2598,11 @@ st_let: ld a,(ttype)
         cp T_ID
         jp nz,err_syntax
 st_idstmt:                      ; identificatore all'inizio dell'istruzione: SUB senza CALL oppure assegnamento
+        call make_nbuf
+        ld hl,nbuf
+        ld de,s_spritedol
+        call str_eq
+        jp z,st_sprdef
         call find_func
         jr c,st_assign
         push hl
@@ -4481,6 +4516,13 @@ st_screen:
         call expr
         call want_int
         EM3 0CDh,low RT_SCREEN,high RT_SCREEN
+        ld a,','
+        call is_p
+        ret nz
+        call next_tok           ; SCREEN modo, dimensione sprite (0 8x8, 1 8x8 x2, 2 16x16, 3 16x16 x2)
+        call expr
+        call want_int
+        EM3 0CDh,low RT_SPRSIZE,high RT_SPRSIZE
         ret
 
 st_pset:
@@ -4594,6 +4636,60 @@ st_paint:                       ; PAINT (x,y)[, colore[, bordo]]
 .go:    EM3 0CDh,low RT_PAINT,high RT_PAINT
         ret
 
+s_spritedol: db "SPRITE$",0
+
+st_sprdef:                      ; SPRITE$(n) = pattern
+        call next_tok
+        call open_paren
+        call expr
+        call want_int
+        ld hl,GX1
+        call emit_st
+        call close_paren
+        ld a,'='
+        call expect_p
+        call expr
+        call want_str
+        EM3 0CDh,low RT_SPRDEF,high RT_SPRDEF
+        ret
+
+st_put:                         ; PUT SPRITE piano, (x,y)[, colore[, pattern]]
+        ld a,K_SPRITE
+        call expect_kw
+        call expr
+        call want_int
+        ld hl,GX1
+        call emit_st
+        ld a,','
+        call expect_p
+        ld de,GX2
+        ld bc,GY2
+        call emit_xy
+        call emit_defcol
+        call emit_i             ; pattern = -1 (come il numero del piano)
+        db 6,21h,0FFh,0FFh,22h,low GY1,high GY1
+        ld a,','
+        call is_p
+        jr nz,.go
+        call next_tok
+        ld a,','
+        call is_p
+        jr z,.pat               ; colore omesso
+        call expr
+        call want_int
+        ld hl,GCOL
+        call emit_st
+        ld a,','
+        call is_p
+        jr nz,.go
+.pat:   call next_tok
+        call expr
+        call want_int
+        ld hl,GY1
+        call emit_st
+.go:    EM3 0CDh,low RT_SPRPUT,high RT_SPRPUT
+        ret
+
 st_palette:                     ; PALETTE [n, rosso, verde, blu]
         call at_send
         jr nz,.args
@@ -4666,8 +4762,6 @@ st_wend:
 ; ---------------------------------------------------------------- runtime e caricatore inclusi
 ldr_img: INCBIN "build/ldr.bin"
 ldr_size equ $-ldr_img
-rt_image: INCBIN "build/rt.bin"
-rt_size equ $-rt_image
 comend:
         ASSERT comend < LABT
         SAVEBIN "build/qbc.com",0100h,comend-0100h

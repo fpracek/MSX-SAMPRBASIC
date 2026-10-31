@@ -4,7 +4,7 @@ Il compilatore BASIC gira **sull'MSX2** (MSX-DOS 1/2, nessun aiuto dal PC). Prog
 `../DESIGN-ONMSX.md`.
 
 ## Uso (su macchina)
-Copia `dist\QB.COM` (editor) e `dist\QBC.COM` (compilatore) sul disco, poi `QB PROG.BAS`, **F5** (o menu Run).
+Copia `dist\QB.COM` (editor), `dist\QBC.COM` (compilatore) e `dist\RT.BIN` (runtime) sul disco, poi `QB PROG.BAS`, **F5** (o menu Run).
 F5 salva il sorgente, carica `QBC.COM` a catena, che genera `PROG.COM`, lo scrive su disco e lo avvia.
 Alla fine il programma attende un tasto e ricarica l'editor. Se la compilazione fallisce l'editor si riapre sul
 sorgente con il cursore sulla riga dell'errore e il messaggio nel titolo (`Line 4: Syntax error`).
@@ -12,7 +12,7 @@ Il DOS 1 non ha EXEC: la catena usa un caricatore di 135 byte (`ldr.asm`) copiat
 a 0080h come mailbox (`" NOME.BAS"`, in caso di errore `" NOME.BAS E<riga> <codice>"`).
 
 ## File
-- `qbc.asm` — compilatore (4,8 KB): lexer, espressioni, istruzioni, emissione diretta di codice macchina.
+- `qbc.asm` — compilatore (circa 10 KB; il runtime NON e' incorporato ma si legge da `RT.BIN` all'avvio della compilazione): lexer, espressioni, istruzioni, emissione diretta di codice macchina.
 - `rtcom.asm` — runtime per .COM (immagine a 0100h con tabella di JP, `rtabi.inc`), BIOS via CALSLT.
 - `ldr.asm` — caricatore a catena. Build: `ldr.asm` → `rtcom.asm` → `qbc.asm` (`--raw`/SAVEBIN in `build/`).
 - `zrun.py` — collaudo veloce senza emulatore MSX (emulatore Z80 in Python + BDOS/BIOS finti, RAM a caso).
@@ -62,7 +62,7 @@ Limiti: sorgente 14 KB, programma 16 KB, 96 etichette, 100 variabili/array, 20 S
 · 9 programma troppo grande · 10 sorgente troppo grande · 11 lettura · 12 scrittura · 13 non ammesso con l'OPTION scelta · 14 tipi incompatibili o array non dichiarato · 15 dati del programma troppo grandi.
 
 ## Risultati
-`zrun.py` 42/42 (anche con RAM iniziale casuale), `qtest.py` 42/42 (openMSX), `gtest.py` 8/8 (grafica: pixel, palette e testo letti dalla VRAM) (openMSX; INPUT con tasti battuti dal test),
+`zrun.py` 44/44 (anche con RAM iniziale casuale), `qtest.py` 44/44 (openMSX), `gtest.py` 10/10 (grafica: pixel, palette e testo letti dalla VRAM) (openMSX; INPUT con tasti battuti dal test),
 `../editor/erun.py` 12/12, `ecom.py` 25/25.
 Non ancora supportati: float, sprite, suono, file.
 Non provato su MSX reale (disco fisico, Nextor/DOS2).

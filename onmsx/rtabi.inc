@@ -46,9 +46,12 @@ RT_GCIRCLE equ 0184h
 RT_PALETTE equ 0187h
 RT_PALINIT equ 018Ah
 RT_PAINT  equ 018Dh
-RT_EMPTY  equ 0190h             ; byte 0 (stringa vuota)
-RT_NAME   equ 0191h             ; 16 byte: nome del sorgente (0-terminato)
-RT_DSIZE  equ 01A1h             ; word: byte di dati del programma (scritta dal compilatore)
+RT_SPRDEF equ 0190h
+RT_SPRPUT equ 0193h
+RT_SPRSIZE equ 0196h
+RT_EMPTY  equ 0199h             ; byte 0 (stringa vuota)
+RT_NAME   equ 019Ah             ; 16 byte: nome del sorgente (0-terminato)
+RT_DSIZE  equ 01AAh             ; word: byte di dati del programma (scritta dal compilatore)
 RTRAM     equ 0C100h            ; RAM del runtime (C000h-C086h: caricatore)
 HEAPP     equ RTRAM+0
 HEAP0     equ RTRAM+10

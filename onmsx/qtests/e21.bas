@@ -1,0 +1,1 @@
+PUT SPRITE 1

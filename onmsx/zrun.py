@@ -179,7 +179,8 @@ class Msx:
 
 def compile_and_run(src, name='T.BAS', qbc=None, keys=(13,)):
     qbc = qbc or open(os.path.join(BUILD, 'qbc.com'), 'rb').read()
-    ms = Msx({name: src.replace('\n', '\r\n').encode('latin-1')})
+    ms = Msx({name: src.replace(chr(10), chr(13) + chr(10)).encode('latin-1'),
+              'RT.BIN': open(os.path.join(BUILD, 'rt.bin'), 'rb').read()})
     ms.boot(qbc, name)
     res = ms.run()
     info = {'phase1': res}

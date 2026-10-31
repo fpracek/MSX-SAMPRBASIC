@@ -13,7 +13,7 @@ from qtest import BUILD, DISK, HERE, OPENMSX, DOSDIR, build_all
 
 GTESTS = os.path.join(HERE, 'gtests')
 FAILS = 0
-VRAM_BYTES = 0xD400
+VRAM_BYTES = 0x10000
 
 
 def check(c, m):
@@ -30,6 +30,10 @@ proc vdump {name} {
     global OUTDIR
     set data [debug read_block VRAM 0 %d]
     set f [open "$OUTDIR/$name.vram" wb]
+    puts -nonewline $f $data
+    close $f
+    set data [debug read_block "VDP regs" 0 48]
+    set f [open "$OUTDIR/$name.reg" wb]
     puts -nonewline $f $data
     close $f
     set data [debug read_block "VDP palette" 0 32]
@@ -63,6 +67,7 @@ def run_cases(names, wait=30.0):
         shutil.copy(os.path.join(DOSDIR, f), DISK)
     shutil.copy(os.path.join(BUILD, 'qbc.com'), os.path.join(DISK, 'QBC.COM'))
     shutil.copy(os.path.join(BUILD, 'qbstub.com'), os.path.join(DISK, 'QB.COM'))
+    shutil.copy(os.path.join(BUILD, 'rt.bin'), os.path.join(DISK, 'RT.BIN'))
     lines = [TCL, 'set OUTDIR "%s"' % BUILD.replace(chr(92), '/')]
     t = 20.0
     for n in names:
@@ -107,6 +112,24 @@ def main():
                 i, r, g, b = (int(z) for z in w[1:5])
                 gr, rb = pal[2 * i + 1] & 7, pal[2 * i]
                 check(((rb >> 4) & 7, gr, rb & 7) == (r, g, b), f'palette {i} = {((rb >> 4) & 7, gr, rb & 7)} (atteso {(r, g, b)})')
+            elif w[0] in ('sppat', 'spat', 'spcol'):
+                rg = open(os.path.join(BUILD, n + '.reg'), 'rb').read()
+                attr = ((rg[11] & 1) << 15) | ((rg[5] & 0xFC) << 7)
+                gen = (rg[6] & 0x1F) << 11
+                if w[0] == 'sppat':
+                    pn, size = int(w[1]), int(w[2])
+                    want = [int(z) for z in w[3:]]
+                    got = list(v[gen + pn * size: gen + pn * size + len(want)])
+                    check(got == want, f'pattern {pn} ({size} byte) a {gen:04X}: {got} (atteso {want})')
+                elif w[0] == 'spat':
+                    pl = int(w[1])
+                    want = [int(z) for z in w[2:5]]
+                    got = list(v[attr + pl * 4: attr + pl * 4 + 3])
+                    check(got == want, f'sprite {pl}: Y,X,pattern = {got} (atteso {want}) attributi a {attr:04X}')
+                else:
+                    pl, cnt, val = int(w[1]), int(w[2]), int(w[3])
+                    got = list(v[attr - 0x200 + pl * 16: attr - 0x200 + pl * 16 + cnt])
+                    check(got == [val] * cnt, f'colori del sprite {pl}: {got[:4]}... (atteso {val} x{cnt})')
             elif w[0] in ('any', 'none', 'count'):
                 x0, y0, x1, y1, c = (int(z) for z in w[1:6])
                 n_ = sum(1 for yy in range(y0, y1 + 1) for xx in range(x0, x1 + 1) if pixel(v, mode, xx, yy) == c)
