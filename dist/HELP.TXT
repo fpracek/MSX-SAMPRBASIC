@@ -668,15 +668,18 @@ See also: PRINT, CLS
 COLOR
 -----
 
-COLOR foreground[, background]
+COLOR foreground[, background[,
+    border]]
 COLOR = (n, r, g, b)
 COLOR = RESTORE
 COLOR SPRITE(n) = color
 COLOR SPRITE$(n) = colors$
 
-Sets the text colors (and the border)
-with numbers from 0 to 15 (in SCREEN 8
-the raw value 0-255). COLOR =
+Sets the foreground, background and
+border colors with numbers from 0 to
+15 (in SCREEN 8 the raw value 0-255).
+Without the third value the border
+takes the background color. COLOR =
 (n,r,g,b) redefines a palette color
 (r, g, b from 0 to 7; MSX2) and COLOR
 = RESTORE restores the default

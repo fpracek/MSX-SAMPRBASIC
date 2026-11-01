@@ -425,6 +425,9 @@ rt_end:
         ld hl,msg_press
         call rt_pstr
 .nomsg:
+        IFDEF BINMODE
+        call rt_keyup           ; il tasto con cui si e' lanciato BLOAD puo' essere ancora giu': non deve contare come "premi un tasto"
+        ENDIF
         push ix                 ; la BIOS (CALSLT) distrugge IX: il frame delle SUB/FUNCTION va salvato
         ld ix,0156h             ; KILBUF: i tasti battuti durante l'esecuzione non devono saltare l'attesa
         call rt_bios
@@ -1155,12 +1158,18 @@ rt_input:                   ; legge una riga -> stringa temporanea
         ld hl,inbuf
         jp rt_sdup
 
-rt_color:                   ; E = primo piano, L = sfondo (anche bordo)
+rt_color:                   ; E = primo piano, L = sfondo, H = bordo + 1 (0 = bordo come lo sfondo)
         ld a,e
         ld (FORCLR),a
         ld a,l
         ld (BAKCLR),a
-        ld (BDRCLR),a
+        ld a,h
+        or a
+        jr nz,.hb
+        ld a,l                  ; senza terzo valore il bordo e' come lo sfondo
+        jr .pb
+.hb:    dec a
+.pb:    ld (BDRCLR),a
         push ix
         ld ix,CHGCLR
         call rt_bios

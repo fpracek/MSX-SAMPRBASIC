@@ -1,0 +1,157 @@
+{
+ "name": "SamPr Basic",
+ "scopeName": "source.samprbasic",
+ "patterns": [
+  {
+   "include": "#asm"
+  },
+  {
+   "include": "#comment"
+  },
+  {
+   "include": "#string"
+  },
+  {
+   "include": "#label"
+  },
+  {
+   "include": "#linenumber"
+  },
+  {
+   "include": "#subdef"
+  },
+  {
+   "include": "#number"
+  },
+  {
+   "include": "#option"
+  },
+  {
+   "include": "#operator"
+  },
+  {
+   "include": "#statement"
+  },
+  {
+   "include": "#function"
+  }
+ ],
+ "repository": {
+  "comment": {
+   "patterns": [
+    {
+     "name": "comment.line.samprbasic",
+     "match": "(?i)(?:\\bREM\\b|').*$"
+    }
+   ]
+  },
+  "string": {
+   "name": "string.quoted.double.samprbasic",
+   "begin": "\"",
+   "end": "\"|$"
+  },
+  "label": {
+   "name": "entity.name.label.samprbasic",
+   "match": "^\\s*([A-Za-z_][A-Za-z0-9_]*):(?!=)",
+   "captures": {
+    "1": {
+     "name": "entity.name.label.samprbasic"
+    }
+   }
+  },
+  "linenumber": {
+   "name": "constant.numeric.linenumber.samprbasic",
+   "match": "^\\s*\\d+\\b"
+  },
+  "subdef": {
+   "match": "(?i)\\b(SUB|FUNCTION)\\s+([A-Za-z_][A-Za-z0-9_]*\\$?)",
+   "captures": {
+    "1": {
+     "name": "keyword.control.samprbasic"
+    },
+    "2": {
+     "name": "entity.name.function.samprbasic"
+    }
+   }
+  },
+  "number": {
+   "name": "constant.numeric.samprbasic",
+   "match": "(?i)&H[0-9A-F]+|&B[01]+|\\b\\d+\\b"
+  },
+  "option": {
+   "match": "(?i)\\b(OPTION)\\s+(TARGET)\\s+(ROM_KONAMISCC|ROM_ASCII16|ROM_ASCII8|ROM_KONAMI|ASCII16|ROM_SCC|ASCII8|KONAMI|ROM_16|ROM_32|ROM16|ROM32|BIN|COM|DOS|SCC)\\b",
+   "captures": {
+    "1": {
+     "name": "keyword.control.samprbasic"
+    },
+    "2": {
+     "name": "keyword.control.samprbasic"
+    },
+    "3": {
+     "name": "support.constant.samprbasic"
+    }
+   }
+  },
+  "operator": {
+   "name": "keyword.operator.word.samprbasic",
+   "match": "(?i)\\b(STEP|THEN|AND|MOD|NOT|XOR|IS|OR|TO)\\b"
+  },
+  "statement": {
+   "name": "keyword.control.samprbasic",
+   "match": "(?i)\\b(EXIT\\s+FUNCTION|COLOR\\s+SPRITE|END\\s+FUNCTION|SELECT\\s+CASE|END\\s+SELECT|EXIT\\s+WHILE|LINE\\s+INPUT|PUT\\s+SPRITE|SET\\s+SCROLL|CASE\\s+ELSE|RANDOMIZE|CALL\\s+FAR|EXIT\\s+FOR|EXIT\\s+SUB|FUNCTION|SET\\s+PAGE|DECLARE|END\\s+SUB|EXIT\\s+DO|PALETTE|RESTORE|SEGMENT|SETBANK|CIRCLE|ELSEIF|END\\s+IF|INCBIN|LOCATE|MWRITE|OPTION|PRESET|RETURN|SCREEN|SELECT|SHARED|SPRITE|VWRITE|WINDOW|BLOAD|BSAVE|CLOSE|COLOR|CONST|FIELD|GOSUB|INPUT|MFREE|MREAD|PAINT|PRINT|SLEEP|SOUND|UNTIL|VBANK|VCOPY|VFILL|VPOKE|WHILE|WRITE|BEEP|CALL|CASE|COPY|DATA|DRAW|ELSE|EXIT|GOTO|KILL|LINE|LOOP|LSET|MPUT|NEXT|OPEN|PLAY|POKE|PSET|READ|RSET|STOP|VIEW|WEND|CLS|DIM|END|FOR|GET|LET|OUT|PUT|SET|SUB|DO|IF)\\b"
+  },
+  "function": {
+   "name": "support.function.samprbasic",
+   "match": "(?i)\\b(MAPPERSEGS|COLLISION|DATAWIN|MALLOC|UBOUND|VARPTR|INKEY|POINT|RIGHT|STICK|STRIG|TIMER|VPEEK|VREAD|BASE|LEFT|MGET|PEEK|ABS|ASC|CHR|CVI|EOF|INP|LEN|LOF|MID|MKI|RND|SGN|STR|VAL|VDP)\\$?(?=\\s*\\(|\\b)"
+  },
+  "asm": {
+   "name": "meta.embedded.block.asm.samprbasic",
+   "begin": "(?i)^\\s*(__ASM)\\b",
+   "end": "(?i)^\\s*(__ENDASM)\\b",
+   "beginCaptures": {
+    "1": {
+     "name": "keyword.control.samprbasic"
+    }
+   },
+   "endCaptures": {
+    "1": {
+     "name": "keyword.control.samprbasic"
+    }
+   },
+   "patterns": [
+    {
+     "name": "comment.line.semicolon.asm",
+     "match": ";.*$"
+    },
+    {
+     "name": "string.quoted.double.asm",
+     "match": "\"[^\"]*\""
+    },
+    {
+     "name": "support.type.register.asm",
+     "match": "(?i)\\b(AF'?|BC|DE|HL|IX|IY|SP|IXH|IXL|IYH|IYL|[ABCDEHLIR])\\b"
+    },
+    {
+     "name": "keyword.operator.condition.asm",
+     "match": "(?i)\\b(NZ|NC|PO|PE|[ZCPM])(?=\\s*,)"
+    },
+    {
+     "name": "keyword.other.mnemonic.asm",
+     "match": "(?i)\\b(ADC|ADD|AND|BIT|CALL|CCF|CP|CPD|CPDR|CPI|CPIR|CPL|DAA|DEC|DI|DJNZ|EI|EX|EXX|HALT|IM|IN|INC|IND|INDR|INI|INIR|JP|JR|LD|LDD|LDDR|LDI|LDIR|NEG|NOP|OR|OTDR|OTIR|OUT|OUTD|OUTI|POP|PUSH|RES|RET|RETI|RETN|RL|RLA|RLC|RLCA|RLD|RR|RRA|RRC|RRCA|RRD|RST|SBC|SCF|SET|SLA|SRA|SRL|SUB|XOR)\\b"
+    },
+    {
+     "name": "keyword.control.directive.asm",
+     "match": "(?i)\\b(DB|DEFB|DW|DEFW|DS|DEFS|EQU)\\b"
+    },
+    {
+     "name": "constant.numeric.asm",
+     "match": "(?i)\\$[0-9A-F]+|0x[0-9A-F]+|\\b[0-9][0-9A-F]*H\\b|%[01]+|\\b[01]+B\\b|\\b\\d+\\b"
+    },
+    {
+     "name": "entity.name.label.asm",
+     "match": "^\\s*[A-Za-z_][A-Za-z0-9_]*:"
+    }
+   ]
+  }
+ }
+}

@@ -67,6 +67,10 @@ A large program is written with one file per segment: `NAME000.SPB` (main, holds
 
 Drop-down menus from the keyboard (**Esc**, **F1–F4**) and with the mouse; selection, copy/paste, undo/redo, find/replace; a file window with folders (DOS 2) and jump-by-first-letter; **F5** compiles and runs; **F6** help on the word under the cursor; **F7** help index; **F8** change segment. Sources use the **`.SPB`** extension (*SamPr Basic*); *Save As* accepts up to 8 characters.
 
+## VS Code extension
+
+Work on the PC with the same workflow and the **same files** as on the MSX: the [`vscode/`](vscode) folder holds the *SamPr Basic for MSX* extension. It runs the real compiler (the same `QBC.COM`/`QBCR.COM`/`QBCB.COM`, inside a Z80 emulator, in milliseconds), shows compile errors as you type on the right file and line, keeps the same keys (**F5** run, **F6/F7** help, **F8** segment), a white-on-blue color theme, hover help, outline and snippets, and runs the result in [openMSX](https://openmsx.org) (DOS programs, BIN files, ROM cartridges). A project can be copied between the PC and a real MSX without any conversion. Build and test with `cd vscode && npm install && npm run tools && npm run build` (see [`vscode/README.md`](vscode/README.md)).
+
 ## Documentation
 
 - **[User manual and reference (PDF)](dist/SamPrBasic-Manual.pdf)**: cover, installation, editor, language, every statement with syntax and example, assembler, debugger, cartridges, BIN, errors and limits.
@@ -95,6 +99,7 @@ cd editor && python etest.py        # editor (and many more: esel, emenu, ecom, 
 |---|---|
 | [`onmsx/`](onmsx) | compiler (`qbc.asm`), runtime (`rtcom.asm` and modules), inline assembler, debugger, tests |
 | [`editor/`](editor) | editor (`editor.asm`, `fileio.asm`), help, file window, tests |
+| [`vscode/`](vscode) | the VS Code extension (TypeScript) |
 | [`doc/`](doc) | PDF manual, online help, screenshots, generators |
 | [`dist/`](dist), [`sample_disk/`](sample_disk) | files to copy to the MSX disk, example programs |
 

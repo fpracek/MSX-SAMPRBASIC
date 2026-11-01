@@ -205,6 +205,18 @@ CH('Working directory (MSX-DOS 2)', [
             "With MSX-DOS 1 there are no folders and none of this applies."]),
 ])
 
+CH('VS Code extension', [
+    ('p', "The <b>SamPr Basic for MSX</b> extension lets you work on the PC with the same workflow, the same shortcuts and the <b>same files</b> as the editor on the MSX: a project (NAME.SPB, "
+          "NAME000.SPB..., NAMEnnn.BIN) can be copied between a real machine, an SD card or disk image and the PC with no conversion."),
+    ('ul', ["<b>The real compiler</b> runs inside VS Code: the extension executes the very same QBC.COM, QBCR.COM and QBCB.COM inside a Z80 emulator with a simulated MSX-DOS. The result is identical to the one produced on the machine and takes a few milliseconds.",
+            "<b>Errors as you type</b>, with the compiler's own messages, on the right file and line (unsaved text too, and multi-file cartridges).",
+            "<b>Same keys:</b> F5 compile and run, F6 help on the word, F7 help index, F8 go to a segment.",
+            "<b>Same look:</b> the <i>SamPr Basic MSX</i> color theme (white on blue, yellow keywords) and an 80-column ruler.",
+            "Hover help for every statement, outline of SUB/FUNCTION/labels, snippets, highlighting of __ASM blocks.",
+            "<b>Run in openMSX</b> for the three outputs: DOS programs, MSX-BASIC BIN files and ROM cartridges (settings: openMSX path, folder with MSXDOS.SYS and COMMAND.COM, machine)."]),
+    ('p', "Install the .vsix file from the release (<i>Extensions &gt; ... &gt; Install from VSIX</i>). Source-level debugging in openMSX is planned."),
+])
+
 CH('MSX1 and MSX2', [
     ('table', [['Feature', 'MSX1', 'MSX2'],
                ['Editor', '40 columns, no colors', '80 columns, colored keywords'],

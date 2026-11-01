@@ -1,0 +1,3 @@
+SCREEN 5
+COLOR 15, 4
+PSET (10, 10), 15

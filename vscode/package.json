@@ -1,0 +1,192 @@
+{
+  "name": "samprbasic",
+  "displayName": "SamPr Basic for MSX",
+  "description": "SamPr Basic: BASIC compiler and IDE for MSX (MSX-DOS programs, MSX-BASIC BIN files, ROM cartridges). Same files and same workflow as the editor that runs on the MSX.",
+  "version": "1.0.0",
+  "publisher": "fpracek",
+  "engines": {
+    "vscode": "^1.90.0"
+  },
+  "categories": [
+    "Programming Languages",
+    "Debuggers",
+    "Themes"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fpracek/MSX-SAMPRBASIC.git"
+  },
+  "main": "./dist/extension.js",
+  "activationEvents": [
+    "onLanguage:samprbasic",
+    "workspaceContains:**/*.spb"
+  ],
+  "contributes": {
+    "languages": [
+      {
+        "id": "samprbasic",
+        "aliases": [
+          "SamPr Basic",
+          "samprbasic"
+        ],
+        "extensions": [
+          ".spb"
+        ],
+        "configuration": "./language-configuration.json"
+      }
+    ],
+    "grammars": [
+      {
+        "language": "samprbasic",
+        "scopeName": "source.samprbasic",
+        "path": "./syntaxes/samprbasic.tmLanguage.json"
+      }
+    ],
+    "themes": [
+      {
+        "label": "SamPr Basic MSX",
+        "uiTheme": "vs-dark",
+        "path": "./themes/samprbasic-msx-color-theme.json"
+      }
+    ],
+    "snippets": [
+      {
+        "language": "samprbasic",
+        "path": "./snippets/samprbasic.json"
+      }
+    ],
+    "commands": [
+      {
+        "command": "samprbasic.run",
+        "title": "SamPr Basic: Compile and Run (F5)"
+      },
+      {
+        "command": "samprbasic.build",
+        "title": "SamPr Basic: Compile"
+      },
+      {
+        "command": "samprbasic.helpWord",
+        "title": "SamPr Basic: Help on Word (F6)"
+      },
+      {
+        "command": "samprbasic.helpIndex",
+        "title": "SamPr Basic: Help Index (F7)"
+      },
+      {
+        "command": "samprbasic.segment",
+        "title": "SamPr Basic: Go to Segment (F8)"
+      },
+      {
+        "command": "samprbasic.about",
+        "title": "SamPr Basic: About"
+      },
+      {
+        "command": "samprbasic.newProject",
+        "title": "SamPr Basic: New Project from Sample"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "samprbasic.run",
+        "key": "f5",
+        "when": "editorLangId == samprbasic"
+      },
+      {
+        "command": "samprbasic.helpWord",
+        "key": "f6",
+        "when": "editorLangId == samprbasic"
+      },
+      {
+        "command": "samprbasic.helpIndex",
+        "key": "f7",
+        "when": "editorLangId == samprbasic"
+      },
+      {
+        "command": "samprbasic.segment",
+        "key": "f8",
+        "when": "editorLangId == samprbasic"
+      }
+    ],
+    "menus": {
+      "editor/title": [
+        {
+          "command": "samprbasic.run",
+          "when": "editorLangId == samprbasic",
+          "group": "navigation"
+        },
+        {
+          "command": "samprbasic.segment",
+          "when": "editorLangId == samprbasic",
+          "group": "navigation"
+        }
+      ]
+    },
+    "configuration": {
+      "title": "SamPr Basic",
+      "properties": {
+        "samprbasic.openmsx.path": {
+          "type": "string",
+          "default": "",
+          "description": "Full path of openmsx.exe (leave empty to use the one in PATH)."
+        },
+        "samprbasic.dosFiles": {
+          "type": "string",
+          "default": "",
+          "description": "Folder holding MSXDOS.SYS and COMMAND.COM (needed to run DOS programs in openMSX; not included)."
+        },
+        "samprbasic.machine": {
+          "type": "string",
+          "default": "Philips_NMS_8250",
+          "description": "openMSX machine used to run DOS and BIN programs (an MSX2 for 80 columns; for MSX1 use e.g. Sony_HB-75P with the disk extension)."
+        },
+        "samprbasic.extension": {
+          "type": "string",
+          "default": "",
+          "description": "Optional openMSX extension for the disk interface (MSX1 machines, e.g. Panasonic_FS-FD1A)."
+        },
+        "samprbasic.fullSpeedWhenLoading": {
+          "type": "boolean",
+          "default": true,
+          "description": "Run openMSX at full speed while it accesses the disk."
+        },
+        "samprbasic.askDate": {
+          "type": "boolean",
+          "default": false,
+          "description": "Type a date at the DOS prompt (MSX1 machines with MSX-DOS 1 ask for it at start-up)."
+        }
+      }
+    },
+    "configurationDefaults": {
+      "[samprbasic]": {
+        "editor.rulers": [
+          80
+        ],
+        "editor.wordWrap": "off",
+        "editor.fontSize": 15,
+        "editor.tabSize": 2,
+        "editor.insertSpaces": true,
+        "editor.renderWhitespace": "none",
+        "files.eol": "\r\n",
+        "files.encoding": "windows1252",
+        "editor.minimap.enabled": false
+      }
+    }
+  },
+  "scripts": {
+    "build": "node esbuild.mjs",
+    "watch": "node esbuild.mjs --watch",
+    "tools": "node scripts/copy-tools.mjs",
+    "test": "node test/e2e.cjs && node test/ext/runTest.cjs",
+    "package": "npm run tools && npm run build && vsce package --no-dependencies",
+    "data": "python ../doc/gen_vscode_data.py"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/vscode": "^1.90.0",
+    "@vscode/test-electron": "^3.1.0",
+    "@vscode/vsce": "^3.0.0",
+    "esbuild": "^0.25.0",
+    "typescript": "^5.6.0",
+    "z80-emulator": "^2.3.0"
+  }
+}

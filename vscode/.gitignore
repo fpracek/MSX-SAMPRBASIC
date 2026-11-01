@@ -1,0 +1,10 @@
+node_modules/
+dist/
+tools/
+samples/
+*.vsix
+out/
+test/tl/
+test/bd/
+test/*.png
+test/*.tcl

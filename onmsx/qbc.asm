@@ -4,7 +4,7 @@
 ; Una passata, emissione diretta; HL = accumulatore, operando sinistro sullo stack.
 ; Input: riga di comando " NOME.SPB"  ->  scrive NOME.COM e lo avvia.
 ; Errore: ricarica l'editor con " NOME.SPB E<riga> <codice>".
-; Memoria: codice 0100h-3DFFh, tabelle 3E00h-4DFFh, sorgente 4E00h-7FFFh,
+; Memoria: codice 0100h-3EFFh, tabelle 3F00h-4EFFh, sorgente 4F00h-7FFFh,
 ;          output 8000h-BEFFh (indirizzi virtuali da 0100h: virt = fisico - 7F00h).
 ; =====================================================================
         INCLUDE "rtabi.inc"
@@ -24,12 +24,12 @@ SRCMAX  equ 3BFEh
         IFDEF BINMODE
 SRC     equ 4F00h
         ELSE
-SRC     equ 4E00h
+SRC     equ 4F00h
         ENDIF
         IFDEF BINMODE
 SRCMAX  equ 30FEh
         ELSE
-SRCMAX  equ 31FEh
+SRCMAX  equ 30FEh
         ENDIF
         ENDIF
 OUT0    equ 8000h
@@ -64,7 +64,7 @@ LABT    equ 0CA00h
         IFDEF BINMODE
 LABT    equ 3F00h
         ELSE
-LABT    equ 3E00h
+LABT    equ 3F00h
         ENDIF
 ;              ; etichette: 96 x 20 byte
         ENDIF
@@ -76,7 +76,7 @@ VART    equ 0D180h
         IFDEF BINMODE
 VART    equ 4680h
         ELSE
-VART    equ 4580h
+VART    equ 4680h
         ENDIF
 ;               ; variabili/array: 100 x 16 byte
         ENDIF
@@ -88,7 +88,7 @@ BLKS    equ 0D7C0h
         IFDEF BINMODE
 BLKS    equ 4CC0h
         ELSE
-BLKS    equ 4BC0h
+BLKS    equ 4CC0h
         ENDIF
 ;               ; stack dei blocchi: 24 x 10 byte
         ENDIF
@@ -149,25 +149,25 @@ FARX    equ 4194h
         IFDEF BINMODE
 FARTABC equ 4AC0h
         ELSE
-FARTABC equ 49C0h
+FARTABC equ 4AC0h
         ENDIF
 ;               ; FARTAB in costruzione: 32 x 4 byte (banco, 0, indirizzo)
         IFDEF BINMODE
 SEGT    equ 4B40h
         ELSE
-SEGT    equ 4A40h
+SEGT    equ 4B40h
         ENDIF
 ;               ; segmento di ogni SUB/FUNCTION (indice nel record)
         IFDEF BINMODE
 FCBSV   equ 4E68h
         ELSE
-FCBSV   equ 4D68h
+FCBSV   equ 4E68h
         ENDIF
 ;               ; copia dell'FCB di uscita durante INCBIN
         IFDEF BINMODE
 FARX    equ 4B54h
         ELSE
-FARX    equ 4A54h
+FARX    equ 4B54h
         ENDIF
 ;               ; indice FARTAB di ogni SUB/FUNCTION (FFh = nessuno)
         ENDIF
@@ -517,7 +517,11 @@ getname:                        ; riga di comando -> fname (maiuscolo, ".SPB" se
         ldir
 .z:     xor a
         ld (de),a
+        IFDEF BINMODE
+        ret
+        ELSE
         jp norm_seg
+        ENDIF
 s_bas:  db ".SPB"
 
 
@@ -577,6 +581,7 @@ open_tool:                      ; DE = FCB di un file degli strumenti (RT.BIN, Q
 .o:     ld c,F_OPEN
         jp BDOS
 
+        IFNDEF BINMODE
 ; ---------------------------------------------------------------- progetti a segmenti su piu' file
 seg_pat:                        ; Z se fname = 5 caratteri + 3 cifre (+ estensione)
         ld hl,fname
@@ -881,6 +886,8 @@ mf_advance:                     ; fine del file: se esiste il successivo si pass
         ld a,b
         call mf_loadbin
         jr .next
+        ENDIF
+
         ENDIF
 
 mk_fcb:                         ; (namep) -> fcb (8.3 maiuscolo, unita' opzionale "A:")
@@ -6722,6 +6729,15 @@ st_color:
         call next_tok
         call expr
         call want_int
+        ld a,','
+        call is_p
+        jr nz,.go
+        call next_tok           ; terzo valore: colore del bordo (H = bordo + 1)
+        EM1 0E5h
+        call expr
+        call want_int
+        call emit_i             ; ld a,l ; inc a ; pop hl ; ld h,a
+        db 4,7Dh,3Ch,0E1h,67h
         jr .go
 .nobg:  call emit_i             ; sfondo invariato: ld a,(BAKCLR) ; ld l,a ; ld h,0
         db 6,3Ah,low 0F3EAh,high 0F3EAh,6Fh,26h,0

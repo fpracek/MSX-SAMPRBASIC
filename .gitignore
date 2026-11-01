@@ -25,3 +25,8 @@ editor/fix_segment2.py
 doc/fix_docs3.py
 doc/fix_gen_en.py
 doc/fix_samples_en.py
+onmsx/fix_color3.py
+sample_disk/PONG.SPB
+sample_disk/pong.com
+sample_disk/test.com
+sample_disk/test.spb

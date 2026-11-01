@@ -1,0 +1,1855 @@
+[
+ {
+  "names": [
+   "REM",
+   "'"
+  ],
+  "category": "Program structure",
+  "syntax": [
+   "REM comment",
+   "' comment"
+  ],
+  "description": "Comment: the rest of the line is ignored. The apostrophe can also be placed after a statement, on the same line.",
+  "example": "REM this is a comment\nPRINT \"hello\"   ' so is this",
+  "see": [
+   "PRINT"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "LABELS",
+   "LINENUMBERS"
+  ],
+  "category": "Program structure",
+  "syntax": [
+   "name:",
+   "10 PRINT \"x\""
+  ],
+  "description": "A program can use labels (name: alone on a line or in front of a statement) and/or line numbers. GOTO, GOSUB and the RESTORE reset accept either. The mode is chosen with OPTION: NUMBERED (numbers only, sorted by number), LABELS (labels only) or MIXED (default, both). Label names follow the same rules as variable names. Several statements on the same line are separated by colons.",
+  "example": "start:\n  PRINT \"a\" : PRINT \"b\"\n  GOTO done\n  PRINT \"never\"\ndone:\n  PRINT \"end\"",
+  "see": [
+   "OPTION",
+   "GOTO",
+   "GOSUB"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "TYPES",
+   "VARIABLES",
+   "NAMES"
+  ],
+  "category": "Program structure",
+  "syntax": [
+   "a   a$   a(10)   a$(10)"
+  ],
+  "description": "There are two types: signed 16-bit integers (-32768 to 32767) and strings (up to 255 characters). The name of a string variable ends with $; A and A$ are distinct variables. The % suffix is accepted and ignored (A% is A). Names are not case sensitive; the first 11 characters plus the suffix are significant. Undeclared variables are 0 or the empty string. Numeric values: decimal, hexadecimal &H1F, binary &B101. The \"true\" value of a comparison is -1, \"false\" is 0.",
+  "example": "n = &HFF\nb = &B1010\nPRINT n; b\nPRINT 3 > 2; 3 < 2",
+  "see": [
+   "DIM",
+   "CONST",
+   "OPERATORS"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "OPERATORS",
+   "AND",
+   "OR",
+   "XOR",
+   "NOT",
+   "MOD"
+  ],
+  "category": "Program structure",
+  "syntax": [
+   "+  -  *  /  \\  MOD",
+   "=  <>  <  >  <=  >=",
+   "NOT  AND  OR  XOR"
+  ],
+  "description": "Arithmetic: + - * / and \\ (integer division, / between integers too) and MOD (remainder). Comparisons: = <> < > <= >= (also between strings, in alphabetical order). Bitwise logical operators on integers: NOT AND OR XOR. + concatenates strings. When in doubt about precedence use parentheses: arithmetic operators come first, then comparisons, then logical ones.",
+  "example": "PRINT 7 \\ 2; 7 MOD 2\nPRINT 5 AND 3; 5 OR 3; 5 XOR 3\nPRINT \"ab\" + \"cd\"; \"a\" < \"b\"",
+  "see": [
+   "TYPES"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "CONST"
+  ],
+  "category": "Program structure",
+  "syntax": [
+   "CONST name = [-]number {, name = number}"
+  ],
+  "description": "Defines numeric constants. They can be used in expressions and as the size in DIM; assigning a value to a constant is an error.",
+  "example": "CONST max = 5, base = 100\nDIM a(max)\na(max) = base + 1\nPRINT a(5)",
+  "see": [
+   "DIM"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "LET"
+  ],
+  "category": "Program structure",
+  "syntax": [
+   "[LET] variable = expression",
+   "[LET] array(i) = expression"
+  ],
+  "description": "Assigns a value to a variable or to an array element. The word LET is optional. The type of the expression must match that of the variable (otherwise error 14: type mismatch).",
+  "example": "LET a = 5\nb$ = \"hello\"\nc = a * 2\nPRINT b$; c",
+  "see": [
+   "DIM"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "END",
+   "STOP"
+  ],
+  "category": "Program structure",
+  "syntax": [
+   "END",
+   "STOP"
+  ],
+  "description": "Ends the program. In a .COM program it shows \"Press any key..\" and waits for a key (then returns to the editor); in a cartridge it waits for a key and restarts the machine. At the end of the source the program ends by itself. In a program STOP is the same as END (there is no interactive debugger: see OPTION DEBUG). With a second word, END also closes blocks: END IF, END SUB, END FUNCTION, END SELECT.",
+  "example": "PRINT \"start\"\nEND\nPRINT \"never\"",
+  "see": [
+   "DEBUG"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "DECLARE"
+  ],
+  "category": "Program structure",
+  "syntax": [
+   "DECLARE SUB name(...)",
+   "DECLARE FUNCTION name(...)"
+  ],
+  "description": "Accepted for compatibility and ignored: SUB and FUNCTION signatures are read by a pre-scan of the source, so a routine can be called before it is defined.",
+  "example": null,
+  "see": [
+   "SUB",
+   "FUNCTION"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "IF",
+   "THEN",
+   "ELSE",
+   "ELSEIF",
+   "END IF"
+  ],
+  "category": "Flow control",
+  "syntax": [
+   "IF condition THEN statement [ELSE statement]",
+   "IF condition THEN",
+   "  ...",
+   "[ELSEIF condition THEN",
+   "  ...]",
+   "[ELSE",
+   "  ...]",
+   "END IF"
+  ],
+  "description": "Executes statements depending on a condition (true if nonzero). Single-line form: IF a > 3 THEN PRINT \"yes\" ELSE PRINT \"no\". Block form: IF ... THEN at the end of a line, any number of ELSEIF, an optional ELSE and END IF. Blocks can be nested.",
+  "example": "n = 5\nIF n > 9 THEN\n  PRINT \"big\"\nELSEIF n > 3 THEN\n  PRINT \"medium\"\nELSE\n  PRINT \"small\"\nEND IF",
+  "see": [
+   "SELECT CASE",
+   "OPERATORS"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "FOR",
+   "NEXT",
+   "TO",
+   "STEP"
+  ],
+  "category": "Flow control",
+  "syntax": [
+   "FOR variable = start TO end [STEP step]",
+   "  ...",
+   "NEXT [variable]"
+  ],
+  "description": "Counting loop. STEP is an integer constant, possibly negative; if omitted it is 1. The loop is not executed if the initial value already exceeds the final one. EXIT FOR leaves the loop. Loops can be nested.",
+  "example": "FOR i = 1 TO 10 STEP 3\n  PRINT i;\nNEXT i\nPRINT\nFOR j = 3 TO 1 STEP -1\n  PRINT j;\nNEXT j",
+  "see": [
+   "EXIT"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "WHILE",
+   "WEND"
+  ],
+  "category": "Flow control",
+  "syntax": [
+   "WHILE condition",
+   "  ...",
+   "WEND"
+  ],
+  "description": "Repeats the block as long as the condition is true (tested at the start). EXIT WHILE leaves the loop.",
+  "example": "n = 3\nWHILE n > 0\n  PRINT n;\n  n = n - 1\nWEND",
+  "see": [
+   "DO",
+   "EXIT"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "DO",
+   "LOOP",
+   "UNTIL"
+  ],
+  "category": "Flow control",
+  "syntax": [
+   "DO [WHILE|UNTIL condition]",
+   "  ...",
+   "LOOP [WHILE|UNTIL condition]"
+  ],
+  "description": "Loop with the test at the start (condition after DO) or at the end (after LOOP), or without a condition (infinite loop, to be left with EXIT DO). UNTIL repeats until the condition becomes true.",
+  "example": "n = 0\nDO\n  n = n + 1\nLOOP UNTIL n >= 4\nPRINT n",
+  "see": [
+   "WHILE",
+   "EXIT"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "EXIT"
+  ],
+  "category": "Flow control",
+  "syntax": [
+   "EXIT FOR | EXIT WHILE | EXIT DO",
+   "EXIT SUB | EXIT FUNCTION"
+  ],
+  "description": "Immediately leaves the current loop (FOR, WHILE, DO) or routine (SUB, FUNCTION).",
+  "example": "FOR i = 1 TO 100\n  IF i * i > 50 THEN EXIT FOR\nNEXT i\nPRINT i",
+  "see": [
+   "FOR",
+   "DO"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "SELECT CASE",
+   "SELECT",
+   "CASE",
+   "END SELECT"
+  ],
+  "category": "Flow control",
+  "syntax": [
+   "SELECT CASE expression",
+   "  CASE value {, value | from TO to}",
+   "  CASE IS operator value",
+   "  CASE ELSE",
+   "END SELECT"
+  ],
+  "description": "Chooses among several alternatives based on an integer or string value. A CASE can list values (CASE 2, 3), ranges (CASE 4 TO 6), comparisons (CASE IS >= 7); with strings also CASE \"a\", \"b\" TO \"m\". The type of the values must match that of the selector. CASE ELSE catches the rest.",
+  "example": "n = 5\nSELECT CASE n\n  CASE 1, 2\n    PRINT \"few\"\n  CASE 3 TO 6\n    PRINT \"medium\"\n  CASE IS > 6\n    PRINT \"many\"\n  CASE ELSE\n    PRINT \"zero\"\nEND SELECT",
+  "see": [
+   "IF"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "GOTO"
+  ],
+  "category": "Flow control",
+  "syntax": [
+   "GOTO label | number"
+  ],
+  "description": "Jumps to the given label or line number. In a multi-segment cartridge the target must be in the same segment.",
+  "example": "i = 0\nagain:\n  i = i + 1\n  PRINT i;\n  IF i < 3 THEN GOTO again",
+  "see": [
+   "GOSUB",
+   "LABELS"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "GOSUB",
+   "RETURN"
+  ],
+  "category": "Flow control",
+  "syntax": [
+   "GOSUB label | number",
+   "RETURN"
+  ],
+  "description": "GOSUB calls a subroutine that starts at the label (or line number) and RETURN goes back to the statement after the call. For routines with parameters and local variables use SUB and FUNCTION.",
+  "example": "GOSUB greet\nPRINT \"end\"\nEND\ngreet:\n  PRINT \"hello\"\n  RETURN",
+  "see": [
+   "SUB",
+   "CALL"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "SUB",
+   "END SUB"
+  ],
+  "category": "Flow control",
+  "syntax": [
+   "SUB name [(parameter {, parameter})]",
+   "  ...",
+   "END SUB"
+  ],
+  "description": "Defines a procedure. Parameters are passed by value (integers or strings, with $); an array is passed by reference by writing a(). Variables used inside the SUB are local, except those declared with SHARED. It can be called with CALL or directly by name. Recursion is allowed. At most 20 routines, 8 parameters each.",
+  "example": "SUB addup(a, b)\n  PRINT a + b\nEND SUB\nCALL addup(3, 4)\naddup 5, 6",
+  "see": [
+   "FUNCTION",
+   "CALL",
+   "SHARED"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "FUNCTION",
+   "END FUNCTION"
+  ],
+  "category": "Flow control",
+  "syntax": [
+   "FUNCTION name[$] [(parameters)]",
+   "  ...",
+   "  name = value",
+   "END FUNCTION"
+  ],
+  "description": "Like a SUB but returns a value: it is assigned to the function name (name = ... or name$ = ... for strings). It is used inside expressions. Recursion allowed.",
+  "example": "FUNCTION twice(n)\n  twice = n * 2\nEND FUNCTION\nPRINT twice(21)",
+  "see": [
+   "SUB",
+   "CALL"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "CALL"
+  ],
+  "category": "Flow control",
+  "syntax": [
+   "CALL name [(arguments)]",
+   "CALL FAR name [(arguments)]"
+  ],
+  "description": "Calls a SUB. The parentheses are optional. CALL FAR forces a call between segments of a cartridge (normally the compiler recognizes this by itself). CALL calls a SUB, not a label: for labels use GOSUB.",
+  "example": "SUB p(x$)\n  PRINT x$\nEND SUB\nCALL p(\"hello\")",
+  "see": [
+   "SUB",
+   "SEGMENT"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "SHARED"
+  ],
+  "category": "Flow control",
+  "syntax": [
+   "SHARED variable {, variable}"
+  ],
+  "description": "Inside a SUB or FUNCTION, declares that the given names are the global variables (and not local variables with the same name).",
+  "example": "total = 0\nSUB addto(n)\n  SHARED total\n  total = total + n\nEND SUB\naddto 5\naddto 7\nPRINT total",
+  "see": [
+   "SUB",
+   "DIM"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "DIM"
+  ],
+  "category": "Data and arrays",
+  "syntax": [
+   "DIM name(n) [, name$(m) ...]",
+   "DIM name(n) MAPPER"
+  ],
+  "description": "Declares arrays of integers or strings with indexes from 0 to n (so n+1 elements). Indexes are checked: out of range the program stops with an error. UBOUND(a) gives the last index. Arrays are passed to SUB and FUNCTION by writing a(). With MAPPER (only .COM and cartridges with a RAM mapper) an integer array lives in the RAM mapper, up to 32768 elements.",
+  "example": "DIM a(4), n$(2)\nFOR i = 0 TO 4\n  a(i) = i * i\nNEXT i\nn$(1) = \"one\"\nPRINT a(3); n$(1); UBOUND(a)",
+  "see": [
+   "UBOUND",
+   "MALLOC"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "UBOUND"
+  ],
+  "category": "Data and arrays",
+  "syntax": [
+   "UBOUND(array)"
+  ],
+  "description": "Returns the maximum index of an array (even when it is a routine parameter).",
+  "example": "DIM v(9)\nPRINT UBOUND(v)",
+  "see": [
+   "DIM"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "DATA",
+   "READ",
+   "RESTORE"
+  ],
+  "category": "Data and arrays",
+  "syntax": [
+   "DATA value {, value}",
+   "READ variable {, variable}",
+   "RESTORE [label]"
+  ],
+  "description": "DATA holds values (integers or strings in quotes); READ reads them in order into the given variables; RESTORE moves reading back to the first DATA or to the one immediately following the given label. Reading past the last DATA is an error.",
+  "example": "DATA 10, -20, \"hello\"\nREAD a, b, s$\nPRINT a; b; s$\nRESTORE\nREAD c\nPRINT c",
+  "see": [
+   "DIM"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "MKI$",
+   "CVI"
+  ],
+  "category": "Data and arrays",
+  "syntax": [
+   "MKI$(n)",
+   "CVI(string$)"
+  ],
+  "description": "MKI$ converts an integer into a 2-byte string; CVI does the opposite. They are used with random-access files (FIELD fields).",
+  "example": "a$ = MKI$(1000)\nPRINT LEN(a$); CVI(a$)",
+  "see": [
+   "FIELD"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "PRINT",
+   "?"
+  ],
+  "category": "Text and keyboard",
+  "syntax": [
+   "PRINT [expression {; | , expression}] [;]",
+   "? expression",
+   "PRINT #n, ..."
+  ],
+  "description": "Writes to the screen. The semicolon leaves the cursor right after the last item; the comma advances to the next tab zone (columns that are multiples of 14). Without a trailing semicolon it moves to a new line. Numbers are preceded by a sign (a space if positive) and followed by a space; strings are written as they are. ? is an abbreviation of PRINT. With #n, it writes to the open file.",
+  "example": "PRINT \"sum:\"; 3 + 4\nPRINT 1, 2, 3\nPRINT \"a\";\nPRINT \"b\"",
+  "see": [
+   "LOCATE",
+   "INPUT",
+   "OPEN"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "INPUT"
+  ],
+  "category": "Text and keyboard",
+  "syntax": [
+   "INPUT [\"text\" ;|,] variable",
+   "INPUT #n, variable {, variable}"
+  ],
+  "description": "Reads a line from the keyboard into the variable (integer or string). With the text and the semicolon the text is followed by \"? \"; with the comma it is not. Confirm with Enter; Backspace deletes. A non-numeric value in an integer variable gives 0. With #n, it reads from the file.",
+  "example": "INPUT \"Name\"; n$\nINPUT \"Age\", e\nPRINT \"Hello \"; n$; e + 1",
+  "see": [
+   "LINE INPUT",
+   "INKEY$"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "LINE INPUT"
+  ],
+  "category": "Text and keyboard",
+  "syntax": [
+   "LINE INPUT [#n,] variable$"
+  ],
+  "description": "Reads a whole line (spaces and commas included) into a string variable; from the keyboard or, with #n,, from a file.",
+  "example": "LINE INPUT a$\nPRINT \"[\" ; a$ ; \"]\"",
+  "see": [
+   "INPUT"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "CLS"
+  ],
+  "category": "Text and keyboard",
+  "syntax": [
+   "CLS"
+  ],
+  "description": "Clears the screen and moves the cursor to the top left (on the active page in SCREEN 5-8).",
+  "example": "CLS\nPRINT \"clean\"",
+  "see": [
+   "LOCATE"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "LOCATE"
+  ],
+  "category": "Text and keyboard",
+  "syntax": [
+   "LOCATE row, column"
+  ],
+  "description": "Positions the text cursor. Row and column start at 1.",
+  "example": "CLS\nLOCATE 5, 10\nPRINT \"here\"",
+  "see": [
+   "PRINT",
+   "CLS"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "COLOR"
+  ],
+  "category": "Text and keyboard",
+  "syntax": [
+   "COLOR foreground[, background[, border]]",
+   "COLOR = (n, r, g, b)",
+   "COLOR = RESTORE",
+   "COLOR SPRITE(n) = color",
+   "COLOR SPRITE$(n) = colors$"
+  ],
+  "description": "Sets the foreground, background and border colors with numbers from 0 to 15 (in SCREEN 8 the raw value 0-255). Without the third value the border takes the background color. COLOR = (n,r,g,b) redefines a palette color (r, g, b from 0 to 7; MSX2) and COLOR = RESTORE restores the default palette. For COLOR SPRITE see sprites.",
+  "example": "COLOR 15, 4\nCLS\nPRINT \"white on blue\"",
+  "see": [
+   "PALETTE",
+   "SCREEN"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "INKEY$"
+  ],
+  "category": "Text and keyboard",
+  "syntax": [
+   "INKEY$"
+  ],
+  "description": "Returns the character of the key pressed, or the empty string if there is none: it does not wait.",
+  "example": "DO\n  k$ = INKEY$\nLOOP WHILE k$ = \"\"\nPRINT \"key:\"; ASC(k$)",
+  "see": [
+   "INPUT",
+   "STICK"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "LEN"
+  ],
+  "category": "Numeric and string functions",
+  "syntax": [
+   "LEN(string$)"
+  ],
+  "description": "Length of a string.",
+  "example": "PRINT LEN(\"hello\")",
+  "see": [
+   "MID$"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "ASC"
+  ],
+  "category": "Numeric and string functions",
+  "syntax": [
+   "ASC(string$)"
+  ],
+  "description": "Code of the first character of the string (0 if it is empty).",
+  "example": "PRINT ASC(\"A\")",
+  "see": [
+   "CHR$"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "CHR$"
+  ],
+  "category": "Numeric and string functions",
+  "syntax": [
+   "CHR$(code)"
+  ],
+  "description": "One-character string with the given code (0-255).",
+  "example": "PRINT CHR$(72); CHR$(105)",
+  "see": [
+   "ASC"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "VAL"
+  ],
+  "category": "Numeric and string functions",
+  "syntax": [
+   "VAL(string$)"
+  ],
+  "description": "Numeric value of a string; stops at the first invalid character, 0 if it does not start with a number.",
+  "example": "PRINT VAL(\"42\") + 1",
+  "see": [
+   "STR$"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "STR$"
+  ],
+  "category": "Numeric and string functions",
+  "syntax": [
+   "STR$(number)"
+  ],
+  "description": "Decimal representation of the number as a string (with a leading space for positive numbers).",
+  "example": "a$ = STR$(7)\nPRINT LEN(a$); a$",
+  "see": [
+   "VAL"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "LEFT$"
+  ],
+  "category": "Numeric and string functions",
+  "syntax": [
+   "LEFT$(string$, n)"
+  ],
+  "description": "The first n characters of the string.",
+  "example": "PRINT LEFT$(\"abcdef\", 3)",
+  "see": [
+   "RIGHT$",
+   "MID$"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "RIGHT$"
+  ],
+  "category": "Numeric and string functions",
+  "syntax": [
+   "RIGHT$(string$, n)"
+  ],
+  "description": "The last n characters of the string.",
+  "example": "PRINT RIGHT$(\"abcdef\", 2)",
+  "see": [
+   "LEFT$",
+   "MID$"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "MID$"
+  ],
+  "category": "Numeric and string functions",
+  "syntax": [
+   "MID$(string$, start [, n])"
+  ],
+  "description": "Substring: starts at character start (the first is 1) and takes n characters (up to the end if n is missing).",
+  "example": "PRINT MID$(\"abcdef\", 2, 3)\nPRINT MID$(\"abcdef\", 4)",
+  "see": [
+   "LEFT$",
+   "RIGHT$",
+   "LEN"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "ABS"
+  ],
+  "category": "Numeric and string functions",
+  "syntax": [
+   "ABS(n)"
+  ],
+  "description": "Absolute value.",
+  "example": "PRINT ABS(-7)",
+  "see": [
+   "SGN"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "SGN"
+  ],
+  "category": "Numeric and string functions",
+  "syntax": [
+   "SGN(n)"
+  ],
+  "description": "Sign: -1, 0 or 1.",
+  "example": "PRINT SGN(-9); SGN(0); SGN(4)",
+  "see": [
+   "ABS"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "RND",
+   "RANDOMIZE"
+  ],
+  "category": "Numeric and string functions",
+  "syntax": [
+   "RND(n)",
+   "RANDOMIZE seed"
+  ],
+  "description": "RND(n) returns a pseudo-random number from 0 to n-1. RANDOMIZE sets the seed of the sequence: the same seed gives the same sequence.",
+  "example": "RANDOMIZE 7\nFOR i = 1 TO 5\n  PRINT RND(100);\nNEXT i",
+  "see": [
+   "TIMER"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "TIMER"
+  ],
+  "category": "Numeric and string functions",
+  "syntax": [
+   "TIMER"
+  ],
+  "description": "Video frame counter (1/50 or 1/60 of a second) read from JIFFY; 16-bit, wraps around to zero.",
+  "example": "t = TIMER\nSLEEP 25\nPRINT TIMER - t",
+  "see": [
+   "SLEEP"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "PEEK"
+  ],
+  "category": "Numeric and string functions",
+  "syntax": [
+   "PEEK(address)",
+   "POKE address, value"
+  ],
+  "description": "PEEK reads a byte of memory; POKE writes it. 16-bit addresses (0 to 65535, also with equivalent negative values).",
+  "example": "POKE 50000, 77\nPRINT PEEK(50000)",
+  "see": [
+   "VARPTR"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "POKE"
+  ],
+  "category": "Numeric and string functions",
+  "syntax": [
+   "POKE address, value"
+  ],
+  "description": "Writes a byte to memory. See PEEK.",
+  "example": "POKE 50000, 12\nPRINT PEEK(50000)",
+  "see": [
+   "PEEK"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "SLEEP"
+  ],
+  "category": "Numeric and string functions",
+  "syntax": [
+   "SLEEP frames"
+  ],
+  "description": "Waits for the given number of video frames (50 or 60 per second depending on the machine's standard).",
+  "example": "PRINT \"wait\"\nSLEEP 50\nPRINT \"done\"",
+  "see": [
+   "TIMER"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "SCREEN"
+  ],
+  "category": "Screen and graphics",
+  "syntax": [
+   "SCREEN mode [, sprite size]"
+  ],
+  "description": "Selects the video mode. MSX1: 0 (40-column text), 1 (32-column color text), 2 (256x192 graphics), 3 (64x48 blocks). MSX2 adds 4, 5 (256x212, 16 colors), 6 (512x212, 4 colors), 7 (512x212, 16 colors), 8 (256x212, 256 colors) and, on MSX2+/turbo R, 10-12 (YJK colors). PSET, LINE, CIRCLE, PAINT, GET/PUT and COPY work in SCREEN 5-8 (PSET, POINT, LINE and CIRCLE also in SCREEN 3). The second parameter is the sprite size: 0 = 8x8, 1 = 8x8 magnified, 2 = 16x16, 3 = 16x16 magnified. On MSX1 a mode above 3 gives \"Illegal function call\".",
+  "example": "SCREEN 5\nCOLOR 15, 4\nCLS\nPSET (10, 10), 15\nLINE -(100, 80), 8",
+  "see": [
+   "PSET",
+   "LINE",
+   "SPRITE",
+   "SET"
+  ],
+  "availability": "MSX1: modes 0-3; MSX2: 0-8 (10-12 on MSX2+)"
+ },
+ {
+  "names": [
+   "PSET",
+   "PRESET"
+  ],
+  "category": "Screen and graphics",
+  "syntax": [
+   "PSET (x, y) [, color [, operation]]",
+   "PRESET (x, y) [, color [, operation]]"
+  ],
+  "description": "Turns a point on (PSET) or off (PRESET, background color). Off-screen coordinates are clipped. The logical operation is PSET, PRESET, AND, OR, XOR or the same prefixed with T (transparent: color 0 does not write).",
+  "example": "SCREEN 5\nPSET (128, 100), 12\nPSET (128, 100), 3, XOR",
+  "see": [
+   "POINT",
+   "LINE"
+  ],
+  "availability": "MSX2 only (including SCREEN 3)"
+ },
+ {
+  "names": [
+   "POINT"
+  ],
+  "category": "Screen and graphics",
+  "syntax": [
+   "POINT(x, y)"
+  ],
+  "description": "Color of the point; -1 if off-screen.",
+  "example": "SCREEN 5\nPSET (5, 5), 9\nPRINT POINT(5, 5)",
+  "see": [
+   "PSET"
+  ],
+  "availability": "MSX2 only"
+ },
+ {
+  "names": [
+   "LINE"
+  ],
+  "category": "Screen and graphics",
+  "syntax": [
+   "LINE [(x1, y1)] - (x2, y2) [, color [, B|BF [, operation]]]"
+  ],
+  "description": "Draws a line; without the first point it starts from the last graphics point. With B it draws a rectangle, with BF a filled rectangle. If the color is omitted the COLOR value is used. Not to be confused with LINE INPUT (which reads a line of text).",
+  "example": "SCREEN 5\nLINE (10, 10)-(100, 60), 15\nLINE (20, 80)-(120, 140), 9, BF",
+  "see": [
+   "CIRCLE",
+   "PSET"
+  ],
+  "availability": "MSX2 only (including SCREEN 3)"
+ },
+ {
+  "names": [
+   "CIRCLE"
+  ],
+  "category": "Screen and graphics",
+  "syntax": [
+   "CIRCLE (x, y), radius [, color]"
+  ],
+  "description": "Draws a circle.",
+  "example": "SCREEN 5\nCIRCLE (128, 106), 50, 11",
+  "see": [
+   "LINE",
+   "PAINT"
+  ],
+  "availability": "MSX2 only (including SCREEN 3)"
+ },
+ {
+  "names": [
+   "PAINT"
+  ],
+  "category": "Screen and graphics",
+  "syntax": [
+   "PAINT (x, y) [, color [, border]]"
+  ],
+  "description": "Fills an area starting from the given point. In the 16-color and 4-color modes the border (the color that stops the fill) must be given if it differs from the fill color.",
+  "example": "SCREEN 5\nCIRCLE (128, 106), 50, 4\nPAINT (128, 106), 6, 4",
+  "see": [
+   "CIRCLE",
+   "LINE"
+  ],
+  "availability": "MSX2 only"
+ },
+ {
+  "names": [
+   "DRAW"
+  ],
+  "category": "Screen and graphics",
+  "syntax": [
+   "DRAW \"commands\""
+  ],
+  "description": "Draws with a command language: U D L R E F G H (move up, down, left, right and diagonally by n points), M x,y (move to; +/- relative), B before a command (move without drawing), N (draw and return), C color, S scale (in quarters). Example: DRAW \"C7 R20 D10 L20 U10\".",
+  "example": "SCREEN 5\nPSET (100, 100)\nDRAW \"C8 R40 D30 L40 U30\"",
+  "see": [
+   "LINE"
+  ],
+  "availability": "MSX2 only"
+ },
+ {
+  "names": [
+   "GET",
+   "PUT"
+  ],
+  "category": "Screen and graphics",
+  "syntax": [
+   "GET (x1,y1)-(x2,y2), array",
+   "PUT (x, y), array [, operation]"
+  ],
+  "description": "GET copies a screen rectangle into an integer array; PUT redraws it with an operation (PSET, PRESET, AND, OR, XOR). In graphics the rectangle must fit in an array dimensioned with DIM. Not to be confused with GET #n / PUT #n (random-access files) and PUT SPRITE.",
+  "example": "SCREEN 5\nDIM a(100)\nCIRCLE (20, 20), 8, 15\nGET (10, 10)-(30, 30), a\nPUT (100, 100), a, PSET",
+  "see": [
+   "COPY",
+   "PUT SPRITE",
+   "OPEN"
+  ],
+  "availability": "MSX2 only"
+ },
+ {
+  "names": [
+   "COPY"
+  ],
+  "category": "Screen and graphics",
+  "syntax": [
+   "COPY (x1,y1)-(x2,y2)[,page] TO (x3,y3)[,page] [, operation]"
+  ],
+  "description": "Copies a screen rectangle (also between pages) using the VDP command engine: very fast, ideal for software sprites and scrolling.",
+  "example": "SCREEN 5\nCIRCLE (30, 30), 20, 12\nCOPY (0, 0)-(60, 60) TO (150, 100)",
+  "see": [
+   "GET",
+   "SET"
+  ],
+  "availability": "MSX2 only"
+ },
+ {
+  "names": [
+   "SET",
+   "SET PAGE",
+   "SET SCROLL"
+  ],
+  "category": "Screen and graphics",
+  "syntax": [
+   "SET PAGE visible, active",
+   "SET SCROLL x, y"
+  ],
+  "description": "SET PAGE selects the displayed page and the page being drawn on (SCREEN 5-8): draw off-screen and then show it, for flicker-free animation. SET SCROLL scrolls the screen smoothly (registers 23 and 18).",
+  "example": "SCREEN 5\nSET PAGE 0, 1\nCIRCLE (100, 100), 40, 15\nSET PAGE 1, 1",
+  "see": [
+   "COPY",
+   "VBANK"
+  ],
+  "availability": "MSX2 only"
+ },
+ {
+  "names": [
+   "VIEW",
+   "WINDOW"
+  ],
+  "category": "Screen and graphics",
+  "syntax": [
+   "VIEW [(x1,y1)-(x2,y2)]",
+   "WINDOW [SCREEN] [(x1,y1)-(x2,y2)]"
+  ],
+  "description": "VIEW restricts drawing to a window of the screen (without arguments it cancels it); WINDOW redefines the coordinate system (WINDOW SCREEN: the y axis grows downward).",
+  "example": "SCREEN 5\nVIEW (50, 50)-(150, 150)\nLINE (0, 0)-(255, 211), 15\nVIEW",
+  "see": [
+   "LINE"
+  ],
+  "availability": "MSX2 only"
+ },
+ {
+  "names": [
+   "PALETTE"
+  ],
+  "category": "Screen and graphics",
+  "syntax": [
+   "PALETTE n, r, g, b",
+   "PALETTE n, color",
+   "COLOR = (n, r, g, b)",
+   "COLOR = RESTORE"
+  ],
+  "description": "Redefines a palette color (r, g, b from 0 to 7); the two-number form assigns the given default color to color n. COLOR = RESTORE restores the factory palette.",
+  "example": "SCREEN 5\nPALETTE 1, 7, 0, 0\nLINE (10, 10)-(100, 60), 1, BF",
+  "see": [
+   "COLOR"
+  ],
+  "availability": "MSX2 only"
+ },
+ {
+  "names": [
+   "VPOKE",
+   "VPEEK"
+  ],
+  "category": "Screen and graphics",
+  "syntax": [
+   "VPOKE address, value",
+   "VPEEK(address)"
+  ],
+  "description": "Writes/reads a byte of video memory. With VBANK the address extends to 17 bits (128 KB on MSX2).",
+  "example": "VPOKE 0, 65\nPRINT VPEEK(0)",
+  "see": [
+   "VBANK",
+   "VFILL",
+   "VWRITE"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "VBANK"
+  ],
+  "category": "Screen and graphics",
+  "syntax": [
+   "VBANK n"
+  ],
+  "description": "Selects the 16 KB VRAM block used by VPOKE, VPEEK, VFILL, VWRITE, VREAD$, BLOAD/BSAVE ... S (R#14 on MSX2).",
+  "example": "VBANK 1\nVPOKE 0, 5",
+  "see": [
+   "VPOKE"
+  ],
+  "availability": "MSX2 only"
+ },
+ {
+  "names": [
+   "VFILL"
+  ],
+  "category": "Screen and graphics",
+  "syntax": [
+   "VFILL address, count, value"
+  ],
+  "description": "Fills a VRAM area with a byte.",
+  "example": "VFILL 0, 768, 32",
+  "see": [
+   "VWRITE"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "VWRITE"
+  ],
+  "category": "Screen and graphics",
+  "syntax": [
+   "VWRITE address, string$"
+  ],
+  "description": "Writes the bytes of a string to VRAM.",
+  "example": "VWRITE 0, \"hello\"",
+  "see": [
+   "VREAD$",
+   "VCOPY"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "VREAD$"
+  ],
+  "category": "Screen and graphics",
+  "syntax": [
+   "VREAD$(address, count)"
+  ],
+  "description": "Reads a VRAM area and returns it as a string.",
+  "example": "PRINT VREAD$(0, 4)",
+  "see": [
+   "VWRITE"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "BASE"
+  ],
+  "category": "Screen and graphics",
+  "syntax": [
+   "BASE(n)"
+  ],
+  "description": "VRAM address of the tables of the current mode (n as in MSX BASIC: 0 names, 2 colors/patterns, ...).",
+  "example": "PRINT BASE(0)",
+  "see": [
+   "VDP"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "VDP"
+  ],
+  "category": "Screen and graphics",
+  "syntax": [
+   "VDP(n)",
+   "VDP(n) = value"
+  ],
+  "description": "Reads or writes VDP register n (reading gives the BIOS copy in RAM).",
+  "example": "VDP(7) = 9\nPRINT VDP(7)",
+  "see": [
+   "BASE",
+   "OUT"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "OUT"
+  ],
+  "category": "Screen and graphics",
+  "syntax": [
+   "OUT port, value",
+   "INP(port)"
+  ],
+  "description": "Writes a byte to an I/O port; INP reads one.",
+  "example": "OUT 170, 3",
+  "see": [
+   "INP",
+   "VDP"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "INP"
+  ],
+  "category": "Screen and graphics",
+  "syntax": [
+   "INP(port)"
+  ],
+  "description": "Reads a byte from an I/O port.",
+  "example": "PRINT INP(168)",
+  "see": [
+   "OUT"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "SPRITE"
+  ],
+  "category": "Sprites",
+  "syntax": [
+   "SPRITE$(n) = string$",
+   "PUT SPRITE plane, (x, y), color, pattern",
+   "PUT SPRITE plane",
+   "COLOR SPRITE(plane) = color",
+   "COLLISION"
+  ],
+  "description": "Sprites are 32 hardware objects. SPRITE$(n) = string$ defines pattern n: 8 bytes for an 8x8 (32 for a 16x16), one bit per dot. PUT SPRITE plane,(x,y),color,pattern shows the sprite; with just PUT SPRITE plane it is hidden. The size (8x8 or 16x16, normal or magnified) is chosen with the second parameter of SCREEN. COLOR SPRITE(n) = c changes the color of a plane; COLOR SPRITE$(n) = string$ gives one color per line (MSX2, sprite mode 2). COLLISION is -1 if two sprites have touched.",
+  "example": "SCREEN 2, 0\nSPRITE$(0) = CHR$(255)+CHR$(129)+CHR$(129)+CHR$(129)+CHR$(129)+CHR$(129)+CHR$(129)+CHR$(255)\nPUT SPRITE 0, (100, 90), 8, 0",
+  "see": [
+   "SCREEN",
+   "COLLISION",
+   "STICK"
+  ],
+  "availability": "MSX1 and MSX2 (SCREEN 1-8)"
+ },
+ {
+  "names": [
+   "PUT SPRITE"
+  ],
+  "category": "Sprites",
+  "syntax": [
+   "PUT SPRITE plane, (x, y), color, pattern",
+   "PUT SPRITE plane"
+  ],
+  "description": "Shows a sprite (or hides it when only the plane is given). See SPRITE.",
+  "example": "SCREEN 2, 0\nSPRITE$(0) = CHR$(255)+CHR$(129)+CHR$(129)+CHR$(129)+CHR$(129)+CHR$(129)+CHR$(129)+CHR$(255)\nPUT SPRITE 0, (50, 50), 15, 0",
+  "see": [
+   "SPRITE"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "COLLISION"
+  ],
+  "category": "Sprites",
+  "syntax": [
+   "COLLISION"
+  ],
+  "description": "Is -1 if two sprites have overlapped since the last read (read from the VDP status), 0 otherwise.",
+  "example": "IF COLLISION THEN PRINT \"hit\"",
+  "see": [
+   "SPRITE"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "STICK"
+  ],
+  "category": "Sprites",
+  "syntax": [
+   "STICK(n)"
+  ],
+  "description": "Direction of joystick n (0 = cursor keys, 1 and 2 = ports). Values from 0 (centered) to 8: 1 is up, then clockwise.",
+  "example": "d = STICK(0)\nIF d = 3 THEN PRINT \"right\"",
+  "see": [
+   "STRIG",
+   "INKEY$"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "STRIG"
+  ],
+  "category": "Sprites",
+  "syntax": [
+   "STRIG(n)"
+  ],
+  "description": "Fire button: n = 0 space bar, 1 and 2 A buttons of joysticks 1 and 2, 3 and 4 B buttons. Is -1 if pressed.",
+  "example": "IF STRIG(0) THEN PRINT \"fire\"",
+  "see": [
+   "STICK"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "BEEP"
+  ],
+  "category": "Sound",
+  "syntax": [
+   "BEEP"
+  ],
+  "description": "Emits the system beep.",
+  "example": "BEEP",
+  "see": [
+   "SOUND",
+   "PLAY"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "SOUND"
+  ],
+  "category": "Sound",
+  "syntax": [
+   "SOUND register, value"
+  ],
+  "description": "Writes directly to a register (0-13) of the AY-3-8910 PSG sound generator: tones, noise, mixer, volumes, envelope.",
+  "example": "SOUND 7, 62\nSOUND 8, 12\nSOUND 0, 254\nSOUND 1, 0",
+  "see": [
+   "PLAY",
+   "BEEP"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "PLAY"
+  ],
+  "category": "Sound",
+  "syntax": [
+   "PLAY voice1$ [, voice2$ [, voice3$]]"
+  ],
+  "description": "Plays a melody on 1-3 voices using the MML language and waits for the end. Commands: A-G (note, with # or + for sharp, - for flat; followed by a number for the length and by dots), R rest, O octave (1-8), L default length (1-64), T tempo (32-255), V volume (0-15), N n (numeric note), < and > octave down/up, M and S (modulation/envelope shape as in MSX BASIC).",
+  "example": "PLAY \"T120 O4 L8 CDEFGAB>C\"\nPLAY \"O3 C2\", \"O4 E2\", \"O4 G2\"",
+  "see": [
+   "SOUND",
+   "BEEP"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "OPEN"
+  ],
+  "category": "Disk files",
+  "syntax": [
+   "OPEN name$ FOR INPUT|OUTPUT|APPEND AS [#]n",
+   "OPEN name$ [FOR RANDOM] AS [#]n LEN = k"
+  ],
+  "description": "Opens a file (.COM programs only, not cartridges). n from 1 to 3. INPUT: read; OUTPUT: create/truncate; APPEND: write at the end; RANDOM: random-access file with records of k bytes (1-128). Open files are closed automatically at the end of the program.",
+  "example": "OPEN \"TEST.TXT\" FOR OUTPUT AS #1\nPRINT #1, \"line one\"\nCLOSE #1\nOPEN \"TEST.TXT\" FOR INPUT AS #1\nLINE INPUT #1, a$\nCLOSE #1\nPRINT a$",
+  "see": [
+   "CLOSE",
+   "PRINT",
+   "INPUT",
+   "EOF",
+   "FIELD"
+  ],
+  "availability": "DOS programs only (.COM)"
+ },
+ {
+  "names": [
+   "CLOSE"
+  ],
+  "category": "Disk files",
+  "syntax": [
+   "CLOSE [#n {, #n}]"
+  ],
+  "description": "Closes the given files (all of them, if no arguments).",
+  "example": "CLOSE #1",
+  "see": [
+   "OPEN"
+  ],
+  "availability": "DOS programs only (.COM)"
+ },
+ {
+  "names": [
+   "WRITE"
+  ],
+  "category": "Disk files",
+  "syntax": [
+   "WRITE #n, expression {, expression}"
+  ],
+  "description": "Writes values to the file separated by commas, with strings in quotes.",
+  "example": "WRITE #1, 5, \"ab\"",
+  "see": [
+   "PRINT",
+   "OPEN"
+  ],
+  "availability": "DOS programs only (.COM)"
+ },
+ {
+  "names": [
+   "EOF"
+  ],
+  "category": "Disk files",
+  "syntax": [
+   "EOF(n)"
+  ],
+  "description": "Is -1 when file n has ended.",
+  "example": "WHILE NOT EOF(1)\n  LINE INPUT #1, a$\n  PRINT a$\nWEND",
+  "see": [
+   "OPEN"
+  ],
+  "availability": "DOS programs only (.COM)"
+ },
+ {
+  "names": [
+   "KILL"
+  ],
+  "category": "Disk files",
+  "syntax": [
+   "KILL name$"
+  ],
+  "description": "Deletes a file from the disk.",
+  "example": "KILL \"TEST.TXT\"",
+  "see": [
+   "OPEN"
+  ],
+  "availability": "DOS programs only (.COM)"
+ },
+ {
+  "names": [
+   "FIELD",
+   "LSET",
+   "RSET"
+  ],
+  "category": "Disk files",
+  "syntax": [
+   "FIELD #n, width AS var$ {, width AS var$}",
+   "LSET var$ = text$",
+   "RSET var$ = text$"
+  ],
+  "description": "Random-access files: FIELD splits the record into fields tied to string variables (up to 8); LSET/RSET fill the field aligning left or right (padding with spaces); PUT #n,r writes record r, GET #n,r reads it (records start at 1). LOF(n) gives the number of records.",
+  "example": "OPEN \"R.DAT\" AS #1 LEN = 20\nFIELD #1, 10 AS n$, 10 AS c$\nLSET n$ = \"Mario\"\nLSET c$ = \"Rossi\"\nPUT #1, 1\nGET #1, 1\nPRINT n$; c$\nCLOSE #1",
+  "see": [
+   "OPEN",
+   "MKI$",
+   "LOF"
+  ],
+  "availability": "DOS programs only (.COM)"
+ },
+ {
+  "names": [
+   "LOF"
+  ],
+  "category": "Disk files",
+  "syntax": [
+   "LOF(n)"
+  ],
+  "description": "Number of records of random-access file n.",
+  "example": "PRINT LOF(1)",
+  "see": [
+   "FIELD"
+  ],
+  "availability": "DOS programs only (.COM)"
+ },
+ {
+  "names": [
+   "BLOAD",
+   "BSAVE"
+  ],
+  "category": "Disk files",
+  "syntax": [
+   "BSAVE name$, start, length [, S]",
+   "BLOAD name$ [, S] [, offset]"
+  ],
+  "description": "Saves/loads a memory block in the MSX binary format. With S the data goes from/to VRAM (VBANK applies).",
+  "example": "BSAVE \"SCREEN.BIN\", 0, 6144, S\nBLOAD \"SCREEN.BIN\", S",
+  "see": [
+   "VBANK",
+   "OPEN"
+  ],
+  "availability": "DOS programs only (.COM)"
+ },
+ {
+  "names": [
+   "SEGMENT"
+  ],
+  "category": "ROM cartridges, segments and mappers",
+  "syntax": [
+   "SEGMENT n"
+  ],
+  "description": "In a multi-bank cartridge, moves the following code into segment n (previous + 1). Segment 0 contains the runtime. A SUB/FUNCTION in another segment is called normally; GOTO and GOSUB do not cross segments. For large projects each segment can live in its own file NAME000, NAME001...: see SEGMENTS.",
+  "example": "OPTION TARGET ASCII8\nSEGMENT 1\nSUB bis()\n  PRINT \"in segment 1\"\nEND SUB",
+  "see": [
+   "OPTION",
+   "INCBIN",
+   "CALL"
+  ],
+  "availability": "ASCII8/ASCII16/Konami/SCC cartridges"
+ },
+ {
+  "names": [
+   "INCBIN"
+  ],
+  "category": "ROM cartridges, segments and mappers",
+  "syntax": [
+   "INCBIN \"file\""
+  ],
+  "description": "Includes the bytes of a file in the current segment (graphics, music, tables).",
+  "example": "SEGMENT 2\nINCBIN \"SPRITES.BIN\"",
+  "see": [
+   "SETBANK",
+   "SEGMENT"
+  ],
+  "availability": "Multi-segment cartridges"
+ },
+ {
+  "names": [
+   "SETBANK",
+   "DATAWIN"
+  ],
+  "category": "ROM cartridges, segments and mappers",
+  "syntax": [
+   "SETBANK n",
+   "DATAWIN"
+  ],
+  "description": "SETBANK maps segment n into the data window; DATAWIN is the address of the window (A000h for 8 KB banks, 8000h for ASCII16).",
+  "example": "SETBANK 2\nVCOPY DATAWIN, 0, 256",
+  "see": [
+   "INCBIN",
+   "VCOPY"
+  ],
+  "availability": "Multi-segment cartridges"
+ },
+ {
+  "names": [
+   "VCOPY"
+  ],
+  "category": "ROM cartridges, segments and mappers",
+  "syntax": [
+   "VCOPY memory_address, vram_address, count"
+  ],
+  "description": "Copies bytes from memory to VRAM.",
+  "example": "VCOPY DATAWIN, 0, 2048",
+  "see": [
+   "SETBANK",
+   "VWRITE"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "MALLOC",
+   "MFREE",
+   "MAPPERSEGS"
+  ],
+  "category": "ROM cartridges, segments and mappers",
+  "syntax": [
+   "MAPPERSEGS",
+   "MALLOC",
+   "MFREE segment"
+  ],
+  "description": "RAM mapper: MAPPERSEGS gives the number of 16 KB segments (0 if there is no mapper); MALLOC allocates one and returns its number; MFREE releases it.",
+  "example": "s = MALLOC\nPRINT MAPPERSEGS; s\nMFREE s",
+  "see": [
+   "MGET",
+   "MPUT",
+   "DIM"
+  ],
+  "availability": "With RAM mapper"
+ },
+ {
+  "names": [
+   "MGET",
+   "MPUT",
+   "MREAD",
+   "MWRITE",
+   "VARPTR"
+  ],
+  "category": "ROM cartridges, segments and mappers",
+  "syntax": [
+   "MGET(segment, offset)",
+   "MPUT segment, offset, value",
+   "MREAD segment, offset, address, count",
+   "MWRITE segment, offset, address, count",
+   "VARPTR(variable)"
+  ],
+  "description": "RAM mapper access: MGET reads a byte, MPUT writes it, MREAD copies from the mapper to memory, MWRITE from memory to the mapper. VARPTR gives the address of a variable (or array element) to pass to MREAD/MWRITE. The memory addresses of the blocks must not fall in 8000h-BFFFh.",
+  "example": "s = MALLOC\nMPUT s, 0, 123\nPRINT MGET(s, 0)\nMFREE s",
+  "see": [
+   "MALLOC",
+   "VARPTR",
+   "DIM"
+  ],
+  "availability": "With RAM mapper"
+ },
+ {
+  "names": [
+   "OPTION"
+  ],
+  "category": "Options (OPTION)",
+  "syntax": [
+   "OPTION NUMBERED | LABELS | MIXED",
+   "OPTION TARGET type",
+   "OPTION DEBUG"
+  ],
+  "description": "Compilation directives, to be placed at the start of the source. NUMBERED: the program has line numbers and no labels; LABELS: labels only; MIXED (default): both. TARGET selects the output format (see OPTION TARGET). DEBUG enables the debugger (see DEBUG).",
+  "example": "OPTION LABELS\nPRINT \"ok\"",
+  "see": [
+   "OPTION TARGET",
+   "OPTION DEBUG",
+   "LABELS"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "OPTION TARGET",
+   "TARGET"
+  ],
+  "category": "Options (OPTION)",
+  "syntax": [
+   "OPTION TARGET DOS | BIN",
+   "OPTION TARGET ROM_16 | ROM_32 | ROM_ASCII8 | ROM_ASCII16 | ROM_KONAMI | ROM_KONAMISCC"
+  ],
+  "description": "When it is the first line, it selects what the compiler produces. DOS (default, also COM): NAME.COM program for MSX-DOS. BIN: NAME.BIN program for MSX-BASIC, without DOS (see BIN). ROM_16 and ROM_32: plain 16 or 32 KB cartridge. ROM_ASCII8, ROM_ASCII16, ROM_KONAMI and ROM_KONAMISCC (also ROM_SCC): banked cartridges, with segments (see SEGMENT and SEGMENTS). The old names ROM16, ROM32, ASCII8, ASCII16, KONAMI, SCC remain valid. A cartridge waits for a key at the end and restarts the machine; cartridges have no files, no BLOAD/BSAVE and no full debugger; the inline assembler works.",
+  "example": "OPTION TARGET ROM_16\nPRINT \"I am a cartridge\"",
+  "see": [
+   "BIN",
+   "DOS",
+   "SEGMENT",
+   "OPTION"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "BIN"
+  ],
+  "category": "Options (OPTION)",
+  "syntax": [
+   "OPTION TARGET BIN"
+  ],
+  "description": "Produces NAME.BIN, a machine-language program for MSX-BASIC, without MSX-DOS. The file is in BLOAD format and starts at address 8400h. From MSX-BASIC: CLEAR 200,&H83FF and then BLOAD \"NAME.BIN\",R. At the end of the program it waits for a key and returns to the BASIC prompt. Disk files (OPEN, BLOAD, BSAVE...), the RAM mapper and the debugger are not available; everything else (graphics, sprites, sound, strings, arrays, SUB/FUNCTION, inline assembler) works as in DOS programs. The code can reach about 12 KB beyond the runtime; data and heap sit from D000h upward.",
+  "example": "OPTION TARGET BIN\nPRINT \"Hello from MSX-BASIC\"",
+  "see": [
+   "DOS",
+   "OPTION TARGET",
+   "ASM"
+  ],
+  "availability": "MSX1 and MSX2, no DOS"
+ },
+ {
+  "names": [
+   "DOS",
+   "COM"
+  ],
+  "category": "Options (OPTION)",
+  "syntax": [
+   "OPTION TARGET DOS"
+  ],
+  "description": "Default value: produces NAME.COM for MSX-DOS (1 or 2) with access to disk files. Equivalent to writing no OPTION TARGET. DOS programs start at 0100h.",
+  "example": null,
+  "see": [
+   "BIN",
+   "OPTION TARGET"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "OPTION NUMBERED",
+   "NUMBERED"
+  ],
+  "category": "Options (OPTION)",
+  "syntax": [
+   "OPTION NUMBERED"
+  ],
+  "description": "Numbered lines (sorted by number, numbers only, no labels). About 590 program lines.",
+  "example": "10 PRINT \"a\"\n20 GOTO 10",
+  "see": [
+   "OPTION",
+   "LABELS"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "OPTION LABELS",
+   "OPT LABELS"
+  ],
+  "category": "Options (OPTION)",
+  "syntax": [
+   "OPTION LABELS"
+  ],
+  "description": "Labels only, no line numbers.",
+  "example": "OPTION LABELS\nciclo:\n  PRINT \"x\";\n  GOTO again",
+  "see": [
+   "OPTION"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "OPTION MIXED",
+   "MIXED"
+  ],
+  "category": "Options (OPTION)",
+  "syntax": [
+   "OPTION MIXED"
+  ],
+  "description": "Line numbers and labels together (default).",
+  "example": "OPTION MIXED",
+  "see": [
+   "OPTION"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "OPTION DEBUG",
+   "OPT DEBUG"
+  ],
+  "category": "Options (OPTION)",
+  "syntax": [
+   "OPTION DEBUG"
+  ],
+  "description": "Compiles with the built-in debugger: the program starts stopped at the first statement. See DEBUG.",
+  "example": "OPTION DEBUG\na = 1\nb = a + 1",
+  "see": [
+   "DEBUG"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "ASM",
+   "__ASM",
+   "__ENDASM",
+   "ASSEMBLER"
+  ],
+  "category": "Guide",
+  "syntax": [
+   "__ASM",
+   "  Z80 instructions",
+   "__ENDASM"
+  ],
+  "description": "An __ASM ... __ENDASM block (each on its own line, upper or lower case) contains documented Z80 code, written as in any assembler. Comments with ;. Local labels name: (also name EQU value). Numbers: decimal, $1F, 0x1F, 1FH, %101, 101B, 'x'; $ is the current address. Directives: DB/DEFB (also strings), DW/DEFW, DS/DEFS. A name that is not a local label is a global BASIC variable (LD HL,(COUNT), LD HL,NOME$) or, in a jump, a BASIC label (JP DONE, JP NZ,DONE). JR and DJNZ only to local labels. Every register can be changed except IX (frame of SUB/FUNCTION) and the stack must be left balanced. The debugger does not stop inside the blocks. It also works in cartridges. Errors: 17 syntax/operand, 18 value or jump out of range, 19 duplicate symbol or missing __ENDASM, 20 QASM.OVL not found.",
+  "example": "count = 0\n__ASM\n  ld hl,(count)\n  inc hl\n  ld (count),hl\n__ENDASM\nPRINT count",
+  "see": [
+   "VARPTR",
+   "OPTION"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "DEBUG",
+   "DEBUGGER"
+  ],
+  "category": "Guide",
+  "syntax": [
+   "OPTION DEBUG"
+  ],
+  "description": "Write OPTION DEBUG in the source and press F5: the program starts stopped at the first statement, in a text screen showing the current line, the global scalar variables with their value and the list of breakpoints. Keys: SPACE (or S, ENTER) runs one statement; R runs to the next breakpoint; B number ENTER sets or clears a breakpoint (ENTER alone = current line, 0 = clear them all); C clears all breakpoints; V next page of variables; E asks for a variable name (local, parameter, global, array element such as V(3) or N$) and shows its value; Q ends the program. Inside a SUB the local variables and parameters appear first with the > prefix. CTRL-STOP while running re-enters the debugger. The program screen stays intact. In cartridges the debugger works but does not show variables. Normal programs (without OPTION DEBUG) pay nothing.",
+  "example": "OPTION DEBUG\ns = 0\nFOR i = 1 TO 3\n  s = s + i\nNEXT i\nPRINT s",
+  "see": [
+   "OPTION DEBUG"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "EDITOR",
+   "MENU",
+   "KEYS"
+  ],
+  "category": "Guide",
+  "syntax": [
+   "Esc = menu, arrows, F1-F4"
+  ],
+  "description": "Start it with SAMPRBAS name (also with a path, on MSX-DOS 2). Keyboard menu: Esc opens the File menu; F1 File, F2 Edit, F3 Find, F4 Help; Run is on the right; left/right arrows change menu, up/down the items, Enter selects, a highlighted letter activates the item, Esc closes. Shortcuts: F5 compiles and runs, F6 Help on the word under the cursor, F7 help index, F8 File > Segment (changes segment). Keywords are colored (on MSX2); on MSX1 the editor has 40 columns, on MSX2 80, automatically. If nothing has changed F5 reruns the program immediately.",
+  "example": null,
+  "see": [
+   "HELP"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "SEGMENTS",
+   "MULTIFILE",
+   "ROMFILE",
+   "NAME000"
+  ],
+  "category": "Guide",
+  "syntax": [
+   "NAME000.SPB, NAME001.SPB ...",
+   "File > Segment... (F8)"
+  ],
+  "description": "A segmented cartridge (ASCII8, ASCII16, KONAMI, SCC) is written as one file per segment: NAME000.SPB (segment 0, fixed, with the OPTIONs) and NAME001, NAME002... (5 characters + 3 digits). The compiler reads them in sequence and links them into NAME.ROM; you compile from any file with F5. The OPTIONs go only in file 000; SEGMENT is not written. A file NAMEnnn.BIN (assembler, sprites, font, data) is an already compiled segment: it is inserted as is. F8 (File > Segment...) saves the current file and opens the segment whose number you type (also without zeros); if the file does not exist, or is a .BIN, it says why and the active file does not change. Numbering starts at 0: it is the first block of the cartridge, not the BIOS.",
+  "example": null,
+  "see": [
+   "SEGMENT",
+   "OPTION TARGET",
+   "EDITOR"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "DIRECTORY",
+   "SPBHOME",
+   "SPBPROJ",
+   "FOLDERS"
+  ],
+  "category": "Guide",
+  "syntax": [
+   "SAMPRBAS \\DIR\\NAME",
+   "SET SPBHOME=\\TOOLS"
+  ],
+  "description": "With MSX-DOS 2 the working directory is always that of the open file: source, .COM/.ROM and the program's files live in the project folder, the tools in theirs. You can give a path on the command line; File > Open navigates between folders. Environment variables: SPBHOME (tools, the folder the editor is first started from) and SPBPROJ (project). With MSX-DOS 1 there are no folders.",
+  "example": null,
+  "see": [
+   "SPB",
+   "EDITOR"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "SPB",
+   "FILE SPB",
+   "SAVE",
+   "OPENFILE"
+  ],
+  "category": "Guide",
+  "syntax": [
+   "SAMPRBAS name",
+   "File > Open, File > Save As"
+  ],
+  "description": "Programs have the .SPB extension (SamPr Basic). SAMPRBAS TEST opens PROVA.SPB if it exists, otherwise starts with a new file already named PROVA.SPB. Open (Ctrl+O) shows a window with the .SPB files (and, with MSX-DOS 2, the folders): arrows, Enter, a letter to jump, Esc to exit. Save As (Ctrl+W) accepts at most 8 characters and adds .SPB. The compiled program is NAME.COM (or NAME.ROM).",
+  "example": null,
+  "see": [
+   "EDITOR",
+   "COMPILING"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "HELP",
+   "INDEX"
+  ],
+  "category": "Guide",
+  "syntax": [
+   "Help menu: Index (F7), Topic..., On word (F6), Shortcuts, About"
+  ],
+  "description": "Help reads the HELP.TXT and HELP.IDX files in the current directory. Index (F7) shows the list of topics; Topic... asks for a name (e.g. PRINT, ASM, DEBUG, OPTION); On word (F6) shows the topic for the word under the cursor. In the viewer: arrows and PgUp/PgDn scroll, Esc closes. HELP.TXT is a plain text file (38-column lines): it can be read and extended; HELP.IDX is the index generated by the gen_docs.py tool.",
+  "example": null,
+  "see": [
+   "EDITOR"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "ERRORS"
+  ],
+  "category": "Guide",
+  "syntax": [
+   "Error codes"
+  ],
+  "description": "1 syntax; 2 nonexistent label or line; 3 not yet supported; 4 illegal character; 5 unclosed block; 6 ELSE/END IF/NEXT/WEND without block; 7 duplicate name; 8 too many variables, labels or blocks; 9 program too large; 10 source too large; 11 read error; 12 write error; 13 not allowed with the chosen OPTION; 14 incompatible types or undeclared array; 15 program data too large; 16 RT.BIN not found; 17-20 inline assembler. The editor reopens with the cursor on the error line.",
+  "example": null,
+  "see": [
+   "LIMITS"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "LIMITS"
+  ],
+  "category": "Guide",
+  "syntax": [
+   "Compiler limits"
+  ],
+  "description": "Source about 12.5 KB per file (15 KB in cartridges); program 16 KB; 96 labels; 100 variables and arrays; 20 SUB/FUNCTION (8 parameters each, 64 in total); 29 local integers and 256 bytes per local string; 24 nested blocks; names significant to 11 characters; about 590 lines in OPTION NUMBERED; strings of 255 characters; integers from -32768 to 32767; open files: 3.",
+  "example": null,
+  "see": [
+   "ERRORS"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "MSX1",
+   "MSX2",
+   "COMPATIBILITY"
+  ],
+  "category": "Guide",
+  "syntax": [
+   "MSX1 / MSX2"
+  ],
+  "description": "The system detects the machine. MSX1: editor and text at 40 columns, SCREEN 0-3, no keyword colors, no graphics 5-12, palette, pages, mapper. MSX2: 80 columns, SCREEN up to 8 (10-12 on MSX2+), PALETTE, COPY, SET PAGE, 17-bit VBANK, RAM mapper. Tested with a Sony HB-75P and an MSX2 with MSX-DOS 1 and 2.",
+  "example": null,
+  "see": [
+   "SCREEN"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "COM",
+   "ROM",
+   "COMPILING",
+   "F5"
+  ],
+  "category": "Guide",
+  "syntax": [
+   "F5, QBC.COM, NAME.COM / NAME.ROM"
+  ],
+  "description": "F5 saves the source, starts the QBC.COM compiler which writes NAME.COM, and runs it; at the end of the program you return to the editor. With OPTION TARGET you get a NAME.ROM cartridge instead. Files needed on the disk: SAMPRBAS.COM, QBC.COM, RT.BIN (and RTD.BIN for debugging, QBCR.COM and RTROM.BIN for cartridges, QASM.OVL for __ASM).",
+  "example": null,
+  "see": [
+   "OPTION TARGET"
+  ],
+  "availability": "MSX1 and MSX2"
+ }
+]

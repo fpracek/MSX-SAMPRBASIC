@@ -133,8 +133,8 @@ T('LINE INPUT', C, ["LINE INPUT [#n,] variable$"],
 T('CLS', C, ["CLS"], "Clears the screen and moves the cursor to the top left (on the active page in SCREEN 5-8).", 'CLS\nPRINT "clean"', ['LOCATE'])
 T('LOCATE', C, ["LOCATE row, column"], "Positions the text cursor. Row and column start at 1.",
   'CLS\nLOCATE 5, 10\nPRINT "here"', ['PRINT', 'CLS'])
-T('COLOR', C, ["COLOR foreground[, background]", "COLOR = (n, r, g, b)", "COLOR = RESTORE", "COLOR SPRITE(n) = color", "COLOR SPRITE$(n) = colors$"],
-  "Sets the text colors (and the border) with numbers from 0 to 15 (in SCREEN 8 the raw value 0-255). `COLOR = (n,r,g,b)` redefines a "
+T('COLOR', C, ["COLOR foreground[, background[, border]]", "COLOR = (n, r, g, b)", "COLOR = RESTORE", "COLOR SPRITE(n) = color", "COLOR SPRITE$(n) = colors$"],
+  "Sets the foreground, background and border colors with numbers from 0 to 15 (in SCREEN 8 the raw value 0-255). Without the third value the border takes the background color. `COLOR = (n,r,g,b)` redefines a "
   "palette color (r, g, b from 0 to 7; MSX2) and `COLOR = RESTORE` restores the default palette. For COLOR SPRITE see sprites.",
   'COLOR 15, 4\nCLS\nPRINT "white on blue"', ['PALETTE', 'SCREEN'])
 T('INKEY$', C, ["INKEY$"], "Returns the character of the key pressed, or the empty string if there is none: it does not wait.",
