@@ -11,6 +11,9 @@ const { runTests } = require("@vscode/test-electron");
   fs.writeFileSync(path.join(ws, "BAD.SPB"), 'PRINT "a"\r\nPRINT "b"\r\nPRINT 1 +\r\nPRINT "c"\r\n');
   fs.writeFileSync(path.join(ws, "GOOD.SPB"), 'PRINT "ok"\r\nSUB hello(n)\r\n  PRINT n\r\nEND SUB\r\nCALL hello(5)\r\nloop1:\r\n');
   fs.writeFileSync(path.join(ws, "TEMP.SPB"), 'PRINT "x"\r\n');
+  fs.writeFileSync(path.join(ws, "DBG.SPB"), ["' debug demo", "DIM v(3)", "g = 7", "v(2) = 42", 'n$ = "hi"', 'CALL prova(g + 1, "arg")', "PRINT g", "SUB prova(p, s$)", "  q = p * 2", "  PRINT q", "END SUB", ""].join("\r\n"));
+  fs.mkdirSync(path.join(ws, ".vscode"), { recursive: true });
+  fs.writeFileSync(path.join(ws, ".vscode", "settings.json"), JSON.stringify({ "samprbasic.openmsx.path": process.env.OPENMSX || "E:/Dropbox/FAUSTO/SVILUPPI/MSX/EMULATORI/openMSX/openmsx.exe", "samprbasic.dosFiles": process.env.SPB_DOS || "E:/Dropbox/FAUSTO/SVILUPPI/MSX/DISK2" }));
   const data = fs.mkdtempSync(path.join(os.tmpdir(), "spb-data-"));
   const exts = fs.mkdtempSync(path.join(os.tmpdir(), "spb-exts-"));
   try {

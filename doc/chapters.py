@@ -213,8 +213,9 @@ CH('VS Code extension', [
             "<b>Same keys:</b> F5 compile and run, F6 help on the word, F7 help index, F8 go to a segment.",
             "<b>Same look:</b> the <i>SamPr Basic MSX</i> color theme (white on blue, yellow keywords) and an 80-column ruler.",
             "Hover help for every statement, outline of SUB/FUNCTION/labels, snippets, highlighting of __ASM blocks.",
-            "<b>Run in openMSX</b> for the three outputs: DOS programs, MSX-BASIC BIN files and ROM cartridges (settings: openMSX path, folder with MSXDOS.SYS and COMMAND.COM, machine)."]),
-    ('p', "Install the .vsix file from the release (<i>Extensions &gt; ... &gt; Install from VSIX</i>). Source-level debugging in openMSX is planned."),
+            "<b>Run in openMSX</b> for the three outputs: DOS programs, MSX-BASIC BIN files and ROM cartridges (settings: openMSX path, folder with MSXDOS.SYS and COMMAND.COM, machine).",
+            "<b>Source-level debugger</b> on openMSX (<i>Run &gt; Start Debugging</i>, Ctrl+F5): breakpoints on any line, step over / into / out, call stack (SUB names), local variables and parameters, globals, arrays, and expressions such as V(2) or N$ in Watch and Debug Console. Works for DOS and BIN programs; the extension compiles a temporary copy with OPTION DEBUG, so your source is never modified."]),
+    ('p', "Install the .vsix file from the release (<i>Extensions &gt; ... &gt; Install from VSIX</i>). In the debugger, set a breakpoint in the gutter and press Ctrl+F5."),
 ])
 
 CH('MSX1 and MSX2', [

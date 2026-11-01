@@ -19,7 +19,8 @@
   "main": "./dist/extension.js",
   "activationEvents": [
     "onLanguage:samprbasic",
-    "workspaceContains:**/*.spb"
+    "workspaceContains:**/*.spb",
+    "onDebug"
   ],
   "contributes": {
     "languages": [
@@ -83,6 +84,10 @@
       {
         "command": "samprbasic.newProject",
         "title": "SamPr Basic: New Project from Sample"
+      },
+      {
+        "command": "samprbasic.debug",
+        "title": "SamPr Basic: Debug in openMSX"
       }
     ],
     "keybindings": [
@@ -104,6 +109,11 @@
       {
         "command": "samprbasic.segment",
         "key": "f8",
+        "when": "editorLangId == samprbasic"
+      },
+      {
+        "command": "samprbasic.debug",
+        "key": "ctrl+f5",
         "when": "editorLangId == samprbasic"
       }
     ],
@@ -170,7 +180,62 @@
         "files.encoding": "windows1252",
         "editor.minimap.enabled": false
       }
-    }
+    },
+    "breakpoints": [
+      {
+        "language": "samprbasic"
+      }
+    ],
+    "debuggers": [
+      {
+        "type": "samprbasic",
+        "label": "SamPr Basic (openMSX)",
+        "languages": [
+          "samprbasic"
+        ],
+        "configurationAttributes": {
+          "launch": {
+            "required": [
+              "program"
+            ],
+            "properties": {
+              "program": {
+                "type": "string",
+                "description": "The .spb file to debug.",
+                "default": "${file}"
+              },
+              "stopOnEntry": {
+                "type": "boolean",
+                "description": "Stop at the first statement.",
+                "default": true
+              }
+            }
+          }
+        },
+        "initialConfigurations": [
+          {
+            "type": "samprbasic",
+            "request": "launch",
+            "name": "Debug SamPr Basic program",
+            "program": "${file}",
+            "stopOnEntry": true
+          }
+        ],
+        "configurationSnippets": [
+          {
+            "label": "SamPr Basic: Debug in openMSX",
+            "description": "Debug the current .spb file in openMSX",
+            "body": {
+              "type": "samprbasic",
+              "request": "launch",
+              "name": "Debug SamPr Basic program",
+              "program": "${file}",
+              "stopOnEntry": true
+            }
+          }
+        ]
+      }
+    ]
   },
   "scripts": {
     "build": "node esbuild.mjs",
@@ -188,5 +253,8 @@
     "esbuild": "^0.25.0",
     "typescript": "^5.6.0",
     "z80-emulator": "^2.3.0"
+  },
+  "dependencies": {
+    "@vscode/debugadapter": "^1.68.0"
   }
 }

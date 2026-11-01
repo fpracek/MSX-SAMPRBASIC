@@ -4,6 +4,7 @@ import * as fs from "fs";
 import * as path from "path";
 import { compile, CompileResult } from "./compile";
 import { launchBin, launchDos, launchRom, LaunchConfig } from "./openmsx";
+import { SamprDebugSession } from "./debug";
 
 interface HelpTopic { names: string[]; category: string; syntax: string[]; description: string; example: string | null; see: string[]; availability: string; }
 
@@ -266,6 +267,23 @@ export function activate(ctx: vscode.ExtensionContext): void {
     vscode.commands.registerCommand("samprbasic.newProject", cmdNewProject),
     vscode.commands.registerCommand("samprbasic.about", () => vscode.window.showInformationMessage(ABOUT, { modal: true }, "OK")),
     vscode.workspace.registerTextDocumentContentProvider("samprbasic-help", new HelpProvider()),
+    vscode.commands.registerCommand("samprbasic.debug", async () => {
+      const doc = await saveCurrent();
+      if (!doc) return;
+      await vscode.debug.startDebugging(undefined, { type: "samprbasic", request: "launch", name: "Debug SamPr Basic program", program: doc.fileName, stopOnEntry: true });
+    }),
+    vscode.debug.registerDebugAdapterDescriptorFactory("samprbasic", {
+      createDebugAdapterDescriptor: () => new vscode.DebugAdapterInlineImplementation(new SamprDebugSession({ toolsDir: toolsDir(), extensionPath: extPath, cfg: launchCfg }) as unknown as vscode.DebugAdapter),
+    }),
+    vscode.debug.registerDebugConfigurationProvider("samprbasic", {
+      resolveDebugConfiguration(_f, config) {
+        if (!config.type) { config.type = "samprbasic"; config.request = "launch"; config.name = "Debug SamPr Basic program"; }
+        const ed = vscode.window.activeTextEditor;
+        if ((!config.program || config.program === "${file}") && ed && ed.document.languageId === "samprbasic") config.program = ed.document.fileName;
+        if (!config.program) { vscode.window.showWarningMessage("Open a SamPr Basic (.spb) file to debug."); return undefined; }
+        return config;
+      },
+    }),
     vscode.workspace.onDidChangeTextDocument((e) => scheduleLive(e.document)),
     vscode.workspace.onDidOpenTextDocument((d) => scheduleLive(d)),
     vscode.window.onDidChangeActiveTextEditor((e) => { if (e) { statusItem[e.document.languageId === "samprbasic" ? "show" : "hide"](); scheduleLive(e.document); } }),

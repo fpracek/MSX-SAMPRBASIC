@@ -45,6 +45,10 @@ Keep names within the MSX 8.3 limit. In the editor on the MSX, *Save As* accepts
 | `samprbasic.askDate` | type a date at the DOS prompt (MSX1 with MSX-DOS 1 asks for it) |
 | `samprbasic.fullSpeedWhenLoading` | run openMSX at full speed during disk access |
 
+## Debugger
+
+Set breakpoints in the gutter and press `Ctrl+F5` (*Debug: SamPr Basic in openMSX*), or use *Run > Start Debugging* with a `samprbasic` launch configuration (`program`, `stopOnEntry`). The extension compiles a temporary copy of the project with `OPTION DEBUG` (your source is untouched), starts openMSX and attaches to it. You get continue / step over / step into / step out / pause, the call stack with SUB names, locals and parameters, globals and arrays, and expression evaluation (`V(2)`, `N$`) in Watch and Debug Console. DOS and BIN targets are supported; ROM cartridges are not.
+
 ## Commands
 
 *SamPr Basic: Compile and Run* (`F5`), *Compile*, *Help on Word* (`F6`), *Help Index* (`F7`), *Go to Segment* (`F8`), *New Project from Sample*, *About*.
@@ -52,7 +56,6 @@ Keep names within the MSX 8.3 limit. In the editor on the MSX, *Save As* accepts
 ## Notes
 
 - Not tried on real MSX hardware; the compiler and runtimes were tested on openMSX (Philips NMS 8250, Sony HB-75P, Panasonic FS-A1ST).
-- Source-level debugging in openMSX is planned.
 
 *SamPr Basic 1.0 — © 2026 Fausto Pracek.* This extension bundles the MIT-licensed [z80-emulator](https://github.com/lkesteloot/trs80) (see `THIRD-PARTY-NOTICES.txt`).
 

@@ -53,6 +53,34 @@ exports.run = async function run() {
   const d2 = vscode.languages.getDiagnostics(bad2.uri);
   check(d2.length === 1 && d2[0].range.start.line === 2, "build reports the error on the right line");
 
+
+  // ---- debugger (openMSX)
+  const dbgDoc = await vscode.workspace.openTextDocument(path.join(ws, "DBG.SPB"));
+  await vscode.window.showTextDocument(dbgDoc);
+  vscode.debug.addBreakpoints([new vscode.SourceBreakpoint(new vscode.Location(dbgDoc.uri, new vscode.Position(9, 0)))]); // line 10: PRINT q (inside the SUB)
+  const started = await vscode.debug.startDebugging(undefined, { type: "samprbasic", request: "launch", name: "t", program: dbgDoc.fileName, stopOnEntry: false });
+  check(started, "debug session started");
+  const sess = () => vscode.debug.activeDebugSession;
+  const frameAt = async () => { try { const st = await sess().customRequest("stackTrace", { threadId: 1 }); return st.stackFrames[0]; } catch { return undefined; } };
+  const f1 = await waitFor(async () => { const f = sess() ? await frameAt() : undefined; return f && f.line ? f : null; }, 120000);
+  check(!!f1 && f1.line === 10, "stopped at the breakpoint on line 10: " + JSON.stringify(f1 && [f1.name, f1.line]));
+  check(!!f1 && /SUB prova/.test(f1.name), "frame is named after the SUB");
+  const getVars = async () => {
+    const sc = await sess().customRequest("scopes", { frameId: 1 });
+    const out = {};
+    for (const s of sc.scopes) { const v = await sess().customRequest("variables", { variablesReference: s.variablesReference }); out[s.name] = Object.fromEntries(v.variables.map((x) => [x.name, x.value])); }
+    return out;
+  };
+  const v1 = await getVars();
+  check(v1.Locals && v1.Locals.p === "8" && v1.Locals.q === "16" && v1.Locals["s$"] === '"arg"', "locals: " + JSON.stringify(v1.Locals));
+  check(v1.Globals && v1.Globals.g === "7" && v1.Globals["n$"] === '"hi"', "globals: " + JSON.stringify(v1.Globals));
+  const ev = await sess().customRequest("evaluate", { expression: "v(2)", context: "watch" });
+  check(ev.result === "42", "evaluate v(2) = " + ev.result);
+  await sess().customRequest("stepOut", { threadId: 1 });
+  const f2 = await waitFor(async () => { const f = await frameAt(); return f && f.line && f.line !== 10 ? f : null; }, 60000);
+  check(!!f2 && f2.line === 7, "step out of the SUB stops on line 7: " + JSON.stringify(f2 && [f2.name, f2.line]));
+  await vscode.debug.stopDebugging();
+
   // about / help index commands exist
   const cmds = await vscode.commands.getCommands(true);
   for (const c of ["samprbasic.run", "samprbasic.helpWord", "samprbasic.helpIndex", "samprbasic.segment", "samprbasic.about", "samprbasic.newProject"]) check(cmds.includes(c), "command " + c);
