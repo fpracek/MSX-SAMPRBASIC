@@ -8010,11 +8010,18 @@ st_put:                         ; PUT SPRITE piano, (x,y)[, colore[, pattern]]  
         ld hl,GX1
         call emit_st
         ld a,','
-        call expect_p
+        call is_p
+        jr z,.pt
+        call emit_i             ; PUT SPRITE piano: lo sprite si nasconde (0,214), fuori da 192 e 212 righe
+        db 6,21h,0,0,22h,low GX2,high GX2
+        call emit_i
+        db 6,21h,214,0,22h,low GY2,high GY2
+        jr .def
+.pt:    call next_tok
         ld de,GX2
         ld bc,GY2
         call emit_xy_raw
-        call emit_defcol
+.def:   call emit_defcol
         call emit_i             ; pattern = -1 (come il numero del piano)
         db 6,21h,0FFh,0FFh,22h,low GY1,high GY1
         ld a,','

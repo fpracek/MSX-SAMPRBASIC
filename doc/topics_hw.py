@@ -10,7 +10,9 @@ T('SCREEN', C, ["SCREEN mode [, sprite size]"],
   "Selects the video mode. MSX1: 0 (40-column text), 1 (32-column color text), 2 (256x192 graphics), 3 (64x48 blocks). MSX2 adds 4, 5 (256x212, 16 colors), "
   "6 (512x212, 4 colors), 7 (512x212, 16 colors), 8 (256x212, 256 colors) and, on MSX2+/turbo R, 10-12 (YJK colors). PSET, LINE, CIRCLE, PAINT, "
   "GET/PUT and COPY work in SCREEN 5-8 (PSET, POINT, LINE and CIRCLE also in SCREEN 3). The second parameter is the sprite size: "
-  "0 = 8x8, 1 = 8x8 magnified, 2 = 16x16, 3 = 16x16 magnified. On MSX1 a mode above 3 gives \"Illegal function call\".",
+  "0 = 8x8, 1 = 8x8 magnified, 2 = 16x16, 3 = 16x16 magnified. On MSX1 a mode above 3 gives \"Illegal function call\". "
+  "Graphics modes keep a 768-byte copy of the text font at the top of the heap (for PRINT on graphics screens): with very large arrays or many strings there may be too little memory left and the program stops with \"Out of string space\". "
+  "SCREEN 4 has no font in VRAM: to write text with VWRITE copy the glyphs from the text screen first (VREAD$) as the GEOMRUN example does.",
   'SCREEN 5\nCOLOR 15, 4\nCLS\nPSET (10, 10), 15\nLINE -(100, 80), 8', ['PSET', 'LINE', 'SPRITE', 'SET'], 'MSX1: modes 0-3; MSX2: 0-8 (10-12 on MSX2+)')
 T(['PSET', 'PRESET'], C, ["PSET (x, y) [, color [, operation]]", "PRESET (x, y) [, color [, operation]]"],
   "Turns a point on (PSET) or off (PRESET, background color). Off-screen coordinates are clipped. The logical operation is PSET, PRESET, "
@@ -65,7 +67,9 @@ T('SPRITE', C, ["SPRITE$(n) = string$", "PUT SPRITE plane, (x, y), color, patter
   "Sprites are 32 hardware objects. SPRITE$(n) = string$ defines pattern n: 8 bytes for an 8x8 (32 for a 16x16), one bit per dot. "
   "PUT SPRITE plane,(x,y),color,pattern shows the sprite; with just PUT SPRITE plane it is hidden. The size (8x8 or 16x16, "
   "normal or magnified) is chosen with the second parameter of SCREEN. COLOR SPRITE(n) = c changes the color of a plane; "
-  "COLOR SPRITE$(n) = string$ gives one color per line (MSX2, sprite mode 2). COLLISION is -1 if two sprites have touched.",
+  "COLOR SPRITE$(n) = string$ gives one color per line (MSX2, sprite mode 2): note that PUT SPRITE with coordinates sets all the lines of the plane to its color, "
+  "so a multicolor sprite that moves is better positioned by writing the attribute table with VPOKE (see the GEOMRUN example: SCREEN 4, attributes at VRAM 7680, "
+  "y-1, x, pattern*4) and layering several planes for more colors. COLLISION is -1 if two sprites have touched.",
   'SCREEN 2, 0\nSPRITE$(0) = CHR$(255)+CHR$(129)+CHR$(129)+CHR$(129)+CHR$(129)+CHR$(129)+CHR$(129)+CHR$(255)\nPUT SPRITE 0, (100, 90), 8, 0',
   ['SCREEN', 'COLLISION', 'STICK'], 'MSX1 and MSX2 (SCREEN 1-8)')
 T('PUT SPRITE', C, ["PUT SPRITE plane, (x, y), color, pattern", "PUT SPRITE plane"], "Shows a sprite (or hides it when only the plane is given). See SPRITE.",

@@ -1,0 +1,5 @@
+SCREEN 5, 2
+PUT SPRITE 3, (20, 30), 15, 1
+PUT SPRITE 2, (40, 50), 15, 1
+p = 3
+PUT SPRITE p

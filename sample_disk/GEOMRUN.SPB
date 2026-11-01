@@ -1,0 +1,501 @@
+REM GEOMETRY RUN - an endless runner demo for SamPr Basic (MSX2). Space or up: jump. ESC: quit.
+REM Redefined tiles scroll the world (floor, city, stars), a 3-layer sprite with one color per
+REM line, random obstacles and a 3-voice PSG tune played from the game loop.
+OPTION LABELS
+DIM cv(3), sv(3), hv(3), pw(8), t8(7), rt(319), pt(11), bp(15), ap(15), sk(15), bk(15), pk(15)
+DIM ok(7), ox(7), oy(7), vs(7), pa(8), pb(8), pvx(8), pvy(8), dg(4)
+' the text font lives in the text screen: keep it, SCREEN 4 does not load one
+a$ = VREAD$(4472, 176) : b$ = VREAD$(4648, 176)
+pw(0) = 1
+FOR i = 1 TO 8 : pw(i) = pw(i - 1) * 2 : NEXT i
+' all 8 rotations of each scrolling tile, computed once (division is slow, VPOKE is fast)
+FOR t = 0 TO 4
+ FOR r = 0 TO 7 : READ t8(r) : NEXT r
+ FOR n = 0 TO 7
+  FOR r = 0 TO 7
+   p = t8(r)
+   rt(t * 64 + n * 8 + r) = ((p * pw(n)) MOD 256) + (p \ pw(8 - n))
+  NEXT r
+ NEXT n
+NEXT t
+FOR i = 0 TO 3 : READ cv(i) : NEXT i
+FOR i = 0 TO 3 : READ sv(i) : NEXT i
+FOR i = 0 TO 3 : READ hv(i) : NEXT i
+FOR i = 0 TO 11 : READ pt(i) : NEXT i
+FOR i = 0 TO 15 : READ n : bp(i) = pt(n MOD 12) * 2 \ pw(n \ 12) : NEXT i
+FOR i = 0 TO 15 : READ n : ap(i) = pt(n MOD 12) * 2 \ pw(n \ 12) : NEXT i
+DATA 255,255,128,128,128,128,128,128
+DATA 255,128,128,128,128,128,128,128
+DATA 0,16,56,124,254,255,255,255
+DATA 255,219,255,219,255,219,255,219
+DATA 0,0,8,0,0,0,64,0
+DATA 256,237,181,98, 0,98,181,237, 16,13,12,13
+DATA 427,403,381,359,339,320,302,285,269,254,240,226
+DATA 9,9,21,9, 5,5,17,5, 0,0,12,0, 7,7,19,7
+DATA 21,24,28,24, 17,21,24,21, 24,28,31,28, 19,23,26,23
+SCREEN 4, 2
+COLOR 15, 1, 1
+CLS
+VWRITE 376, a$ : VWRITE 552, b$ : VFILL 8192 + 376, 352, 241
+GOSUB make_tiles
+GOSUB make_sprites
+SOUND 7, 56
+best = 0
+title:
+GOSUB reset_game
+state = 0
+GOSUB text_title
+DO
+ GOSUB scene
+ IF STRIG(0) OR STICK(0) = 1 THEN EXIT DO
+LOOP
+CALL stars_on
+state = 1
+DO
+ GOSUB scene
+ jm = STRIG(0) OR STICK(0) = 1
+ IF state = 1 THEN
+  GOSUB player_step
+  GOSUB spawn_step
+  acc = acc + spd
+  IF acc >= 24 THEN
+   acc = acc - 24
+   score = score + 1
+   i = 0
+   DO
+    dg(i) = dg(i) + 1
+    IF dg(i) < 10 THEN EXIT DO
+    dg(i) = 0
+    i = i + 1
+   LOOP UNTIL i > 4
+   FOR i = 0 TO 4 : VPOKE 6144 + 11 - i, 48 + dg(i) : NEXT i
+   IF score = 50 THEN spd = 7
+   IF score = 110 THEN spd = 8
+   IF score = 180 THEN spd = 9
+   IF score = 260 THEN spd = 10
+  END IF
+ ELSE
+  GOSUB explosion_step
+  dead = dead + 1
+  IF dead = 40 THEN GOSUB text_over
+  IF dead > 40 AND jm THEN GOTO title
+ END IF
+LOOP
+quit:
+SOUND 8, 0 : SOUND 9, 0 : SOUND 10, 0
+SCREEN 0
+END
+scene:
+ SLEEP 2
+ fp = fp + spd
+ IF fp >= 8 THEN fp = fp - 8
+ IF fp >= 8 THEN fp = fp - 8
+ CALL gt(fp * 8)
+ CALL gf(64 + fp * 8)
+ fc = fc + 1
+ IF fc = 4 THEN
+  fc = 0
+  a$ = INKEY$
+  IF a$ = CHR$(27) THEN GOTO quit
+ END IF
+ IF fc = 1 OR fc = 3 THEN
+  cp = cp + spd
+  IF cp >= 8 THEN cp = cp - 8
+  IF cp >= 8 THEN cp = cp - 8
+  CALL ht(128 + cp * 8)
+  CALL hf(192 + cp * 8)
+ END IF
+ IF fc = 2 THEN
+  sp = sp + spd
+  IF sp >= 8 THEN sp = sp - 8
+  IF sp >= 8 THEN sp = sp - 8
+  CALL st(256 + sp * 8)
+ END IF
+ GOSUB music
+RETURN
+music:
+ IF state = 2 THEN RETURN
+ mt = mt + 1
+ IF mt >= 3 THEN
+  mt = 0
+  ms = ms + 1
+  IF ms = 16 THEN ms = 0
+  p = bp(ms)
+  SOUND 0, p MOD 256 : SOUND 1, p \ 256 : SOUND 8, 11
+  p = ap(ms)
+  SOUND 2, p MOD 256 : SOUND 3, p \ 256 : SOUND 9, 10
+  hs = 1 - hs
+  IF hs = 1 AND sfx = 0 THEN
+   SOUND 6, 6 : SOUND 7, 28 : SOUND 10, 9
+   hat = 1
+  END IF
+ ELSE
+  SOUND 9, 10 - mt * 3
+  IF hat = 1 THEN
+   hat = 0
+   SOUND 10, 0
+  END IF
+ END IF
+ IF sfx > 0 THEN
+  sfx = sfx - 1
+  SOUND 4, 150 - sfx * 14 : SOUND 5, 0 : SOUND 10, 12 : SOUND 7, 56
+  IF sfx = 0 THEN SOUND 10, 0
+ END IF
+RETURN
+player_step:
+ prevb = py + 16
+ IF ground = 1 AND jm THEN
+  vy = -13
+  sfx = 6
+  fcnt = 0
+ END IF
+ vy = vy + 2
+ IF vy > 14 THEN vy = 14
+ py = py + vy
+ ground = 0
+ IF py + 16 >= 144 THEN
+  py = 128
+  vy = 0
+  ground = 1
+ END IF
+ aa = 7693
+ FOR i = 0 TO 5
+  k = ok(i)
+  IF k > 0 THEN
+   x = ox(i) - spd
+   ox(i) = x
+   IF x < 0 THEN
+    ok(i) = 0
+    CALL hide(3 + i)
+   ELSE
+    IF x < 256 THEN
+     IF vs(i) = 0 THEN
+      vs(i) = 1
+      VPOKE aa - 1, oy(i) - 1 : VPOKE aa + 1, 44 + k * 4
+     END IF
+     VPOKE aa, x
+    END IF
+    IF x < 78 AND x > -16 THEN
+     y = oy(i)
+     IF k = 1 THEN
+      IF x + 5 < 78 AND x + 11 > 66 AND y + 6 < py + 15 AND y + 15 > py + 2 THEN GOSUB crash
+     ELSEIF x + 16 > 66 THEN
+      IF vy >= 0 AND prevb <= y + 2 AND py + 16 >= y THEN
+       py = y - 16
+       vy = 0
+       ground = 1
+      ELSEIF py + 16 > y + 2 AND py < y + 15 THEN
+       GOSUB crash
+      END IF
+     END IF
+    END IF
+   END IF
+  END IF
+  aa = aa + 4
+ NEXT i
+ IF state <> 1 THEN RETURN
+ IF ground = 1 THEN
+  fr = 0
+ ELSE
+  fcnt = fcnt + 1
+  IF fcnt >= 4 THEN
+   fcnt = 0
+   fr = fr + 1
+   IF fr > 3 THEN fr = 0
+  END IF
+ END IF
+ VPOKE 7680, py - 1 : VPOKE 7684, py - 1 : VPOKE 7688, py - 1
+ IF fr <> lfr THEN
+  lfr = fr
+  VPOKE 7682, fr * 12 : VPOKE 7686, fr * 12 + 4 : VPOKE 7690, fr * 12 + 8
+ END IF
+RETURN
+
+spawn_step:
+ gap = gap - spd
+ IF gap > 0 THEN RETURN
+ SELECT CASE RND(8)
+  CASE 0, 1, 6
+   CALL addob(256, 128, 1)
+   w = 16
+  CASE 2
+   CALL addob(256, 128, 1) : CALL addob(272, 128, 1)
+   w = 32
+  CASE 3
+   CALL addob(256, 128, 1) : CALL addob(272, 128, 1) : CALL addob(288, 128, 1)
+   w = 48
+  CASE 4
+   CALL addob(256, 128, 2)
+   w = 16
+  CASE 5
+   CALL addob(256, 128, 2) : CALL addob(272, 128, 2) : CALL addob(272, 112, 2)
+   w = 32
+  CASE ELSE
+   CALL addob(256, 128, 2) : CALL addob(304, 128, 1)
+   w = 64
+ END SELECT
+ gap = w + 90 + RND(110) + (spd - 6) * 12
+RETURN
+crash:
+ state = 2
+ dead = 0
+ spd = 0
+ SOUND 8, 0 : SOUND 9, 0
+ SOUND 6, 20 : SOUND 7, 31 : SOUND 10, 16 : SOUND 12, 60 : SOUND 13, 0
+ FOR j = 0 TO 8
+  pa(j) = 68
+  pb(j) = py + 4
+  pvx(j) = RND(13) - 6
+  pvy(j) = -2 - RND(8)
+  CALL tint(11 + j, 3)
+ NEXT j
+ CALL hide(0) : CALL hide(1) : CALL hide(2)
+ IF score > best THEN best = score
+ CALL num5(6144 + 20, best)
+RETURN
+explosion_step:
+ FOR j = 0 TO 8
+  pa(j) = pa(j) + pvx(j)
+  pb(j) = pb(j) + pvy(j)
+  pvy(j) = pvy(j) + 1
+  IF pb(j) > 140 THEN
+   pb(j) = 140
+   pvy(j) = -pvy(j) \ 2
+   pvx(j) = pvx(j) \ 2
+  END IF
+  IF pa(j) > 0 AND pa(j) < 248 THEN
+   CALL spr(11 + j, pa(j), pb(j), 14)
+  ELSE
+   CALL hide(11 + j)
+  END IF
+ NEXT j
+ IF dead = 12 THEN SOUND 10, 0 : SOUND 7, 56
+RETURN
+reset_game:
+ FOR i = 0 TO 5 : ok(i) = 0 : vs(i) = 0 : CALL hide(3 + i) : NEXT i
+ FOR j = 0 TO 8 : CALL hide(11 + j) : NEXT j
+ FOR i = 0 TO 4 : dg(i) = 0 : NEXT i
+ py = 128 : vy = 0 : ground = 1 : fr = 0 : lfr = 0
+ spd = 6 : score = 0 : acc = 0 : gap = 100 : sfx = 0 : state = 0
+ SOUND 7, 56
+ VWRITE 6144 + 1, "SCORE"
+ VWRITE 6144 + 14, "BEST"
+ CALL num5(6144 + 7, 0)
+ CALL num5(6144 + 20, best)
+ CALL spr(0, 64, py, 0)
+ CALL spr(1, 64, py, 1)
+ CALL spr(2, 64, py, 2)
+ CALL stars_on
+RETURN
+text_title:
+ VFILL 6144 + 96, 32, 32
+ VFILL 6144 + 160, 32, 32
+ VWRITE 6144 + 96 + 10, "GEOMETRY RUN"
+ VWRITE 6144 + 160 + 5, "PRESS SPACE TO JUMP / START"
+RETURN
+text_over:
+ VFILL 6144 + 96, 32, 32
+ VFILL 6144 + 160, 32, 32
+ VWRITE 6144 + 96 + 11, "GAME OVER"
+ VWRITE 6144 + 160 + 8, "SPACE TO TRY AGAIN"
+RETURN
+SUB stars_on
+ VFILL 6144 + 96, 32, 134
+ VFILL 6144 + 160, 32, 134
+END SUB
+SUB num5(a, v)
+ VPOKE a, 48 + (v \ 10000) MOD 10
+ VPOKE a + 1, 48 + (v \ 1000) MOD 10
+ VPOKE a + 2, 48 + (v \ 100) MOD 10
+ VPOKE a + 3, 48 + (v \ 10) MOD 10
+ VPOKE a + 4, 48 + v MOD 10
+END SUB
+SUB gt(i)
+ SHARED rt
+ VPOKE 5154, rt(i + 2) : VPOKE 5155, rt(i + 3) : VPOKE 5156, rt(i + 4)
+ VPOKE 5157, rt(i + 5) : VPOKE 5158, rt(i + 6) : VPOKE 5159, rt(i + 7)
+END SUB
+SUB gf(i)
+ SHARED rt
+ VPOKE 5161, rt(i + 1) : VPOKE 5162, rt(i + 2) : VPOKE 5163, rt(i + 3) : VPOKE 5164, rt(i + 4)
+ VPOKE 5165, rt(i + 5) : VPOKE 5166, rt(i + 6) : VPOKE 5167, rt(i + 7)
+END SUB
+SUB ht(i)
+ SHARED rt
+ VPOKE 3089, rt(i + 1) : VPOKE 3090, rt(i + 2) : VPOKE 3091, rt(i + 3) : VPOKE 3092, rt(i + 4)
+END SUB
+SUB hf(i)
+ SHARED rt
+ VPOKE 5145, rt(i + 1) : VPOKE 5147, rt(i + 3) : VPOKE 5149, rt(i + 5) : VPOKE 5151, rt(i + 7)
+END SUB
+SUB st(i)
+ SHARED rt
+ VPOKE 1074, rt(i + 2) : VPOKE 1078, rt(i + 6)
+END SUB
+SUB tile(a, i)
+ SHARED rt
+ FOR r = 0 TO 7
+  VPOKE a + r, rt(i + r)
+ NEXT r
+END SUB
+SUB spr(pl, x, y, pat)
+ VPOKE 7680 + pl * 4, y - 1
+ VPOKE 7681 + pl * 4, x
+ VPOKE 7682 + pl * 4, pat * 4
+END SUB
+SUB hide(pl)
+ VPOKE 7680 + pl * 4, 209
+END SUB
+SUB addob(x, y, kind)
+ SHARED ok, ox, oy, vs
+ FOR i = 0 TO 5
+  IF ok(i) = 0 THEN
+   ok(i) = kind
+   ox(i) = x
+   oy(i) = y
+   vs(i) = 0
+   CALL tint(3 + i, kind)
+   EXIT FOR
+  END IF
+ NEXT i
+END SUB
+SUB tint(pl, w)
+ SHARED sk, bk, pk
+ c$ = ""
+ FOR r = 0 TO 15
+  IF w = 1 THEN
+   c$ = c$ + CHR$(sk(r))
+  ELSEIF w = 2 THEN
+   c$ = c$ + CHR$(bk(r))
+  ELSE
+   c$ = c$ + CHR$(pk(r))
+  END IF
+ NEXT r
+ COLOR SPRITE$(pl) = c$
+END SUB
+make_tiles:
+ VFILL 6144, 192, 32
+ RESTORE sky_colors
+ READ a
+ FOR tr = 6 TO 14
+  READ b
+  c = 100 + tr
+  bank = tr \ 8
+  FOR r = 0 TO 7
+   IF r < 5 THEN
+    pat = 0
+    fg = a
+   ELSEIF r = 6 THEN
+    pat = 85
+    fg = b
+   ELSE
+    pat = 170
+    fg = b
+   END IF
+   VPOKE bank * 2048 + c * 8 + r, pat
+   VPOKE 8192 + bank * 2048 + c * 8 + r, fg * 16 + a
+  NEXT r
+  VFILL 6144 + tr * 32, 32, c
+  a = b
+ NEXT tr
+ FOR r = 0 TO 7
+  VPOKE 8192 + 134 * 8 + r, 15 * 16 + 1
+  VPOKE 8192 + 2048 + 130 * 8 + r, 16 + a
+  VPOKE 8192 + 4096 + 131 * 8 + r, 16 + 11
+ NEXT r
+ VFILL 6144 + 15 * 32, 32, 130
+ VFILL 6144 + 16 * 32, 64, 131
+ RESTORE ground_colors
+ FOR r = 0 TO 7
+  READ g1, g2
+  VPOKE 8192 + 4096 + 132 * 8 + r, g1 * 16 + 1
+  VPOKE 8192 + 4096 + 133 * 8 + r, g2 * 16 + 1
+ NEXT r
+ VFILL 6144 + 18 * 32, 32, 132
+ VFILL 6144 + 19 * 32, 160, 133
+ CALL tile(5152, 0) : CALL tile(5160, 64) : CALL tile(3088, 128) : CALL tile(5144, 192) : CALL tile(1072, 256)
+RETURN
+sky_colors:
+DATA 1,4,4,5,5,13,13,9,9,10
+ground_colors:
+DATA 15,9, 11,9, 10,8, 10,8, 9,6, 9,6, 8,4, 8,4
+make_sprites:
+ FOR f = 0 TO 3
+  ca = cv(f) : sa = sv(f) : h = hv(f)
+  CALL shape(f * 3, 2, h)
+  CALL shape(f * 3 + 1, 1, h)
+  CALL shape(f * 3 + 2, 0, h)
+ NEXT f
+ CALL shape(12, 3, 0)
+ CALL shape(13, 4, 0)
+ CALL shape(14, 5, 0)
+ CALL setcols
+RETURN
+sprite_colors:
+DATA 15,11,1,15,7,11
+DATA 15,11,1,15,7,11
+DATA 15,11,1,15,15,11
+DATA 15,11,1,9,15,11
+DATA 15,11,1,9,15,10
+DATA 15,10,1,9,15,10
+DATA 15,10,1,9,15,10
+DATA 15,10,1,9,15,9
+DATA 15,10,1,8,15,9
+DATA 15,9,1,8,15,9
+DATA 15,9,1,8,15,8
+DATA 15,9,1,8,15,8
+DATA 15,9,1,8,15,8
+DATA 15,8,1,6,15,6
+DATA 15,8,1,6,7,6
+DATA 15,8,1,6,7,6
+SUB setcols
+ SHARED sk, bk, pk
+ e$ = "" : d$ = "" : o$ = ""
+ RESTORE sprite_colors
+ FOR r = 0 TO 15
+  READ e, b, o, s, k, q
+  e$ = e$ + CHR$(e)
+  d$ = d$ + CHR$(b)
+  o$ = o$ + CHR$(o)
+  sk(r) = s : bk(r) = k : pk(r) = q
+ NEXT r
+ COLOR SPRITE$(0) = e$
+ COLOR SPRITE$(1) = d$
+ COLOR SPRITE$(2) = o$
+END SUB
+SUB shape(num, kind, h)
+ SHARED ca, sa, pw
+ s$ = ""
+ FOR q = 0 TO 3
+  FOR r = 0 TO 7
+   byt = 0
+   FOR c = 0 TO 7
+    px = c + (q \ 2) * 8
+    py = r + (q MOD 2) * 8
+    x = 2 * px - 15
+    y = 2 * py - 15
+    u = (x * ca + y * sa) \ 256
+    v = (y * ca - x * sa) \ 256
+    lit = 0
+    SELECT CASE kind
+     CASE 0
+      IF ABS(u) <= h AND ABS(v) <= h THEN lit = 1
+     CASE 1
+      IF ABS(u) <= h - 3 AND ABS(v) <= h - 3 THEN lit = 1
+     CASE 2
+      IF ABS(v + 4) <= 3 AND (ABS(u + 6) <= 2 OR ABS(u - 6) <= 2) THEN lit = 1
+     CASE 3
+      IF ABS(x) <= py + 1 THEN lit = 1
+     CASE 4
+      IF px < 2 OR px > 13 OR py < 2 OR py > 13 THEN lit = 1
+      IF px > 4 AND px < 11 AND py > 4 AND py < 11 THEN lit = 1
+     CASE ELSE
+      IF px > 4 AND px < 11 AND py > 4 AND py < 11 THEN lit = 1
+    END SELECT
+    IF lit = 1 THEN byt = byt + pw(7 - c)
+   NEXT c
+   s$ = s$ + CHR$(byt)
+  NEXT r
+ NEXT q
+ SPRITE$(num) = s$
+END SUB

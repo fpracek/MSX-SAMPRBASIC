@@ -80,10 +80,14 @@ rt_screen:                      ; HL = modo 0..8 (CHGMOD del BIOS), 10..12 solo 
         ld ix,CHGMOD
         call rt_bios
         pop ix
+        ld a,(SCRREAL)
+        cp 4
+        jr nc,.nsp              ; SCREEN 4+: il CLRSPR della BIOS non ritorna (tabelle sprite del modo 2)
         push ix
         ld ix,0069h             ; CLRSPR: come SCREEN del BASIC, via gli sprite lasciati nella VRAM (es. dall'editor)
         call rt_bios
         pop ix
+.nsp:
         ld a,(SCRREAL)
         cp 10
         jr c,.cm
@@ -147,8 +151,15 @@ rt_screen:                      ; HL = modo 0..8 (CHGMOD del BIOS), 10..12 solo 
         or a
         sbc hl,de
         pop hl
-        jp c,rt_oom
-        ld (FONTPTR),hl
+        jr nc,.fok
+        xor a                   ; senza spazio per il font l'errore va stampato in modo testo (in grafica servirebbe il font stesso)
+        ld (SCRMODE),a
+        push ix
+        ld ix,INITXT
+        call rt_bios
+        pop ix
+        jp rt_oom
+.fok:   ld (FONTPTR),hl
         ld (heapend),hl
 .hf:    call load_font
         call rt_trpon

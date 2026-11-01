@@ -40,3 +40,7 @@ demo/ffpath.txt
 demo/exp.py
 demo/*_marks.*
 demo/vscode_run.log
+demo/t*.spb
+demo/shots/
+demo/*.wav
+demo/dsheet.png

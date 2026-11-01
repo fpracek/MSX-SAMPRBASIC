@@ -909,6 +909,16 @@ the sprite size: 0 = 8x8, 1 = 8x8
 magnified, 2 = 16x16, 3 = 16x16
 magnified. On MSX1 a mode above 3
 gives "Illegal function call".
+Graphics modes keep a 768-byte copy of
+the text font at the top of the heap
+(for PRINT on graphics screens): with
+very large arrays or many strings
+there may be too little memory left
+and the program stops with "Out of
+string space". SCREEN 4 has no font in
+VRAM: to write text with VWRITE copy
+the glyphs from the text screen first
+(VREAD$) as the GEOMRUN example does.
 
 Example:
   SCREEN 5
@@ -1263,8 +1273,16 @@ the second parameter of SCREEN. COLOR
 SPRITE(n) = c changes the color of a
 plane; COLOR SPRITE$(n) = string$
 gives one color per line (MSX2, sprite
-mode 2). COLLISION is -1 if two
-sprites have touched.
+mode 2): note that PUT SPRITE with
+coordinates sets all the lines of the
+plane to its color, so a multicolor
+sprite that moves is better positioned
+by writing the attribute table with
+VPOKE (see the GEOMRUN example: SCREEN
+4, attributes at VRAM 7680, y-1, x,
+pattern*4) and layering several planes
+for more colors. COLLISION is -1 if
+two sprites have touched.
 
 Example:
   SCREEN 2, 0
