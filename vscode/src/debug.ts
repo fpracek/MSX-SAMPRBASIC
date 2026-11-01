@@ -381,6 +381,7 @@ export class SamprDebugSession extends DebugSession {
     const r = this.routineAt(this.curHook);
     if (r) scopes.push(new Scope("Locals", this.varHandles.create({ kind: "locals" }), false));
     scopes.push(new Scope("Globals", this.varHandles.create({ kind: "globals" }), false));
+    (scopes[0] as DebugProtocol.Scope).presentationHint = "locals"; // VS Code opens this one by itself
     response.body = { scopes };
     this.sendResponse(response);
   }

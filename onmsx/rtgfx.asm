@@ -80,6 +80,10 @@ rt_screen:                      ; HL = modo 0..8 (CHGMOD del BIOS), 10..12 solo 
         ld ix,CHGMOD
         call rt_bios
         pop ix
+        push ix
+        ld ix,0069h             ; CLRSPR: come SCREEN del BASIC, via gli sprite lasciati nella VRAM (es. dall'editor)
+        call rt_bios
+        pop ix
         ld a,(SCRREAL)
         cp 10
         jr c,.cm

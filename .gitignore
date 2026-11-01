@@ -32,3 +32,11 @@ sample_disk/test.com
 sample_disk/test.spb
 sample_disk/PONGFAST.SPB
 sample_disk/PONGFAST.COM
+demo/*.avi
+demo/*.png
+demo/vscode_raw.mp4
+demo/graph.txt
+demo/ffpath.txt
+demo/exp.py
+demo/*_marks.*
+demo/vscode_run.log
