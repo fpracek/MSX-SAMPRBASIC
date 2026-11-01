@@ -215,8 +215,10 @@ STOP
 
 Ends the program. In a .COM program it
 shows "Press any key.." and waits for
-a key (then returns to the editor); in
-a cartridge it waits for a key and
+a key (then returns to the editor if
+it was started from it, to the DOS
+prompt if you ran NAME.COM yourself);
+in a cartridge it waits for a key and
 restarts the machine. At the end of
 the source the program ends by itself.
 In a program STOP is the same as END
@@ -1794,11 +1796,19 @@ can be changed except IX (frame of
 SUB/FUNCTION) and the stack must be
 left balanced. The debugger does not
 stop inside the blocks. It also works
-in cartridges. Errors: 17
-syntax/operand, 18 value or jump out
-of range, 19 duplicate symbol or
-missing __ENDASM, 20 QASM.OVL not
-found.
+in cartridges. OPTION ASM as the first
+line makes the WHOLE file assembly (an
+assembler editor): the block ends at
+the end of the file, or at an optional
+__ENDASM; there are no BASIC variables
+or labels, the program starts at the
+first line and ends when the code runs
+off the end (or with JP/RET tricks of
+your own); DOS programs only, not
+cartridges. Errors: 17 syntax/operand,
+18 value or jump out of range, 19
+duplicate symbol or missing __ENDASM,
+20 QASM.OVL not found.
 
 Example:
   count = 0

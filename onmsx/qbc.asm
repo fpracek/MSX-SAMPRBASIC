@@ -3735,6 +3735,31 @@ skip_sp:
         jr .s
 s_optionl: db "option",0
 s_debugl: db "debug",0
+        IFNDEF ROMMODE
+s_asml: db "asm",0
+chk_opta:                       ; Z se il sorgente non ha "OPTION ASM" (tutto il file e' assembly)
+        ld hl,SRC
+.l:     ld a,(hl)
+        or a
+        ret z
+        or 20h
+        cp 'o'
+        jr nz,.n
+        push hl
+        ld de,s_optionl
+        call match_ci
+        jr nz,.f
+        call skip_sp
+        ld de,s_asml
+        call match_ci
+        jr nz,.f
+        pop hl
+        or 1
+        ret
+.f:     pop hl
+.n:     inc hl
+        jr .l
+        ENDIF
 chk_dbg:                        ; Z se il sorgente non ha "OPTION DEBUG"
         ld hl,SRC
 .l:     ld a,(hl)
@@ -4680,7 +4705,11 @@ st_asmb:                        ; "# [*] elementi": byte preparati da QASM.OVL (
         call expect_p
         jp st_asmb.l
 
-chk_asm:                        ; il sorgente ha "__ASM": QASM.OVL (a 8000h) riscrive i blocchi
+chk_asm:                        ; il sorgente ha "__ASM" o "OPTION ASM": QASM.OVL (a 8000h) riscrive i blocchi
+        IFNDEF ROMMODE
+        call chk_opta
+        jr nz,.go
+        ENDIF
         ld hl,SRC
 .l:     ld a,(hl)
         or a

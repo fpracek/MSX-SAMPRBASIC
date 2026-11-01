@@ -51,7 +51,7 @@ CH('Installation and start', [
           "8 characters and the editor adds .SPB. The compiled program gets the same name with extension .COM (or .ROM for cartridges)."),
     ('h', 'First program'),
     ('code', 'PRINT "Hello MSX!"\nFOR i = 1 TO 5\n  PRINT i; " x 2 ="; i * 2\nNEXT i'),
-    ('p', "Type the program in the editor and press <b>F5</b>. At the end the run waits for a key and returns to the editor. If there is an error, the editor "
+    ('p', "Type the program in the editor and press <b>F5</b>. At the end the run waits for a key and returns to the editor (a NAME.COM that you launch yourself from the DOS prompt returns to the DOS prompt instead). If there is an error, the editor "
           "reopens with the cursor on the wrong line and the message in the title bar."),
 ])
 
@@ -130,6 +130,8 @@ CH('Inline assembler', [
     ('p', "For the parts that must be very fast you can write Z80 assembler directly, between the lines <b>__ASM</b> and <b>__ENDASM</b>. "
           "The compiler loads a small assembler (QASM.OVL) that translates the block into machine code inserted into the program."),
     ('code', '__ASM\n  ld hl,(count)    ; the BASIC variable "count"\n  inc hl\n  ld (count),hl\n  jp done          ; jump to the BASIC label "done"\n__ENDASM'),
+    ('p', "<b>Assembler-only files:</b> if the first line is <font face='Courier'>OPTION ASM</font> the whole file is assembly: there is no BASIC at all, the code starts at the first line and the program ends when it runs off the end of the file. "
+          "Use it as an assembler editor: the editor already has Tab (it inserts spaces up to the next multiple of 4) and F5 compiles and runs. DOS (.COM) programs only. From assembly you can call the DOS functions with <font face='Courier'>CALL 5</font> (e.g. C=9, DE=text ending in $)."),
     ('h', 'Rules'),
     ('ul', ["All documented Z80 instructions; comments with <font face='Courier'>;</font>.",
             "Numbers: <font face='Courier'>123, $7F, 0x7F, 7FH, %101, 101B, 'a'</font>; <font face='Courier'>$</font> is the current address.",

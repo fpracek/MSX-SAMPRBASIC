@@ -41,7 +41,7 @@ T('LET', C, ["[LET] variable = expression", "[LET] array(i) = expression"],
   "of the variable (otherwise error 14: type mismatch).",
   'LET a = 5\nb$ = "hello"\nc = a * 2\nPRINT b$; c', ['DIM'])
 T(['END', 'STOP'], C, ["END", "STOP"],
-  "Ends the program. In a .COM program it shows \"Press any key..\" and waits for a key (then returns to the editor); in a cartridge it waits for a "
+  "Ends the program. In a .COM program it shows \"Press any key..\" and waits for a key (then returns to the editor if it was started from it, to the DOS prompt if you ran NAME.COM yourself); in a cartridge it waits for a "
   "key and restarts the machine. At the end of the source the program ends by itself. In a program STOP is the same as END (there is no "
   "interactive debugger: see OPTION DEBUG). With a second word, END also closes blocks: END IF, END SUB, END FUNCTION, END SELECT.",
   'PRINT "start"\nEND\nPRINT "never"', ['DEBUG'])

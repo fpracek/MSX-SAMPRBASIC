@@ -201,11 +201,22 @@ nextline:                       ; HL = inizio della riga successiva; lno++
         ld (lno),de
         ret
 
-is_asm:                         ; HL = inizio riga: Z se la riga e' "__ASM"
+is_asm:                         ; HL = inizio riga: Z se la riga e' "__ASM" o "OPTION ASM"
         call skipsp
+        push hl
         ld de,k_asm
         call matchk
+        jr z,.k
+        pop hl
+        ld de,k_opt
+        call matchk
         ret nz
+        call skipsp
+        ld de,k_asm2
+        call matchk
+        ret nz
+        push hl
+.k:     pop de
         ld a,(hl)
         call isid
         jr c,.no
@@ -213,6 +224,8 @@ is_asm:                         ; HL = inizio riga: Z se la riga e' "__ASM"
         ret
 .no:    or 1
         ret
+k_opt:  db "OPTION",0
+k_asm2: db "ASM",0
 k_asm:  db "__ASM",0
 k_end:  db "__ENDASM",0
 k_equ:  db "EQU",0
@@ -229,6 +242,12 @@ doblock:                        ; HL = inizio della riga __ASM -> HL = punto dop
         sbc hl,de
         pop hl
         jr c,.more
+        ld hl,(bstart)
+        call skipsp
+        ld a,(hl)
+        and 0DFh
+        cp 'O'
+        jr z,.eof               ; OPTION ASM: il blocco arriva fino alla fine del file
         ld de,(blno)
         ld (curl),de
         jp err_sym              ; __ENDASM mancante
@@ -241,7 +260,9 @@ doblock:                        ; HL = inizio della riga __ASM -> HL = punto dop
         call nextline
         jr .fe
 .found: call nextline
-        ld (bend),hl
+        jr .fnd
+.eof:   ld hl,(srce)
+.fnd:   ld (bend),hl
         ld de,(lno)
         ld (lnoaft),de
         xor a

@@ -117,7 +117,7 @@
    "END",
    "STOP"
   ],
-  "description": "Ends the program. In a .COM program it shows \"Press any key..\" and waits for a key (then returns to the editor); in a cartridge it waits for a key and restarts the machine. At the end of the source the program ends by itself. In a program STOP is the same as END (there is no interactive debugger: see OPTION DEBUG). With a second word, END also closes blocks: END IF, END SUB, END FUNCTION, END SELECT.",
+  "description": "Ends the program. In a .COM program it shows \"Press any key..\" and waits for a key (then returns to the editor if it was started from it, to the DOS prompt if you ran NAME.COM yourself); in a cartridge it waits for a key and restarts the machine. At the end of the source the program ends by itself. In a program STOP is the same as END (there is no interactive debugger: see OPTION DEBUG). With a second word, END also closes blocks: END IF, END SUB, END FUNCTION, END SELECT.",
   "example": "PRINT \"start\"\nEND\nPRINT \"never\"",
   "see": [
    "DEBUG"
@@ -1669,7 +1669,7 @@
    "  Z80 instructions",
    "__ENDASM"
   ],
-  "description": "An __ASM ... __ENDASM block (each on its own line, upper or lower case) contains documented Z80 code, written as in any assembler. Comments with ;. Local labels name: (also name EQU value). Numbers: decimal, $1F, 0x1F, 1FH, %101, 101B, 'x'; $ is the current address. Directives: DB/DEFB (also strings), DW/DEFW, DS/DEFS. A name that is not a local label is a global BASIC variable (LD HL,(COUNT), LD HL,NOME$) or, in a jump, a BASIC label (JP DONE, JP NZ,DONE). JR and DJNZ only to local labels. Every register can be changed except IX (frame of SUB/FUNCTION) and the stack must be left balanced. The debugger does not stop inside the blocks. It also works in cartridges. Errors: 17 syntax/operand, 18 value or jump out of range, 19 duplicate symbol or missing __ENDASM, 20 QASM.OVL not found.",
+  "description": "An __ASM ... __ENDASM block (each on its own line, upper or lower case) contains documented Z80 code, written as in any assembler. Comments with ;. Local labels name: (also name EQU value). Numbers: decimal, $1F, 0x1F, 1FH, %101, 101B, 'x'; $ is the current address. Directives: DB/DEFB (also strings), DW/DEFW, DS/DEFS. A name that is not a local label is a global BASIC variable (LD HL,(COUNT), LD HL,NOME$) or, in a jump, a BASIC label (JP DONE, JP NZ,DONE). JR and DJNZ only to local labels. Every register can be changed except IX (frame of SUB/FUNCTION) and the stack must be left balanced. The debugger does not stop inside the blocks. It also works in cartridges. OPTION ASM as the first line makes the WHOLE file assembly (an assembler editor): the block ends at the end of the file, or at an optional __ENDASM; there are no BASIC variables or labels, the program starts at the first line and ends when the code runs off the end (or with JP/RET tricks of your own); DOS programs only, not cartridges. Errors: 17 syntax/operand, 18 value or jump out of range, 19 duplicate symbol or missing __ENDASM, 20 QASM.OVL not found.",
   "example": "count = 0\n__ASM\n  ld hl,(count)\n  inc hl\n  ld (count),hl\n__ENDASM\nPRINT count",
   "see": [
    "VARPTR",

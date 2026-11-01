@@ -1532,6 +1532,12 @@ run_only:                       ; NOME.COM esiste? allora lo carica con il caric
         ld c,F_CLOSE
         call BDOS
         call leave_screen
+        ld a,1                  ; riga di comando non vuota: il programma sa di essere lanciato dall'editor e vi ritorna
+        ld (0080h),a
+        ld a,' '
+        ld (0081h),a
+        ld a,0Dh
+        ld (0082h),a
         ld hl,ldr_img
         ld de,0C000h
         ld bc,ldr_size

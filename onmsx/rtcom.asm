@@ -193,6 +193,8 @@ rt_start:
         IFDEF ROMMODE
         ld hl,(0FC4Ah)          ; HIMEM
         ELSE
+        ld a,(0080h)            ; l'editor/compilatore lanciano il programma con una riga di comando non vuota
+        ld (rt_launch),a
         ld hl,(0006h)
         ENDIF
         ENDIF
@@ -411,6 +413,11 @@ msg_sub: db 29,"Error: Subscript out of range"
 
 msg_div: db 24,"Error: Division by zero"
 msg_press: db 15,"Press any key..."
+        IFNDEF ROMMODE
+        IFNDEF BINMODE
+rt_launch: db 0                 ; riga di comando all'avvio: vuota = lanciato dal prompt DOS, non dall'editor
+        ENDIF
+        ENDIF
 
 rt_end:
         call files_close_all
@@ -448,7 +455,16 @@ rt_end:
         IFDEF ROMMODE
         jp 0                    ; cartuccia: dopo un tasto si riavvia la macchina
         ELSE
-        call rt_keyup           ; il tasto non deve ripetersi nell'editor che si ricarica
+        ld a,(rt_launch)
+        or a
+        jr nz,.ide
+        push ix                 ; lanciato dal prompt: schermo di testo e ritorno al DOS, senza editor
+        ld ix,INITXT
+        call rt_bios
+        pop ix
+        ld c,0
+        jp 5
+.ide:   call rt_keyup           ; il tasto non deve ripetersi nell'editor che si ricarica
         call rt_cdhome          ; DOS 2: l'editor si ricarica dalla directory degli strumenti
         ld hl,rt_name           ; riga di comando per l'editor: " NOME.BAS"
         ld de,0082h

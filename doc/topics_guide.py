@@ -9,6 +9,7 @@ T(['ASM', '__ASM', '__ENDASM', 'ASSEMBLER'], C, ["__ASM", "  Z80 instructions", 
   "Directives: DB/DEFB (also strings), DW/DEFW, DS/DEFS. A name that is not a local label is a global BASIC variable (`LD HL,(COUNT)`, `LD HL,NOME$`) "
   "or, in a jump, a BASIC label (`JP DONE`, `JP NZ,DONE`). JR and DJNZ only to local labels. Every register can be changed except IX "
   "(frame of SUB/FUNCTION) and the stack must be left balanced. The debugger does not stop inside the blocks. It also works in cartridges. "
+  "OPTION ASM as the first line makes the WHOLE file assembly (an assembler editor): the block ends at the end of the file, or at an optional __ENDASM; there are no BASIC variables or labels, the program starts at the first line and ends when the code runs off the end (or with `JP`/`RET` tricks of your own); DOS programs only, not cartridges. "
   "Errors: 17 syntax/operand, 18 value or jump out of range, 19 duplicate symbol or missing __ENDASM, 20 QASM.OVL not found.",
   "count = 0\n__ASM\n  ld hl,(count)\n  inc hl\n  ld (count),hl\n__ENDASM\nPRINT count", ['VARPTR', 'OPTION'])
 T(['DEBUG', 'DEBUGGER'], C, ["OPTION DEBUG"],

@@ -1,0 +1,15 @@
+OPTION ASM
+; the whole file is assembly: no BASIC statements at all (prints with MSX-DOS calls)
+        LD DE,msg
+        LD C,9
+        CALL 5
+        LD B,3
+again:  PUSH BC
+        LD E,'*'
+        LD C,2
+        CALL 5
+        POP BC
+        DJNZ again
+        JR done
+msg:    DB "asm mode ok$"
+done:
