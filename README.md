@@ -47,7 +47,7 @@ END SUB
 2. Start `SAMPRBAS MYPROG` (it opens `MYPROG.SPB`, or creates it with that name). Under MSX-DOS 2 you can give a path: `SAMPRBAS \GAMES\MYPROG`.
 3. Write your program and press **F5**. When the program ends the editor reopens; on a compile error the cursor is placed on the offending line.
 
-To try everything on a PC with [openMSX](https://openmsx.org): `avvia_nms8250.bat` (MSX2, 80 columns) or `avvia_hb75p.bat` (Sony HB-75P, MSX1, 40 columns) mount the sample disk [`disco_prova/`](disco_prova) (with the example `.SPB` programs; `MSXDOS.SYS` and `COMMAND.COM` are also needed and are not included).
+To try everything on a PC with [openMSX](https://openmsx.org): `start_nms8250.bat` (MSX2, 80 columns) or `start_hb75p.bat` (Sony HB-75P, MSX1, 40 columns) mount the sample disk [`sample_disk/`](sample_disk) (with the example `.SPB` programs; `MSXDOS.SYS` and `COMMAND.COM` are also needed and are not included).
 
 ## What it produces: `OPTION TARGET`
 
@@ -96,7 +96,7 @@ cd editor && python etest.py        # editor (and many more: esel, emenu, ecom, 
 | [`onmsx/`](onmsx) | compiler (`qbc.asm`), runtime (`rtcom.asm` and modules), inline assembler, debugger, tests |
 | [`editor/`](editor) | editor (`editor.asm`, `fileio.asm`), help, file window, tests |
 | [`doc/`](doc) | PDF manual, online help, screenshots, generators |
-| [`dist/`](dist), [`disco_prova/`](disco_prova) | files to copy to the MSX disk, example programs |
+| [`dist/`](dist), [`sample_disk/`](sample_disk) | files to copy to the MSX disk, example programs |
 
 ## Known limits
 

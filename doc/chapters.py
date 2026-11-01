@@ -44,7 +44,7 @@ CH('Installation and start', [
                ['HELP.TXT, HELP.IDX', 'The online help (optional)']], [150, 330]),
     ('p', "Start the editor with <font face='Courier'>SAMPRBAS</font> (new program) or <font face='Courier'>SAMPRBAS TEST.SPB</font>. On MSX1 DOS asks for the date at startup: "
           "press Enter. On a PC you can try everything with the openMSX emulator: the project folder contains "
-          "<font face='Courier'>avvia_nms8250.bat</font> (MSX2, 80 columns) and <font face='Courier'>avvia_hb75p.bat</font> (Sony HB-75P MSX1, 40 columns), which mount the test disk."),
+          "<font face='Courier'>start_nms8250.bat</font> (MSX2, 80 columns) and <font face='Courier'>start_hb75p.bat</font> (Sony HB-75P MSX1, 40 columns), which mount the test disk."),
     ('h', 'Program files: the .SPB extension'),
     ('p', "Source files have the extension <b>.SPB</b> (SamPr Basic). When you start <font face='Courier'>SAMPRBAS TEST</font> the editor opens TEST.SPB if it exists; "
           "otherwise it starts with a new file that already has that name (the .SPB extension is added automatically if missing). In <b>Save As</b> you type at most "

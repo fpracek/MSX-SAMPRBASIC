@@ -8,8 +8,8 @@ onmsx/patch*.py
 out.rom
 *.bak*
 doc/out/
-disco_prova/MSXDOS.SYS
-disco_prova/COMMAND.COM
+sample_disk/MSXDOS.SYS
+sample_disk/COMMAND.COM
 editor/fix_browser.py
 onmsx/fix_dbgvars.py
 onmsx/fix_multifile.py
