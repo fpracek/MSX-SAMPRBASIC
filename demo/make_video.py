@@ -38,10 +38,24 @@ MSEG = [
     (1, mm['helpshown'], mm['helpshown'] + 8.0, 1.0, 'Online help on the MSX'),
 ]
 
+dm = json.load(open(os.path.join(HERE, 'msx_dbg_marks.json')))
+DSEG = [
+    (2, 9.0, 14.0, 2.0, 'On the MSX: add OPTION DEBUG as the first line of the program'),
+    (2, 14.0, dm['f5'], 1.0, 'Then F5 as usual'),
+    (2, dm['f5'], 29.5, 4.0, 'The compiler builds the program with the debug runtime'),
+    (2, 29.5, 33.5, 1.0, 'The program starts stopped at the first statement'),
+    (2, dm['step'], dm['bp'], 1.0, 'SPACE runs one statement - the variables update live'),
+    (2, dm['bp'], dm['insub'], 1.0, 'B sets a breakpoint, R runs to it'),
+    (2, dm['insub'], dm['eval'], 1.0, 'Inside a SUB the locals and parameters come first (marked with >)'),
+    (2, dm['eval'], dm['eval'] + 7.0, 1.0, 'E shows the value of any variable or array element'),
+    (2, dm['eval'] + 7.0, dm['end'], 1.0, 'Q ends the program'),
+]
+
 CARDS = {
     'intro': ('SamPr Basic', 'A BASIC to Z80 compiler and IDE for MSX', 3.5),
     'p1': ('Part 1', 'VS Code extension on the PC', 2.5),
     'p2': ('Part 2', 'On the MSX itself (openMSX)', 2.5),
+    'p3': ('Part 3', 'The debugger on the MSX', 2.5),
     'outro': ('github.com/fpracek/MSX-SAMPRBASIC', 'Compiler, editor, debugger, VS Code extension, manual', 4.0),
 }
 
@@ -85,12 +99,15 @@ for s, a, b, sp, cap in SEG:
 card('p2', n); n += 1
 for s, a, b, sp, cap in MSEG:
     seg(n, s, a, b, sp, cap); n += 1
+card('p3', n); n += 1
+for s, a, b, sp, cap in DSEG:
+    seg(n, s, a, b, sp, cap); n += 1
 card('outro', n); n += 1
 
 graph = ';\n'.join(chains) + ';\n' + ''.join(labels) + f'concat=n={len(labels)}:v=1:a=0[v]'
 gp = os.path.join(HERE, 'graph.txt')
 open(gp, 'w', encoding='utf-8').write(graph)
-cmd = [FF, '-y', '-loglevel', 'error', '-stats', '-i', os.path.join(HERE, 'vscode_raw.mp4'), '-i', os.path.join(HERE, 'msx_raw.avi'),
+cmd = [FF, '-y', '-loglevel', 'error', '-stats', '-i', os.path.join(HERE, 'vscode_raw.mp4'), '-i', os.path.join(HERE, 'msx_raw.avi'), '-i', os.path.join(HERE, 'msx_dbg_raw.avi'),
        '-filter_complex_script', gp, '-map', '[v]', '-c:v', 'libx264', '-preset', 'medium', '-crf', '20', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', OUT]
 subprocess.run(cmd, check=True)
 print(OUT, os.path.getsize(OUT))
