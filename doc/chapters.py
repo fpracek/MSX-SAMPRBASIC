@@ -20,6 +20,7 @@ CH('Introduction', [
         "<b>Built for games</b>: MSX2 bitmap graphics, sprites, direct VRAM access, scrolling, joystick, three-voice sound with the MML language.",
         "<b>Inline Z80 assembler</b> with <font face='Courier'>__ASM ... __ENDASM</font> for the critical parts.",
         "Step-by-step <b>debugger</b> with breakpoints and variables (<font face='Courier'>OPTION DEBUG</font>).",
+        "<font face='Courier'>OPTION BREAK</font>: CTRL+STOP stops a program started from the editor and returns to it.",
         "<b>ROM cartridges</b> from 16 KB to 2 MB (ASCII8, ASCII16, KONAMI, SCC) with code spread over several segments and embedded data.",
         "<b>Disk files</b>, text and random access; <b>RAM mapper</b> for large amounts of data; BLOAD/BSAVE.",
         "<b>MSX1 and MSX2</b>: on MSX1 the editor works in 40 columns, on MSX2 in 80, chosen automatically.",

@@ -132,9 +132,9 @@ T(['MGET', 'MPUT', 'MREAD', 'MWRITE', 'VARPTR'], C, ["MGET(segment, offset)", "M
 
 # ------------------------------------------------------------------ OPTION
 C = 'Options (OPTION)'
-T('OPTION', C, ["OPTION NUMBERED | LABELS | MIXED", "OPTION TARGET type", "OPTION DEBUG"],
+T('OPTION', C, ["OPTION NUMBERED | LABELS | MIXED", "OPTION TARGET type", "OPTION DEBUG", "OPTION BREAK"],
   "Compilation directives, to be placed at the start of the source. NUMBERED: the program has line numbers and no labels; LABELS: labels only; "
-  "MIXED (default): both. TARGET selects the output format (see OPTION TARGET). DEBUG enables the debugger (see DEBUG).",
+  "MIXED (default): both. TARGET selects the output format (see OPTION TARGET). DEBUG enables the debugger (see DEBUG). BREAK lets CTRL+STOP stop a program started from the editor (see OPTION BREAK).",
   'OPTION LABELS\nPRINT "ok"', ['OPTION TARGET', 'OPTION DEBUG', 'LABELS'])
 T(['OPTION TARGET','TARGET'], C, ["OPTION TARGET DOS | BIN", "OPTION TARGET ROM_16 | ROM_32 | ROM_ASCII8 | ROM_ASCII16 | ROM_KONAMI | ROM_KONAMISCC"],
   "When it is the first line, it selects what the compiler produces. DOS (default, also COM): NAME.COM program for MSX-DOS. BIN: NAME.BIN program for MSX-BASIC, "
@@ -154,4 +154,10 @@ T(['DOS', 'COM'], C, ["OPTION TARGET DOS"],
 T(['OPTION NUMBERED','NUMBERED'], C, ["OPTION NUMBERED"], "Numbered lines (sorted by number, numbers only, no labels). About 590 program lines.", '10 PRINT "a"\n20 GOTO 10', ['OPTION', 'LABELS'])
 T(['OPTION LABELS','OPT LABELS'], C, ["OPTION LABELS"], "Labels only, no line numbers.", 'OPTION LABELS\nciclo:\n  PRINT "x";\n  GOTO again', ['OPTION'])
 T(['OPTION MIXED','MIXED'], C, ["OPTION MIXED"], "Line numbers and labels together (default).", 'OPTION MIXED', ['OPTION'])
+T(['OPTION BREAK','OPT BREAK','BREAK'], C, ["OPTION BREAK"],
+  "Lets you interrupt the program with CTRL+STOP and go back to the editor, but only when the program was started from the editor (F5): "
+  "a .COM launched from the DOS prompt ignores the option and runs normally. The compiler adds a check of the keyboard at every backward jump "
+  "(NEXT, LOOP, WEND, GOTO), so any loop can be interrupted at the cost of a few microseconds per iteration; a program that never loops back cannot be stopped. "
+  "On openMSX the STOP key is Pause: press CTRL+Pause. DOS programs only (not BIN or cartridges); with OPTION DEBUG the debugger is used instead.",
+  'OPTION BREAK\nPRINT "CTRL+STOP returns to the editor"\nDO\n  n = n + 1\nLOOP', ['OPTION', 'OPTION DEBUG'])
 T(['OPTION DEBUG','OPT DEBUG'], C, ["OPTION DEBUG"], "Compiles with the built-in debugger: the program starts stopped at the first statement. See DEBUG.", 'OPTION DEBUG\na = 1\nb = a + 1', ['DEBUG'])

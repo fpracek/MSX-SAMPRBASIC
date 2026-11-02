@@ -1,7 +1,6 @@
-REM GEOMETRY RUN - an endless runner demo for SamPr Basic (MSX2). Space or up: jump. ESC: quit.
-REM Redefined tiles scroll the world (floor, city, stars), a 3-layer sprite with one color per
-REM line, random obstacles and a 3-voice PSG tune played from the game loop.
+REM GEOMETRY RUN - endless runner demo for SamPr Basic (MSX2). Space/up: jump. ESC: quit.
 OPTION LABELS
+OPTION BREAK
 DIM cv(3), sv(3), hv(3), pw(8), t8(7), rt(319), pt(11), bp(15), ap(15), sk(15), bk(15), pk(15)
 DIM ok(7), ox(7), oy(7), vs(7), pa(8), pb(8), pvx(8), pvy(8), dg(4)
 ' the text font lives in the text screen: keep it, SCREEN 4 does not load one
@@ -37,6 +36,7 @@ SCREEN 4, 2
 COLOR 15, 1, 1
 CLS
 VWRITE 376, a$ : VWRITE 552, b$ : VFILL 8192 + 376, 352, 241
+VWRITE 6144 + 96 + 11, "LOADING..."
 GOSUB make_tiles
 GOSUB make_sprites
 SOUND 7, 56
@@ -421,16 +421,15 @@ ground_colors:
 DATA 15,9, 11,9, 10,8, 10,8, 9,6, 9,6, 8,4, 8,4
 make_sprites:
  FOR f = 0 TO 3
-  ca = cv(f) : sa = sv(f) : h = hv(f)
-  CALL shape(f * 3, 2, h)
-  CALL shape(f * 3 + 1, 1, h)
-  CALL shape(f * 3 + 2, 0, h)
+  CALL cube(f * 3, cv(f), sv(f), hv(f))
+ VPOKE 6144 + 117 + f, 46
  NEXT f
- CALL shape(12, 3, 0)
- CALL shape(13, 4, 0)
- CALL shape(14, 5, 0)
+ CALL shape(12, 3)
+ CALL shape(13, 4)
+ CALL shape(14, 5)
  CALL setcols
 RETURN
+
 sprite_colors:
 DATA 15,11,1,15,7,11
 DATA 15,11,1,15,7,11
@@ -463,35 +462,55 @@ SUB setcols
  COLOR SPRITE$(1) = d$
  COLOR SPRITE$(2) = o$
 END SUB
-SUB shape(num, kind, h)
- SHARED ca, sa, pw
+SUB cube(num, ca, sa, h)
+ SHARED pw
+ h1 = h * 256 : h2 = (h - 3) * 256
+ e$ = "" : d$ = "" : o$ = ""
+ FOR q = 0 TO 3
+  qx = (q \ 2) * 8
+  qy = (q MOD 2) * 8
+  FOR r = 0 TO 7
+   b0 = 0 : b1 = 0 : b2 = 0
+   y = 2 * (r + qy) - 15
+   FOR c = 0 TO 7
+    x = 2 * (c + qx) - 15
+    u = x * ca + y * sa
+    IF ABS(u) <= h1 THEN
+     v = y * ca - x * sa
+     IF ABS(v) <= h1 THEN
+      m = pw(7 - c)
+      b2 = b2 + m
+      IF ABS(u) <= h2 AND ABS(v) <= h2 THEN b1 = b1 + m
+      IF ABS(v + 1024) <= 768 AND (ABS(u + 1536) <= 512 OR ABS(u - 1536) <= 512) THEN b0 = b0 + m
+     END IF
+    END IF
+   NEXT c
+   e$ = e$ + CHR$(b0) : d$ = d$ + CHR$(b1) : o$ = o$ + CHR$(b2)
+  NEXT r
+ NEXT q
+ SPRITE$(num) = e$ : SPRITE$(num + 1) = d$ : SPRITE$(num + 2) = o$
+END SUB
+
+SUB shape(num, kind)
+ SHARED pw
  s$ = ""
  FOR q = 0 TO 3
+  qx = (q \ 2) * 8
+  qy = (q MOD 2) * 8
   FOR r = 0 TO 7
    byt = 0
+   py = r + qy
    FOR c = 0 TO 7
-    px = c + (q \ 2) * 8
-    py = r + (q MOD 2) * 8
-    x = 2 * px - 15
-    y = 2 * py - 15
-    u = (x * ca + y * sa) \ 256
-    v = (y * ca - x * sa) \ 256
+    px = c + qx
     lit = 0
-    SELECT CASE kind
-     CASE 0
-      IF ABS(u) <= h AND ABS(v) <= h THEN lit = 1
-     CASE 1
-      IF ABS(u) <= h - 3 AND ABS(v) <= h - 3 THEN lit = 1
-     CASE 2
-      IF ABS(v + 4) <= 3 AND (ABS(u + 6) <= 2 OR ABS(u - 6) <= 2) THEN lit = 1
-     CASE 3
-      IF ABS(x) <= py + 1 THEN lit = 1
-     CASE 4
-      IF px < 2 OR px > 13 OR py < 2 OR py > 13 THEN lit = 1
-      IF px > 4 AND px < 11 AND py > 4 AND py < 11 THEN lit = 1
-     CASE ELSE
-      IF px > 4 AND px < 11 AND py > 4 AND py < 11 THEN lit = 1
-    END SELECT
+    IF kind = 3 THEN
+     IF ABS(2 * px - 15) <= py + 1 THEN lit = 1
+    ELSEIF kind = 4 THEN
+     IF px < 2 OR px > 13 OR py < 2 OR py > 13 THEN lit = 1
+     IF px > 4 AND px < 11 AND py > 4 AND py < 11 THEN lit = 1
+    ELSE
+     IF px > 4 AND px < 11 AND py > 4 AND py < 11 THEN lit = 1
+    END IF
     IF lit = 1 THEN byt = byt + pw(7 - c)
    NEXT c
    s$ = s$ + CHR$(byt)

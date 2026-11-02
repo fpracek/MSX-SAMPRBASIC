@@ -173,6 +173,7 @@ FARX    equ 4B54h
         ENDIF
 dbgpa   equ ST+217              ; w  operando (fisico) da correggere con l'indirizzo della tabella delle variabili
 dbgf    equ ST+219              ; b  OPTION DEBUG attivo
+brkf    equ ST+231              ; b  OPTION BREAK attivo (.COM)
 asmbase equ ST+60               ; w  inizio del blocco di assembler in linea (indirizzo virtuale)
 usewin  equ ST+216              ; b  il sorgente usa WINDOW: le coordinate grafiche vengono convertite
 nfunc   equ ST+192              ; b
@@ -353,6 +354,13 @@ E_RT    equ 16
         MACRO EM7 a,b,c,d,e,f,g
         call emit_i
         db 7,a,b,c,d,e,f,g
+        ENDM
+        MACRO BRKCHK
+        IFNDEF ROMMODE
+        IFNDEF BINMODE
+        call emit_brk
+        ENDIF
+        ENDIF
         ENDM
         MACRO ERR n
         ld a,n
@@ -3294,6 +3302,7 @@ compile:
         ld (etype),a
         ld (usewin),a
         ld (dbgf),a
+        ld (brkf),a
         ld (dbglast),a
         ld (dbglast+1),a
         ld (target),a
@@ -4632,7 +4641,23 @@ emit_dbg:                       ; OPTION DEBUG: push hl ; ld hl,<riga> ; call RT
         EM1 0E1h
         ret
 
+emit_brk:                       ; OPTION BREAK: controllo del tasto di interruzione prima di un salto all'indietro
+        IFNDEF ROMMODE
+        IFNDEF BINMODE
+        ld a,(brkf)
+        or a
+        ret z
+        ld a,(dbgf)             ; con OPTION DEBUG il debugger controlla gia' ogni istruzione
+        or a
+        ret nz
+        jp emit_dbg
+        ENDIF
+        ENDIF
+
 s_debug: db "DEBUG",0
+        IFNDEF ROMMODE
+s_break: db "BREAK",0
+        ENDIF
 
 st_asmb:                        ; "# [*] elementi": byte preparati da QASM.OVL (assembler in linea)
         ld a,'*'
@@ -4765,8 +4790,21 @@ st_option:
         ld hl,tbuf
         ld de,s_debug
         call str_eq
+        jr z,.dbg
+        IFNDEF ROMMODE
+        IFNDEF BINMODE
+        ld hl,tbuf
+        ld de,s_break
+        call str_eq
         jr nz,st_skip
+        ld a,80h                ; OPTION BREAK: bit 7 del byte di tipo del runtime + controlli sui salti all'indietro
+        ld (HDRTGT),a
         ld a,1
+        ld (brkf),a
+        ENDIF
+        ENDIF
+        jr st_skip
+.dbg:   ld a,1
         ld (dbgf),a
         IFNDEF ROMMODE
         ld a,21h                ; ld hl,tabella ; ld (DBGT),hl  (l'indirizzo si scrive a fine compilazione)
@@ -4962,7 +5000,13 @@ jump_target:                    ; A = opcode; token = numero di riga o etichetta
         cp 1
         jp z,err_mode
 .go:    ld a,b
-        call label_jump
+        cp 0C3h
+        jr nz,.nb
+        push bc
+        BRKCHK
+        pop bc
+        ld a,b
+.nb:    call label_jump
         jp next_tok
 
 st_return:
@@ -5311,6 +5355,7 @@ st_next:
         ld a,(tmpk)
         ld hl,(tmpv)
         call emit_stv           ; var = hl
+        BRKCHK
         pop hl
         ld a,0C3h
         call emit_jabs          ; jp inizio
@@ -6415,6 +6460,7 @@ st_loop:
         pop hl
         jr .plain
 .c:     push bc
+        BRKCHK
         call next_tok
         call cond_expr
         pop bc
@@ -6430,6 +6476,9 @@ st_loop:
         pop hl
         jr .fin
 .plain: push hl
+        BRKCHK
+        pop hl
+        push hl
         inc hl
         ld e,(hl)
         inc hl
@@ -8107,6 +8156,9 @@ bi_point:                       ; POINT(x, y) -> colore (-1 fuori dallo schermo)
 st_wend:
         ld a,B_WHILE
         call need_blk
+        push hl
+        BRKCHK
+        pop hl
         inc hl
         ld e,(hl)
         inc hl

@@ -21,6 +21,7 @@ Write your program, press **F5**: a few seconds later it runs at the speed of th
 - **Everything a game needs is one statement:** `SCREEN 5-8` (also 10-12), `PSET/LINE/CIRCLE/PAINT/DRAW`, `COPY`, hardware pages and scrolling, `PALETTE`, 8x8/16x16 sprites with per-line colors, 3-voice MML `PLAY`, `SOUND`, `STICK/STRIG`, direct 17-bit VRAM access.
 - **Inline Z80 assembler** with `__ASM … __ENDASM` (every documented instruction; BASIC variables and labels are visible from the block).
 - **Step debugger** (`OPTION DEBUG`): breakpoints, global variables and **locals/parameters** (`>`), and an **E** command to inspect any variable (`V(3)`, `N$`…).
+- **`OPTION BREAK`**: CTRL+STOP interrupts a program started from the editor and returns to it (ignored when the `.COM` is run from the DOS prompt).
 - **Three kinds of output from a single option** (`OPTION TARGET`), so there are no conflicting settings.
 - **ROM cartridges from 16 KB to 2 MB** (ASCII8, ASCII16, Konami, SCC) with code split over several **segments**, one file each, plus precompiled `.BIN` segments for assembler code and data.
 - **Disk files** (text and random access), **RAM mapper**, `BLOAD/BSAVE`, MSX-DOS 2 folders.

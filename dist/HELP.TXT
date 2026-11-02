@@ -73,7 +73,7 @@ MALLOC       MGET
 OPTIONS (OPTION)
 OPTION       BIN
 DOS          OPTION MIXED
-OPTION DEBUG
+OPTION BREAK OPTION DEBUG
 
 GUIDE
 ASM          DEBUG
@@ -1655,6 +1655,7 @@ OPTION
 OPTION NUMBERED | LABELS | MIXED
 OPTION TARGET type
 OPTION DEBUG
+OPTION BREAK
 
 Compilation directives, to be placed
 at the start of the source. NUMBERED:
@@ -1663,7 +1664,9 @@ labels; LABELS: labels only; MIXED
 (default): both. TARGET selects the
 output format (see OPTION TARGET).
 DEBUG enables the debugger (see
-DEBUG).
+DEBUG). BREAK lets CTRL+STOP stop a
+program started from the editor (see
+OPTION BREAK).
 
 Example:
   OPTION LABELS
@@ -1775,6 +1778,36 @@ Line numbers and labels together
 Example:
   OPTION MIXED
 See also: OPTION
+OPTION BREAK
+------------
+
+OPTION BREAK
+
+Lets you interrupt the program with
+CTRL+STOP and go back to the editor,
+but only when the program was started
+from the editor (F5): a .COM launched
+from the DOS prompt ignores the option
+and runs normally. The compiler adds a
+check of the keyboard at every
+backward jump (NEXT, LOOP, WEND,
+GOTO), so any loop can be interrupted
+at the cost of a few microseconds per
+iteration; a program that never loops
+back cannot be stopped. On openMSX the
+STOP key is Pause: press CTRL+Pause.
+DOS programs only (not BIN or
+cartridges); with OPTION DEBUG the
+debugger is used instead.
+
+Example:
+  OPTION BREAK
+  PRINT "CTRL+STOP returns to the 
+    editor"
+  DO
+    n = n + 1
+  LOOP
+See also: OPTION, OPTION DEBUG
 OPTION DEBUG
 ------------
 

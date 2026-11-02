@@ -1224,7 +1224,64 @@ rt_datawin: ld hl,0
         IFDEF DBGRT
         INCLUDE "rtdbg.asm"
         ELSE
+        IFDEF ROMMODE
 rt_dbg: ret
+        ELSE
+        IFDEF BINMODE
+rt_dbg: ret
+        ELSE
+rt_dbg:                         ; OPTION BREAK: CTRL+STOP riporta all'editor, solo se il programma e' stato lanciato da li
+        ld a,(rt_launch)
+        or a
+        ret z
+        ld a,(rt_target)
+        and 80h
+        ret z
+        push bc
+        di
+        in a,(0AAh)
+        ld b,a                  ; fila di tastiera selezionata
+        and 0F0h
+        or 6
+        out (0AAh),a
+        in a,(0A9h)
+        ld c,a                  ; fila 6: bit 1 = CTRL
+        ld a,b
+        and 0F0h
+        or 7
+        out (0AAh),a
+        in a,(0A9h)             ; fila 7: bit 4 = STOP
+        and 10h
+        ld a,b
+        out (0AAh),a
+        ei
+        jr nz,.no
+        bit 1,c
+        jr z,.go
+.no:    pop bc
+        ret
+.go:    pop bc
+rt_toide:                       ; chiude i file, azzera il suono e ricarica l'editor senza aspettare un tasto
+        ld sp,(0006h)
+        call files_close_all
+        xor a
+        ld (0FC6Dh),a
+        ld a,7
+        out (0A0h),a
+        ld a,0BFh
+        out (0A1h),a
+        ld b,8
+.sil:   ld a,b
+        out (0A0h),a
+        xor a
+        out (0A1h),a
+        inc b
+        ld a,b
+        cp 11
+        jr c,.sil
+        jp rt_end.ide
+        ENDIF
+        ENDIF
         ENDIF
         IFDEF BINMODE
         INCLUDE "rtbin.asm"
