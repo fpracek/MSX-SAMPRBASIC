@@ -47,3 +47,5 @@ demo/dsheet.png
 sample_disk/GEOMRUN.COM
 demo/msx_game_marks.json
 demo/comments*.json
+demo/after.json
+demo/c2_*.json
