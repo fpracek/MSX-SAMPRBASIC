@@ -51,11 +51,23 @@ DSEG = [
     (2, dm['eval'] + 7.0, dm['end'], 1.0, 'Q ends the program'),
 ]
 
+gm = json.load(open(os.path.join(HERE, 'msx_game_marks.json')))
+GSEG = [
+    (3, 14.0, gm['f5'], 1.0, 'Part 4 - GEOMRUN: a complete game in SamPr Basic, 12 KB of source, open in the MSX editor'),
+    (3, gm['f5'], gm['title'] - 2.0, 8.0, 'F5: the compiler on the MSX builds the game (sped up)'),
+    (3, gm['title'] - 2.0, gm['play'], 1.0, 'Redefined tiles scroll the floor, a 3-layer multicolor sprite, PSG music'),
+    (3, gm['play'], gm['play'] + 24.0, 1.0, 'Random spikes, blocks and stairs (jumps pressed by a script that reads the sprite table)'),
+    (3, gm['play'] + 24.0, gm['brk'], 1.0, 'The game itself is untouched: it is the program compiled from the editor'),
+    (3, gm['brk'], gm['brk'] + 10.0, 2.0, 'OPTION BREAK: CTRL+STOP returns to the editor'),
+    (3, gm['brk'] + 10.0, gm['end'], 1.0, 'Back in the editor, ready to edit and run again'),
+]
+
 CARDS = {
     'intro': ('SamPr Basic', 'A BASIC to Z80 compiler and IDE for MSX', 3.5),
     'p1': ('Part 1', 'VS Code extension on the PC', 2.5),
     'p2': ('Part 2', 'On the MSX itself (openMSX)', 2.5),
     'p3': ('Part 3', 'The debugger on the MSX', 2.5),
+    'p4': ('Part 4', 'A complete game: GEOMRUN', 2.5),
     'outro': ('github.com/fpracek/MSX-SAMPRBASIC', 'Compiler, editor, debugger, VS Code extension, manual', 4.0),
 }
 
@@ -102,12 +114,15 @@ for s, a, b, sp, cap in MSEG:
 card('p3', n); n += 1
 for s, a, b, sp, cap in DSEG:
     seg(n, s, a, b, sp, cap); n += 1
+card('p4', n); n += 1
+for s, a, b, sp, cap in GSEG:
+    seg(n, s, a, b, sp, cap); n += 1
 card('outro', n); n += 1
 
 graph = ';\n'.join(chains) + ';\n' + ''.join(labels) + f'concat=n={len(labels)}:v=1:a=0[v]'
 gp = os.path.join(HERE, 'graph.txt')
 open(gp, 'w', encoding='utf-8').write(graph)
-cmd = [FF, '-y', '-loglevel', 'error', '-stats', '-i', os.path.join(HERE, 'vscode_raw.mp4'), '-i', os.path.join(HERE, 'msx_raw.avi'), '-i', os.path.join(HERE, 'msx_dbg_raw.avi'),
+cmd = [FF, '-y', '-loglevel', 'error', '-stats', '-i', os.path.join(HERE, 'vscode_raw.mp4'), '-i', os.path.join(HERE, 'msx_raw.avi'), '-i', os.path.join(HERE, 'msx_dbg_raw.avi'), '-i', os.path.join(HERE, 'msx_game_raw.avi'),
        '-filter_complex_script', gp, '-map', '[v]', '-c:v', 'libx264', '-preset', 'medium', '-crf', '20', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', OUT]
 subprocess.run(cmd, check=True)
 print(OUT, os.path.getsize(OUT))
