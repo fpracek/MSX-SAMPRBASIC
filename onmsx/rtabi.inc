@@ -3,13 +3,13 @@
 RTB       equ 4100h
         ELSE
         IFDEF BINMODE
-RTB       equ 8400h             ; BIN: immagine a 8400h (BASIC con CLEAR 200,&H83FF)
+RTB       equ 8400h             ; BIN: image at 8400h (BASIC with CLEAR 200,&H83FF)
         ELSE
 RTB       equ 0100h
         ENDIF
         ENDIF
         ENDIF
-; Punti d'ingresso del runtime (tabella di JP a indirizzi fissi, immagine a 0100h)
+; Runtime entry points (table of JPs at fixed addresses, image at 0100h)
 RT_PSTR   equ RTB+(0103h-0100h)
 RT_PINT   equ RTB+(0106h-0100h)
 RT_PNL    equ RTB+(0109h-0100h)
@@ -122,19 +122,19 @@ RT_FLOF   equ RTB+(0247h-0100h)
 RT_MKI    equ RTB+(024Ah-0100h)
 RT_CVI    equ RTB+(024Dh-0100h)
 RT_RSET   equ RTB+(0250h-0100h)
-RT_EMPTY  equ RTB+(0253h-0100h)             ; byte 0 (stringa vuota)
-RT_NAME   equ RTB+(0254h-0100h)             ; 16 byte: nome del sorgente (0-terminato)
-RT_DSIZE  equ RTB+(0264h-0100h)             ; word: byte di dati del programma (scritta dal compilatore)
-RT_DATA0  equ RTB+(0266h-0100h)             ; word: primo elemento DATA (0 = nessun DATA)
-RT_TARGET equ RTB+(0268h-0100h)             ; byte: tipo di cartuccia (1 ROM16, 2 ROM32, 3 ASCII8, 4 ASCII16, 5 KONAMI, 6 SCC)
-RT_DBG    equ RT_TARGET+1       ; jp rt_dbg: gancio del debugger (OPTION DEBUG)
-RT_STAMP  equ RT_DBG+5          ; 20 byte: data, ora e variante della costruzione (il compilatore .COM li confronta)
+RT_EMPTY  equ RTB+(0253h-0100h)             ; byte 0 (empty string)
+RT_NAME   equ RTB+(0254h-0100h)             ; 16 bytes: source name (0-terminated)
+RT_DSIZE  equ RTB+(0264h-0100h)             ; word: program data bytes (written by the compiler)
+RT_DATA0  equ RTB+(0266h-0100h)             ; word: first DATA item (0 = no DATA)
+RT_TARGET equ RTB+(0268h-0100h)             ; byte: cartridge type (1 ROM16, 2 ROM32, 3 ASCII8, 4 ASCII16, 5 KONAMI, 6 SCC)
+RT_DBG    equ RT_TARGET+1       ; jp rt_dbg: debugger hook (OPTION DEBUG)
+RT_STAMP  equ RT_DBG+5          ; 20 bytes: date, time and variant of the build (the .COM compiler compares them)
 RT_STAMPLEN equ 20
-RT_SIZE   equ RT_DBG+3          ; word: dimensione dell'immagine del runtime (letta dal compilatore .COM senza leggere tutto il file)
+RT_SIZE   equ RT_DBG+3          ; word: size of the runtime image (read by the .COM compiler without reading the whole file)
         IFDEF BINMODE
-RTRAM     equ 0D000h            ; BIN: RAM del runtime e dati del programma sopra l'immagine
+RTRAM     equ 0D000h            ; BIN: runtime RAM and program data above the image
         ELSE
-RTRAM     equ 0C090h            ; RAM del runtime (C000h-C086h: caricatore)
+RTRAM     equ 0C090h            ; Runtime RAM (C000h-C086h: loader)
         ENDIF
 HEAPP     equ RTRAM+0
 HEAP0     equ RTRAM+10
@@ -143,23 +143,23 @@ GY1       equ RTRAM+11Ah
 GX2       equ RTRAM+11Ch
 GY2       equ RTRAM+11Eh
 GCOL      equ RTRAM+120h        ; colore (< 0 = colore corrente)
-GFLG      equ RTRAM+122h        ; byte: 0 linea, 1 riquadro, 2 riquadro pieno
-SCRMODE   equ RTRAM+123h        ; byte: modo SCREEN corrente
-LASTX     equ RTRAM+124h        ; ultimo punto grafico
+GFLG      equ RTRAM+122h        ; byte: 0 line, 1 box, 2 filled box
+SCRMODE   equ RTRAM+123h        ; byte: current SCREEN mode
+LASTX     equ RTRAM+124h        ; last graphic point
 LASTY     equ RTRAM+126h
-FONTPTR   equ RTRAM+150h        ; puntatore al font 8x8 (768 byte in cima allo heap, riservato da SCREEN 5-8)
-ROWPTR    equ RTRAM+152h        ; puntatore alla riga di pixel di PAINT (256 byte in cima allo heap)
-TCX       equ RTRAM+154h        ; cursore di testo in grafica (colonna, riga)
+FONTPTR   equ RTRAM+150h        ; pointer to the 8x8 font (768 bytes at the top of the heap, reserved by SCREEN 5-8)
+ROWPTR    equ RTRAM+152h        ; pointer to PAINT's pixel row (256 bytes at the top of the heap)
+TCX       equ RTRAM+154h        ; text cursor in graphics (column, row)
 TCY       equ RTRAM+155h
-GBPP      equ RTRAM+156h        ; bit per pixel, pixel per byte, maschera del colore
+GBPP      equ RTRAM+156h        ; bits per pixel, pixels per byte, color mask
 GPPB      equ RTRAM+157h
 GONES     equ RTRAM+158h
-GFGP      equ RTRAM+159h        ; colori replicati in un byte di VRAM
+GFGP      equ RTRAM+159h        ; colors replicated in a VRAM byte
 GBGP      equ RTRAM+15Ah
 PCOL      equ RTRAM+15Bh        ; PAINT: colore, bordo, tratto in corso
 PBRD      equ RTRAM+15Ch
 PRUN      equ RTRAM+15Dh
-PSTK      equ RTRAM+15Eh        ; PAINT: pila dei semi e variabili
+PSTK      equ RTRAM+15Eh        ; PAINT: seed stack and variables
 PLIM      equ RTRAM+160h
 PXS       equ RTRAM+162h
 PY        equ RTRAM+164h
@@ -169,26 +169,26 @@ PX        equ RTRAM+16Ah
 PSY       equ RTRAM+16Ch
 PTX       equ RTRAM+16Eh
 PTY       equ RTRAM+170h
-ARRB      equ RTRAM+172h        ; array di GET/PUT: base e numero di elementi
+ARRB      equ RTRAM+172h        ; GET/PUT array: base and number of elements
 ARRC      equ RTRAM+174h
-CCX       equ RTRAM+176h        ; CIRCLE ad arco/ellisse: centro, ultimo punto
+CCX       equ RTRAM+176h        ; CIRCLE arc/ellipse: center, last point
 CCY       equ RTRAM+178h
 CPX       equ RTRAM+17Ah
 CPY       equ RTRAM+17Ch
-DCOL      equ RTRAM+17Eh        ; DRAW: colore, scala, prefissi B e N, lunghezza e puntatore
+DCOL      equ RTRAM+17Eh        ; DRAW: color, scale, B and N prefixes, length and pointer
 DSC       equ RTRAM+17Fh
 DB        equ RTRAM+180h
 DN        equ RTRAM+181h
 DLEN      equ RTRAM+182h
 DPOS      equ RTRAM+183h
-CRX       equ RTRAM+185h        ; CIRCLE: raggi, angolo corrente, gradi rimasti, primo punto
+CRX       equ RTRAM+185h        ; CIRCLE: radii, current angle, degrees left, first point
 CRY       equ RTRAM+187h
 CANG      equ RTRAM+189h
 CK        equ RTRAM+18Bh
 CFIRST    equ RTRAM+18Dh
 CEND      equ ARRB              ; CIRCLE: angolo finale (gradi) e aspetto (percentuale) riusano ARRB/ARRC
 CASP      equ ARRC
-GRPCOL    equ 0F3C9h            ; tabelle del BIOS (colori e pattern dello schermo 2, sprite degli schermi 1-3)
+GRPCOL    equ 0F3C9h            ; BIOS tables (SCREEN 2 colors and patterns, SCREEN 1-3 sprites)
 GRPCGP    equ 0F3CBh
 GRPATR    equ 0F3CDh
 GRPPAT    equ 0F3CFh
@@ -196,16 +196,16 @@ T32ATR    equ 0F3C3h
 T32PAT    equ 0F3C5h
 MLTATR    equ 0F3D7h
 MLTPAT    equ 0F3D9h
-P2OFF     equ RTRAM+18Eh        ; SCREEN 2: scostamento e maschera del pixel (non usare S1..S8: servono ai chiamanti)
+P2OFF     equ RTRAM+18Eh        ; SCREEN 2: pixel offset and mask (do not use S1..S8: they are needed by the callers)
 P2MSK     equ RTRAM+190h
-VX1       equ RTRAM+192h        ; VIEW: finestra di ritaglio (limiti inclusi) e sue dimensioni
+VX1       equ RTRAM+192h        ; VIEW: clipping window (limits inclusive) and its dimensions
 VY1       equ RTRAM+194h
 VX2       equ RTRAM+196h
 VY2       equ RTRAM+198h
 VXW       equ RTRAM+19Ah
 VYH       equ RTRAM+19Ch
-SCRREAL   equ RTRAM+19Eh        ; numero dello SCREEN richiesto (SCRMODE vale 2 anche per lo SCREEN 4: stesso layout)
-WACT      equ RTRAM+19Fh        ; WINDOW: attivo, asse y verso l'alto, origine logica, estensioni, fattori
+SCRREAL   equ RTRAM+19Eh        ; requested SCREEN number (SCRMODE is 2 also for SCREEN 4: same layout)
+WACT      equ RTRAM+19Fh        ; WINDOW: active, y axis upward, logical origin, extents, factors
 WYUP      equ RTRAM+1A0h
 WWX1      equ RTRAM+1A1h
 WWY1      equ RTRAM+1A3h
@@ -219,42 +219,42 @@ WDV       equ RTRAM+1B3h
 WREM      equ RTRAM+1B5h
 WCNT      equ RTRAM+1B7h
 WSG       equ RTRAM+1B8h
-UBANK     equ RTRAM+1B9h        ; VBANK: 64 KB della VRAM usati da VPOKE/VPEEK/VFILL/VWRITE/VREAD
+UBANK     equ RTRAM+1B9h        ; VBANK: 64 KB of VRAM used by VPOKE/VPEEK/VFILL/VWRITE/VREAD
 VA16      equ RTRAM+1BAh        ; A16 usato da vram_set
 APAGE     equ RTRAM+1BBh        ; pagina attiva (SET PAGE)
-GOP       equ RTRAM+1BCh        ; operatore logico dei comandi VDP
-DPTR      equ RTRAM+1BDh        ; puntatore DATA/READ
-APY       equ RTRAM+1BFh        ; pagina attiva: scostamento Y (pagina*256) per i comandi VDP
-APLO      equ RTRAM+1C1h        ; ... scostamento dell'indirizzo VRAM (16 bit bassi)
-APHI      equ RTRAM+1C3h        ; ... A16 dell'indirizzo VRAM
-CSP       equ RTRAM+1C4h        ; COPY: pagina sorgente, destinazione (x,y), pagina destinazione (-1 = attiva)
+GOP       equ RTRAM+1BCh        ; logical operator of the VDP commands
+DPTR      equ RTRAM+1BDh        ; DATA/READ pointer
+APY       equ RTRAM+1BFh        ; active page: Y offset (page*256) for the VDP commands
+APLO      equ RTRAM+1C1h        ; ... VRAM address offset (low 16 bits)
+APHI      equ RTRAM+1C3h        ; ... A16 of the VRAM address
+CSP       equ RTRAM+1C4h        ; COPY: source page, destination (x,y), destination page (-1 = active)
 CDX       equ RTRAM+1C6h
 CDY       equ RTRAM+1C8h
 CDP       equ RTRAM+1CAh
-PLV       equ RTRAM+1CCh        ; PLAY: stringhe delle 3 voci
-PVOICE    equ RTRAM+1D2h        ; PLAY: stato delle voci (3 x 12 byte)
-PHZ       equ RTRAM+1F6h        ; PLAY: frequenza di quadro * 240
+PLV       equ RTRAM+1CCh        ; PLAY: strings of the 3 voices
+PVOICE    equ RTRAM+1D2h        ; PLAY: voice state (3 x 12 bytes)
+PHZ       equ RTRAM+1F6h        ; PLAY: frame rate * 240
 PTEMPO    equ RTRAM+1F8h
 PANY      equ RTRAM+1FAh
-FILEP     equ RTRAM+1FBh        ; descrittori dei file (0 = non ancora riservati)
-OUTSEL    equ RTRAM+1FDh        ; file di PRINT# (0 = schermo)
-FARSP     equ RTRAM+1FEh        ; ROM: pila software delle chiamate fra segmenti
-CURBANK   equ RTRAM+200h        ; ROM: banco nella finestra di codice
-CWREG     equ RTRAM+201h        ; ROM: registro di banco della finestra di codice
-DWREG     equ RTRAM+203h        ; ROM: registro di banco della finestra dati (A000h per i banchi da 8 KB)
-MSAVE     equ RTRAM+205h        ; mapper: segmento della pagina 2 da ripristinare
-MAPN      equ RTRAM+206h        ; numero di segmenti (word), valido se MAPK <> 0
+FILEP     equ RTRAM+1FBh        ; file descriptors (0 = not yet reserved)
+OUTSEL    equ RTRAM+1FDh        ; PRINT# file (0 = screen)
+FARSP     equ RTRAM+1FEh        ; ROM: software stack of cross-segment calls
+CURBANK   equ RTRAM+200h        ; ROM: bank in the code window
+CWREG     equ RTRAM+201h        ; ROM: bank register of the code window
+DWREG     equ RTRAM+203h        ; ROM: bank register of the data window (A000h for the 8 KB banks)
+MSAVE     equ RTRAM+205h        ; mapper: page 2 segment to restore
+MAPN      equ RTRAM+206h        ; number of segments (word), valid if MAPK <> 0
 MAPK      equ RTRAM+208h
-MT0       equ RTRAM+209h        ; scratch del rilevamento
+MT0       equ RTRAM+209h        ; detection scratch
 MTN       equ RTRAM+20Ah
 MTB       equ RTRAM+20Bh
-MJT       equ RTRAM+20Ch        ; tabella delle routine del mapper (DOS 2)
-MALN      equ RTRAM+20Eh        ; segmenti presi dall'alto (senza DOS 2)
-RAMSL     equ RTRAM+20Fh        ; ROM: slot della RAM (pagina 3 = mapper)
-DBGP      equ RTRAM+210h        ; debugger: blocco di stato (in cima all'heap), 0 = non ancora creato
-KUT       equ RTRAM+216h        ; JIFFY d'inizio dell'attesa del rilascio dei tasti
-M2FLAG    equ RTRAM+214h        ; 0 = MSX1 (TMS9918: niente R#14, niente 80 colonne), altrimenti MSX2 o superiore
-DBGT      equ RTRAM+212h        ; debugger: tabella delle variabili (scritta dal programma)
+MJT       equ RTRAM+20Ch        ; table of the mapper routines (DOS 2)
+MALN      equ RTRAM+20Eh        ; segments taken from the top (without DOS 2)
+RAMSL     equ RTRAM+20Fh        ; ROM: RAM slot (page 3 = mapper)
+DBGP      equ RTRAM+210h        ; debugger: state block (at the top of the heap), 0 = not yet created
+KUT       equ RTRAM+216h        ; JIFFY at the start of the wait for key release
+M2FLAG    equ RTRAM+214h        ; 0 = MSX1 (TMS9918: no R#14, no 80 columns), otherwise MSX2 or higher
+DBGT      equ RTRAM+212h        ; debugger: variable table (written by the program)
         IFDEF BINMODE
 DATA_BASE equ RTRAM+0220h
         ELSE

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Cattura schermate di openMSX (editor, aiuto, About, menu) per il manuale -> doc/img/. Va eseguito in primo piano."""
+"""Captures openMSX screenshots (editor, help, About, menus) for the manual -> doc/img/. Must be run in the foreground."""
 import os
 import subprocess
 import sys

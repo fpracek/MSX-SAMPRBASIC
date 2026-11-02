@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Test dei colori delle parole chiave (build ROM, NMS-8250): scrive del BASIC, aspetta i tempi morti e
-confronta i flag della tabella di blink (VRAM 800h, 10 byte per riga) con un modello Python."""
+"""Keyword color test (ROM build, NMS-8250): types some BASIC, waits for the idle time and
+compares the flags of the blink table (VRAM 800h, 10 bytes per row) with a Python model."""
 import os
 import re
 import sys
@@ -21,7 +21,7 @@ LINES = [
 
 
 def model(text):
-    """flag di colore per una riga (79 colonne) come li calcola l'editor"""
+    """color flags for a row (79 columns) as the editor computes them"""
     flags = [0] * 79
     text = text[:79].ljust(79)
     q = False
@@ -55,9 +55,9 @@ def main():
     sc.dump('k0_init')
     for ln in LINES:
         sc.do('type "%s\\r"' % ln.replace('"', '\\"').replace('$', '\\$'), 0.2)
-    sc.wait(sum(len(x) + 1 for x in LINES) * 0.5 + 4.0)   # la digitazione e' lenta; poi i tempi morti (2 righe per quadro)
+    sc.wait(sum(len(x) + 1 for x in LINES) * 0.5 + 4.0)   # typing is slow; then the idle time (2 rows per frame)
     sc.dump('k1_typed')
-    sc.tap(8, 0x20, 3, 0.4)              # Su x3 (scorre, ridisegna)
+    sc.tap(8, 0x20, 3, 0.4)              # Up x3 (scrolls, redraws)
     sc.wait(2.0)
     sc.dump('k2_up')
     etest.run(sc)

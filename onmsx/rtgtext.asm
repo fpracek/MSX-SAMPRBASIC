@@ -1,13 +1,13 @@
 ; =====================================================================
-; Testo in grafica (SCREEN 5-8), PALETTE e PAINT
-; Il font si copia dalla ROM del BIOS (RDSLT) in RAM: 96 glifi 8x8 (ASCII 32-127). Le celle sono 8x8 pixel
-; (32 colonne x 26 righe negli schermi 5 e 8, 64 x 26 nei 6 e 7); i glifi si scrivono direttamente in VRAM
-; con sfondo opaco (BAKCLR) e primo piano FORCLR.
+; Text in graphics (SCREEN 5-8), PALETTE and PAINT
+; The font is copied from the BIOS ROM (RDSLT) into RAM: 96 8x8 glyphs (ASCII 32-127). Cells are 8x8 pixels
+; (32 columns x 26 rows in screens 5 and 8, 64 x 26 in 6 and 7); glyphs are written directly to VRAM
+; with opaque background (BAKCLR) and foreground FORCLR.
 ; =====================================================================
 RDSLT   equ 000Ch
 VDPD    equ 98h
 
-rdrom:                          ; HL = indirizzo nella ROM principale -> A (conserva HL, DE, BC)
+rdrom:                          ; HL = address in the main ROM -> A (preserves HL, DE, BC)
         push hl
         push de
         push bc
@@ -19,7 +19,7 @@ rdrom:                          ; HL = indirizzo nella ROM principale -> A (cons
         pop hl
         ret
 
-load_font:                      ; ASCII 32-127 dalla tabella del BIOS (puntatore a 0004h)
+load_font:                      ; ASCII 32-127 from the BIOS table (pointer at 0004h)
         ld hl,4
         call rdrom
         ld c,a
@@ -41,7 +41,7 @@ load_font:                      ; ASCII 32-127 dalla tabella del BIOS (puntatore
         jr nz,.l
         ret
 
-gmode_init:                     ; bit per pixel, pixel per byte, maschera del colore, in base a SCRMODE
+gmode_init:                     ; bits per pixel, pixels per byte, color mask, based on SCRMODE
         ld a,(SCRMODE)
         cp 2
         jr z,.m2
@@ -56,7 +56,7 @@ gmode_init:                     ; bit per pixel, pixel per byte, maschera del co
         ld a,0Fh
         ld (GONES),a
         ret
-.m2:    ld a,8                  ; SCREEN 2: righe lette come un byte per pixel (colore)
+.m2:    ld a,8                  ; SCREEN 2: lines read as one byte per pixel (color)
         ld (GBPP),a
         ld a,1
         ld (GPPB),a
@@ -78,7 +78,7 @@ gmode_init:                     ; bit per pixel, pixel per byte, maschera del co
         ld (GONES),a
         ret
 
-gcols:                          ; -> A = colonne di testo
+gcols:                          ; -> A = text columns
         ld a,(SCRMODE)
         cp 6
         jr z,.w
@@ -89,7 +89,7 @@ gcols:                          ; -> A = colonne di testo
 .w:     ld a,64
         ret
 
-gstride:                        ; -> A = byte per riga di pixel: 128, oppure 0 = 256
+gstride:                        ; -> A = bytes per pixel line: 128, or 0 = 256
         ld a,(SCRMODE)
         cp 5
         jr z,.s
@@ -150,7 +150,7 @@ gputc:                          ; A = carattere (modo grafico): disegna o interp
         ld (CSRX),a
         ret
 
-gpack:                          ; A = colore -> A = colore replicato in un byte di VRAM
+gpack:                          ; A = color -> A = color replicated across a VRAM byte
         ld b,a
         ld a,(GBPP)
         cp 8
@@ -159,7 +159,7 @@ gpack:                          ; A = colore -> A = colore replicato in un byte 
         ret
 .n:     cp 4
         jr z,.four
-        ld a,b                  ; 2 bit per pixel
+        ld a,b                  ; 2 bits per pixel
         and 3
         ld b,a
         add a,a
@@ -176,7 +176,7 @@ gpack:                          ; A = colore -> A = colore replicato in un byte 
         or b
         ret
 
-gdraw:                          ; A = carattere 32..: disegna il glifo nella cella (TCX,TCY)
+gdraw:                          ; A = character 32..: draws the glyph in cell (TCX,TCY)
         sub 32
         ret c
         cp 96
@@ -189,7 +189,7 @@ gdraw:                          ; A = carattere 32..: disegna il glifo nella cel
         add hl,hl
         ld de,(FONTPTR)
         add hl,de
-        push hl                 ; puntatore al glifo
+        push hl                 ; pointer to the glyph
         ld a,(SCRMODE)
         cp 2
         jp z,gdraw2
@@ -199,12 +199,12 @@ gdraw:                          ; A = carattere 32..: disegna il glifo nella cel
         ld a,(BAKCLR)
         call gpack
         ld (GBGP),a
-        ld a,(TCY)              ; indirizzo = TCY*8*stride + TCX*byte-per-cella
+        ld a,(TCY)              ; address = TCY*8*stride + TCX*bytes-per-cell
         ld l,a
         ld h,0
         add hl,hl
         add hl,hl
-        add hl,hl               ; riga di pixel
+        add hl,hl               ; pixel line
         call gstride
         or a
         ld h,l                  ; * 256
@@ -216,13 +216,13 @@ gdraw:                          ; A = carattere 32..: disegna il glifo nella cel
         ld e,a
         ld d,0
         ld a,(GPPB)
-        ld b,2                  ; byte per cella 4 (log2 = 2)
+        ld b,2                  ; bytes per cell 4 (log2 = 2)
         cp 2
         jr z,.sh
-        ld b,1                  ; 2 byte
+        ld b,1                  ; 2 bytes
         cp 4
         jr z,.sh
-        ld b,3                  ; 8 byte
+        ld b,3                  ; 8 bytes
 .sh:    sla e
         rl d
         djnz .sh
@@ -230,7 +230,7 @@ gdraw:                          ; A = carattere 32..: disegna il glifo nella cel
         ld de,(APLO)            ; pagina attiva
         add hl,de
         pop de                  ; DE = glifo
-        ld b,8                  ; 8 righe
+        ld b,8                  ; 8 lines
 .row:   push bc
         push de
         push hl
@@ -256,12 +256,12 @@ gdraw:                          ; A = carattere 32..: disegna il glifo nella cel
         djnz .row
         ret
 
-vram_set:                       ; HL = indirizzo VRAM (16 bit + VA16 = A16), A = 0 lettura / 40h scrittura
+vram_set:                       ; HL = VRAM address (16 bit + VA16 = A16), A = 0 read / 40h write
         ld c,a
         ld a,(M2FLAG)
         or a
         jr nz,.m2
-        di                      ; MSX1: VRAM da 16 KB, il TMS9918 non ha R#14 (il numero 14 sovrascriverebbe R#6)
+        di                      ; MSX1: 16 KB VRAM, the TMS9918 has no R#14 (number 14 would overwrite R#6)
         ld a,l
         out (VDPC),a
         ld a,h
@@ -295,16 +295,16 @@ vram_set:                       ; HL = indirizzo VRAM (16 bit + VA16 = A16), A =
         ei
         ret
 
-gline:                          ; A = riga del glifo (bit 7 = pixel a sinistra): scrive 8 pixel alla porta dati
+gline:                          ; A = glyph line (bit 7 = left pixel): writes 8 pixels to the data port
         ld b,a
         ld a,(GPPB)
-        ld e,a                  ; E = pixel per byte di VRAM
+        ld e,a                  ; E = pixels per VRAM byte
         ld d,8                  ; D = pixel rimasti
-.byte:  ld l,0                  ; L = maschera del byte di VRAM
-        ld h,e                  ; H = pixel ancora da mettere nel byte
+.byte:  ld l,0                  ; L = VRAM byte mask
+        ld h,e                  ; H = pixels still to put in the byte
 .px:    ld a,(GBPP)
         ld c,a
-.sh:    sla l                   ; maschera <<= bit per pixel
+.sh:    sla l                   ; mask <<= bits per pixel
         dec c
         jr nz,.sh
         ld a,b
@@ -332,13 +332,13 @@ gline:                          ; A = riga del glifo (bit 7 = pixel a sinistra):
         jr nz,.byte
         ret
 
-vdp_setsrc:                     ; HL = SX, DE = SY (registri R#32-35), SY relativo alla pagina attiva
+vdp_setsrc:                     ; HL = SX, DE = SY (registers R#32-35), SY relative to the active page
         push hl
         ld hl,(APY)
         add hl,de
         ex de,hl
         pop hl
-vdp_setsrc_raw:                 ; come sopra, SY assoluto
+vdp_setsrc_raw:                 ; as above, SY absolute
         di
         ld a,32
         out (VDPC),a
@@ -355,7 +355,7 @@ vdp_setsrc_raw:                 ; come sopra, SY assoluto
         ei
         ret
 
-gscroll:                        ; scorre lo schermo di una riga di testo (8 pixel)
+gscroll:                        ; scrolls the screen by one text line (8 pixels)
         ld a,(SCRMODE)
         cp 2
         jp z,gscroll2
@@ -376,7 +376,7 @@ gscroll:                        ; scorre lo schermo di una riga di testo (8 pixe
         ld a,0D0h               ; HMMM
         ld (GCMD+10),a
         call vdp_cmd
-        ld a,(BAKCLR)           ; ultima riga di testo -> sfondo
+        ld a,(BAKCLR)           ; last text line -> background
         ld b,a
         ld a,(GONES)
         and b
@@ -406,12 +406,12 @@ rt_palinit:                     ; tavolozza predefinita dell'MSX2
         ld a,90h
         out (VDPC),a
         ld hl,paltab
-        ld bc,2000h+9Ah         ; 32 byte alla porta dei dati di palette
+        ld bc,2000h+9Ah         ; 32 bytes to the palette data port
         otir
         ei
         ret
 
-rt_palette:                     ; GX1 = numero (0-15), GY1 = rosso, GX2 = verde, GY2 = blu (0-7)
+rt_palette:                     ; GX1 = number (0-15), GY1 = red, GX2 = green, GY2 = blue (0-7)
         ld hl,(GX1)
         ld a,h
         or a
@@ -462,7 +462,7 @@ rt_palette:                     ; GX1 = numero (0-15), GY1 = rosso, GX2 = verde,
         ret
 
 ; ---------------------------------------------------------------- PAINT
-ppush:                          ; HL = x, DE = y: seme sulla pila (in coda alla zona libera); se piena lo scarta
+ppush:                          ; HL = x, DE = y: seed onto the stack (at the end of the free area); if full, discards it
         ld (PTX),hl
         ld (PTY),de
         ld hl,(PSTK)
@@ -501,7 +501,7 @@ ppop:                           ; -> HL = x, DE = y
         pop hl
         ret
 
-rowread:                        ; HL = y: legge la riga di pixel in ROWBUF
+rowread:                        ; HL = y: reads the pixel line into ROWBUF
         ld a,(SCRMODE)
         cp 2
         jp z,rowread2
@@ -513,7 +513,7 @@ rowread:                        ; HL = y: legge la riga di pixel in ROWBUF
         ld a,l
         ld h,a                  ; y * 256
         ld l,0
-        ld b,0                  ; 256 byte
+        ld b,0                  ; 256 bytes
         jr z,.rd
         srl h                   ; y * 128
         rr l
@@ -529,13 +529,13 @@ rowread:                        ; HL = y: legge la riga di pixel in ROWBUF
         inir
         ret
 
-rb_pix:                         ; HL = x -> A = pixel dalla riga in ROWBUF
+rb_pix:                         ; HL = x -> A = pixel from the line in ROWBUF
         ld a,(GBPP)
         cp 8
         jr z,.m8
         cp 2
         jr z,.m2
-        ld a,l                  ; 4 bit per pixel
+        ld a,l                  ; 4 bits per pixel
         and 1
         ld c,a
         srl h
@@ -577,7 +577,7 @@ rb_pix:                         ; HL = x -> A = pixel dalla riga in ROWBUF
         ld a,(hl)
         ret
 
-rb_ok:                          ; HL = x: C se il pixel si puo' riempire (ne' bordo ne' gia' del colore di riempimento)
+rb_ok:                          ; HL = x: C if the pixel can be filled (neither border nor already the fill color)
         push hl
         call rb_pix
         pop hl
@@ -593,7 +593,7 @@ rb_ok:                          ; HL = x: C se il pixel si puo' riempire (ne' bo
 .no:    or a
         ret
 
-scanrow:                        ; HL = y: semi per ogni tratto riempibile di quella riga entro [PXL, PXR]
+scanrow:                        ; HL = y: seeds for each fillable run of that line within [PXL, PXR]
         ld (PSY),hl
         call rowread
         xor a
@@ -624,7 +624,7 @@ scanrow:                        ; HL = y: semi per ogni tratto riempibile di que
         ld (PX),hl
         jr .l
 
-rt_paint:                       ; PAINT (GX1,GY1), colore GCOL, bordo GX2 (< 0 = come il colore di riempimento)
+rt_paint:                       ; PAINT (GX1,GY1), color GCOL, border GX2 (< 0 = same as the fill color)
         call chk_gfx_nm
         call gcolor
         ld b,a
@@ -648,7 +648,7 @@ rt_paint:                       ; PAINT (GX1,GY1), colore GCOL, bordo GX2 (< 0 =
         ld (GCMD+8),a
         xor a
         ld (GCMD+9),a
-        ld hl,(heapend)         ; riga di pixel e pila dei semi in cima alla zona libera dello heap
+        ld hl,(heapend)         ; pixel line and seed stack at the top of the heap's free area
         ld de,-256
         add hl,de
         ld (ROWPTR),hl
@@ -703,7 +703,7 @@ rt_paint:                       ; PAINT (GX1,GY1), colore GCOL, bordo GX2 (< 0 =
         inc hl
         ld (PXR),hl
         jr .rf
-.fill:  ld hl,(PXL)             ; riempie il tratto
+.fill:  ld hl,(PXL)             ; fills the run
         ld (S1),hl
         ld hl,(PY)
         ld (S2),hl
@@ -711,7 +711,7 @@ rt_paint:                       ; PAINT (GX1,GY1), colore GCOL, bordo GX2 (< 0 =
         ld hl,(PXR)
         ld (S3),hl
         call rect_draw
-        ld hl,(PY)              ; semi sopra e sotto (dentro la finestra)
+        ld hl,(PY)              ; seeds above and below (inside the window)
         ld de,(VY1)
         or a
         sbc hl,de
@@ -731,8 +731,8 @@ rt_paint:                       ; PAINT (GX1,GY1), colore GCOL, bordo GX2 (< 0 =
 .dnok:  call scanrow
         jp .loop
 
-; ---------------------------------------------------------------- SCREEN 2: testo, scorrimento, lettura di una riga
-gdraw2:                         ; (SP) = glifo: scrive pattern e colori nella cella (TCX,TCY)
+; ---------------------------------------------------------------- SCREEN 2: text, scrolling, reading a line
+gdraw2:                         ; (SP) = glyph: writes pattern and colors into cell (TCX,TCY)
         pop de
         ld a,(TCY)
         ld h,a
@@ -743,7 +743,7 @@ gdraw2:                         ; (SP) = glifo: scrive pattern e colori nella ce
         add a,a
         ld c,a
         ld b,0
-        add hl,bc               ; scostamento = TCY*256 + TCX*8
+        add hl,bc               ; offset = TCY*256 + TCX*8
         push hl
         ld bc,(GRPCGP)
         add hl,bc
@@ -774,7 +774,7 @@ gdraw2:                         ; (SP) = glifo: scrive pattern e colori nella ce
         djnz .c
         ret
 
-gscroll2:                       ; SCREEN 2: scorre di una riga le tabelle dei pattern e dei colori
+gscroll2:                       ; SCREEN 2: scrolls the pattern and color tables by one line
         call ensure_rowbuf
         ld hl,(GRPCGP)
         ld (S1),hl
@@ -782,7 +782,7 @@ gscroll2:                       ; SCREEN 2: scorre di una riga le tabelle dei pa
         ld hl,(GRPCOL)
         ld (S1),hl
         call scr2tbl
-        ld hl,(GRPCGP)          ; ultima riga: pattern vuoti
+        ld hl,(GRPCGP)          ; last line: empty patterns
         ld de,23*256
         add hl,de
         ld a,40h
@@ -791,7 +791,7 @@ gscroll2:                       ; SCREEN 2: scorre di una riga le tabelle dei pa
         xor a
 .z:     out (VDPD),a
         djnz .z
-        ld hl,(GRPCOL)          ; colori = primo piano / sfondo correnti
+        ld hl,(GRPCOL)          ; colors = current foreground / background
         ld de,23*256
         add hl,de
         ld a,40h
@@ -811,7 +811,7 @@ gscroll2:                       ; SCREEN 2: scorre di una riga le tabelle dei pa
         djnz .c
         ret
 
-scr2tbl:                        ; (S1) = base della tabella: copia 23 righe da 256 byte verso l'alto
+scr2tbl:                        ; (S1) = table base: copies 23 lines of 256 bytes upward
         ld a,23
         ld (S2),a
 .l:     ld hl,(S1)
@@ -837,7 +837,7 @@ scr2tbl:                        ; (S1) = base della tabella: copia 23 righe da 2
         jr nz,.l
         ret
 
-rowread2:                       ; SCREEN 2, HL = y: ROWBUF[x] = colore del pixel (x, y)
+rowread2:                       ; SCREEN 2, HL = y: ROWBUF[x] = color of pixel (x, y)
         ld (S1),hl
         ld hl,(ROWPTR)
         ld (S2),hl

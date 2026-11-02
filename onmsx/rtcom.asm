@@ -1,6 +1,6 @@
 ; =====================================================================
-; MSXQB runtime per programmi .COM (MSX-DOS), immagine a 0100h.
-; Tabella di JP a indirizzi fissi (vedi rtabi.inc), BIOS via CALSLT.
+; MSXQB runtime for .COM programs (MSX-DOS), image at 0100h.
+; Table of JPs at fixed addresses (see rtabi.inc), BIOS via CALSLT.
 ; =====================================================================
         INCLUDE "rtabi.inc"
 CHPUT   equ 00A2h
@@ -184,22 +184,22 @@ rt_bios:
         ei
         ret
 
-BINTOP  equ 0F000h              ; BIN: cima della pila; sopra si salva la pila di BASIC
+BINTOP  equ 0F000h              ; BIN: top of the stack; above it the BASIC stack is saved
 rt_start:
         IFDEF BINMODE
-        ld (BINTOP),sp          ; la pila di BASIC si ripristina a fine programma
+        ld (BINTOP),sp          ; the BASIC stack is restored at the end of the program
         ld hl,BINTOP
         ELSE
         IFDEF ROMMODE
         ld hl,(0FC4Ah)          ; HIMEM
         ELSE
-        ld a,(0080h)            ; l'editor/compilatore lanciano il programma con una riga di comando non vuota
+        ld a,(0080h)            ; the editor/compiler launch the program with a non-empty command line
         ld (rt_launch),a
         ld hl,(0006h)
         ENDIF
         ENDIF
         ld sp,hl
-        ld hl,2Dh               ; versione MSX (0 = MSX1): su MSX1 il testo e' a 40 colonne, su MSX2 a 80
+        ld hl,2Dh               ; MSX version (0 = MSX1): on MSX1 text is 40 columns, on MSX2 80
         call rdrom
         ld b,80
         or a
@@ -208,15 +208,15 @@ rt_start:
 .wd:    ld a,b
         ld (LINL40),a
         ld (LINLEN),a
-        push ix                 ; la BIOS (CALSLT) distrugge IX: il frame delle SUB/FUNCTION va salvato
+        push ix                 ; the BIOS (CALSLT) destroys IX: the SUB/FUNCTION frame must be saved
         ld ix,INITXT
         call rt_bios
         pop ix
-        push ix                 ; la BIOS (CALSLT) distrugge IX: il frame delle SUB/FUNCTION va salvato
+        push ix                 ; the BIOS (CALSLT) destroys IX: the SUB/FUNCTION frame must be saved
         ld ix,ERAFNK
         call rt_bios
         pop ix
-        ld hl,(rt_dsize)        ; azzera la RAM del runtime e i dati del programma
+        ld hl,(rt_dsize)        ; clears the runtime RAM and the program data
         ld de,DATA_BASE-RTRAM
         add hl,de
         ld b,h
@@ -256,13 +256,13 @@ rt_start:
         ENDIF
         jp rt_prog
 
-rt_locate:                  ; DE = riga, HL = colonna
+rt_locate:                  ; DE = row, HL = column
         ld a,(SCRMODE)
         cp 2
         jr z,.gl
         cp 5
         jr c,.txt
-.gl:    ld a,e                  ; grafica: cursore di testo su celle 8x8
+.gl:    ld a,e                  ; graphics: text cursor on 8x8 cells
         dec a
         ld b,a
         call grows
@@ -299,7 +299,7 @@ rt_cls:
         ld a,(SCRMODE)
         cp 5
         jr c,.bios
-        ld a,(APAGE)            ; pagina attiva diversa da 0: la BIOS non la cancella, si usa il VDP
+        ld a,(APAGE)            ; active page other than 0: the BIOS does not clear it, the VDP is used
         or a
         jr nz,.pg
 .bios:  xor a
@@ -312,7 +312,7 @@ rt_cls:
         jr z,.g
         cp 5
         ret c
-.g:     xor a                   ; grafica: cursore di testo in alto a sinistra
+.g:     xor a                   ; graphics: text cursor at top left
         ld (TCX),a
         ld (TCY),a
         inc a
@@ -357,15 +357,15 @@ rt_putc:
 .g:     ld a,(SCRREAL)
         cp 3
         ld a,b
-        jr z,.p3                ; SCREEN 3: niente testo
-        call gputc              ; schermi grafici: disegna il carattere
+        jr z,.p3                ; SCREEN 3: no text
+        call gputc              ; graphics screens: draws the character
 .p3:        pop bc
         pop de
         pop hl
         ret
 .t:     ld a,b
 .txt:
-        push ix                 ; la BIOS (CALSLT) distrugge IX: il frame delle SUB/FUNCTION va salvato
+        push ix                 ; the BIOS (CALSLT) destroys IX: the SUB/FUNCTION frame must be saved
         ld ix,CHPUT
         call rt_bios
         pop ix
@@ -374,7 +374,7 @@ rt_putc:
         pop hl
         ret
 
-rt_pstr:                    ; HL = stringa [len][dati]
+rt_pstr:                    ; HL = string [len][data]
         ld a,(hl)
         or a
         ret z
@@ -415,28 +415,28 @@ msg_div: db 24,"Error: Division by zero"
 msg_press: db 15,"Press any key..."
         IFNDEF ROMMODE
         IFNDEF BINMODE
-rt_launch: db 0                 ; riga di comando all'avvio: vuota = lanciato dal prompt DOS, non dall'editor
+rt_launch: db 0                 ; command line at startup: empty = launched from the DOS prompt, not from the editor
         ENDIF
         ENDIF
 
 rt_end:
         call files_close_all
-        xor a                   ; niente eventi sprite quando si torna all'editor
+        xor a                   ; no sprite events when returning to the editor
         ld (0FC6Dh),a
         ld a,(SCRMODE)
         cp 2
         jr z,.nomsg
         cp 5
-        jr nc,.nomsg            ; in grafica il testo non si vede: si attende solo un tasto
+        jr nc,.nomsg            ; in graphics the text is not visible: just wait for a key
         call rt_pnl
         ld hl,msg_press
         call rt_pstr
 .nomsg:
         IFDEF BINMODE
-        call rt_keyup           ; il tasto con cui si e' lanciato BLOAD puo' essere ancora giu': non deve contare come "premi un tasto"
+        call rt_keyup           ; the key used to launch BLOAD may still be down: it must not count as "press a key"
         ENDIF
-        push ix                 ; la BIOS (CALSLT) distrugge IX: il frame delle SUB/FUNCTION va salvato
-        ld ix,0156h             ; KILBUF: i tasti battuti durante l'esecuzione non devono saltare l'attesa
+        push ix                 ; the BIOS (CALSLT) destroys IX: the SUB/FUNCTION frame must be saved
+        ld ix,0156h             ; KILBUF: keys typed during execution must not skip the wait
         call rt_bios
         pop ix
         push ix
@@ -445,28 +445,28 @@ rt_end:
         pop ix
         IFDEF BINMODE
         push ix
-        ld ix,INITXT            ; schermo di testo per il BASIC
+        ld ix,INITXT            ; text screen for BASIC
         call rt_bios
         pop ix
         ld sp,(BINTOP)
         ei
-        ret                     ; BIN: si torna a MSX-BASIC
+        ret                     ; BIN: return to MSX-BASIC
         ELSE
         IFDEF ROMMODE
-        jp 0                    ; cartuccia: dopo un tasto si riavvia la macchina
+        jp 0                    ; cartridge: after a key the machine is restarted
         ELSE
         ld a,(rt_launch)
         or a
         jr nz,.ide
-        push ix                 ; lanciato dal prompt: schermo di testo e ritorno al DOS, senza editor
+        push ix                 ; launched from the prompt: text screen and return to DOS, without the editor
         ld ix,INITXT
         call rt_bios
         pop ix
         ld c,0
         jp 5
-.ide:   call rt_keyup           ; il tasto non deve ripetersi nell'editor che si ricarica
-        call rt_cdhome          ; DOS 2: l'editor si ricarica dalla directory degli strumenti
-        ld hl,rt_name           ; riga di comando per l'editor: " NOME.BAS"
+.ide:   call rt_keyup           ; the key must not repeat in the editor being reloaded
+        call rt_cdhome          ; DOS 2: the editor is reloaded from the tools directory
+        ld hl,rt_name           ; command line for the editor: " NAME.BAS"
         ld de,0082h
         ld bc,16
         ldir
@@ -480,7 +480,7 @@ rt_end:
         inc hl
         inc b
         jr .n
-.d:     ld (hl),' '             ; " +": il sorgente non e' cambiato dopo la compilazione (l'editor puo' rilanciare NOME.COM)
+.d:     ld (hl),' '             ; " +": the source has not changed since compilation (the editor can relaunch NAME.COM)
         inc hl
         ld (hl),'+'
         inc hl
@@ -500,7 +500,7 @@ rt_end:
 
         IFNDEF ROMMODE
         IFNDEF BINMODE
-rt_cdhome:                  ; DOS 2: CHDIR in SPBHOME (directory degli strumenti); DOS 1 e variabile assente: nulla
+rt_cdhome:                  ; DOS 2: CHDIR to SPBHOME (tools directory); DOS 1 and variable absent: nothing
         ld b,0
         ld c,6Fh
         call 5
@@ -534,7 +534,7 @@ s_envhome: db "SPBHOME",0
         ENDIF
         ENDIF
 
-rt_keyup:                   ; attende che nessun tasto sia premuto (al massimo ~10 s)
+rt_keyup:                   ; waits until no key is pressed (at most ~10 s)
         ld hl,(JIFFY)
         ld (KUT),hl
 .t:     ld b,0
@@ -563,7 +563,7 @@ rt_keyup:                   ; attende che nessun tasto sia premuto (al massimo ~
         halt
         jr .t
 
-rt_zone:                    ; virgola nel PRINT: prossima zona da 14
+rt_zone:                    ; comma in PRINT: next 14-wide zone
 .l:     ld a,' '
         call rt_putc
         call curcol
@@ -584,7 +584,7 @@ rt_pint:                    ; stampa HL: segno/spazio, cifre, spazio
         ld a,' '
         jp rt_putc
 
-rt_udec:                    ; HL senza segno
+rt_udec:                    ; unsigned HL
         ld c,0
         ld de,10000
         call .dg
@@ -644,7 +644,7 @@ rt_mul:                     ; HL = HL*DE
         jr nz,.l
         ret
 
-rt_div:                     ; HL = HL\DE (con segno), DE = resto
+rt_div:                     ; HL = HL\DE (signed), DE = remainder
         ld a,d
         or e
         jp z,rt_ediv
@@ -692,7 +692,7 @@ rt_mod:                     ; HL = HL MOD DE
         ex de,hl
         ret
 
-rt_div10:                   ; HL/10 senza segno -> HL, A = resto
+rt_div10:                   ; HL/10 unsigned -> HL, A = remainder
         xor a
         ld b,16
 .l:     add hl,hl
@@ -704,7 +704,7 @@ rt_div10:                   ; HL/10 senza segno -> HL, A = resto
 .n:     djnz .l
         ret
 
-; confronto con segno: DE = sinistro, HL = destro -> Z uguale, C se DE<HL
+; signed compare: DE = left, HL = right -> Z equal, C if DE<HL
 rt_cmp:
         ld a,d
         xor h
@@ -749,7 +749,7 @@ b_le:   ld hl,-1
         ret
 
 ; ---------------------------------------------------------------- RND, indici, stringhe, input
-rt_chk:                     ; HL = indice, DE = numero elementi
+rt_chk:                     ; HL = index, DE = number of elements
         or a
         sbc hl,de
         jp nc,rt_esub
@@ -792,7 +792,7 @@ rt_rnd:                     ; HL = n -> 0..n-1
 .z:     ld hl,0
         ret
 ; ---------------------------------------------------------------- stringhe
-rt_alloc:                   ; A = lunghezza -> HL = nuova stringa (len impostata)
+rt_alloc:                   ; A = length -> HL = new string (len set)
         push de
         push bc
         ld hl,(heapp)
@@ -810,21 +810,21 @@ rt_alloc:                   ; A = lunghezza -> HL = nuova stringa (len impostata
         jp nc,rt_oom
         ld (heapp),hl
         pop hl
-        ld a,c              ; C = len+1 (inc bc): la lunghezza vera e' C-1
+        ld a,c              ; C = len+1 (inc bc): the real length is C-1
         dec a
         ld (hl),a
         pop bc
         pop de
         ret
 
-rt_scopy:                   ; HL = sorgente, DE = buffer destinazione
+rt_scopy:                   ; HL = source, DE = destination buffer
         ld c,(hl)
         ld b,0
         inc bc
         ldir
         ret
 
-rt_sdup:                    ; HL = stringa -> copia temporanea
+rt_sdup:                    ; HL = string -> temporary copy
         ld a,(hl)
         or a
         jr nz,.n
@@ -1078,7 +1078,7 @@ rt_val:                     ; HL = stringa -> intero
         ret z
         jp rt_neghl
 
-; confronto stringhe: DE = sinistra, HL = destra -> Z uguale, C se DE<HL
+; string compare: DE = left, HL = right -> Z equal, C if DE<HL
 rt_scmp:
         ld a,(de)
         ld b,a
@@ -1109,13 +1109,13 @@ rt_scmp:
 
 ; ---------------------------------------------------------------- input
 rt_inkey:
-        push ix                 ; la BIOS (CALSLT) distrugge IX: il frame delle SUB/FUNCTION va salvato
+        push ix                 ; the BIOS (CALSLT) destroys IX: the SUB/FUNCTION frame must be saved
         ld ix,CHSNS
         call rt_bios
         pop ix
         ld hl,rt_empty
         ret z
-        push ix                 ; la BIOS (CALSLT) distrugge IX: il frame delle SUB/FUNCTION va salvato
+        push ix                 ; the BIOS (CALSLT) destroys IX: the SUB/FUNCTION frame must be saved
         ld ix,CHGET
         call rt_bios
         pop ix
@@ -1127,12 +1127,12 @@ rt_inkey:
         dec hl
         ret
 
-rt_input:                   ; legge una riga -> stringa temporanea
+rt_input:                   ; reads a line -> temporary string
         ld hl,inbuf+1
         ld b,0
 .k:     push hl
         push bc
-        push ix                 ; la BIOS (CALSLT) distrugge IX: il frame delle SUB/FUNCTION va salvato
+        push ix                 ; the BIOS (CALSLT) destroys IX: the SUB/FUNCTION frame must be saved
         ld ix,CHGET
         call rt_bios
         pop ix
@@ -1174,7 +1174,7 @@ rt_input:                   ; legge una riga -> stringa temporanea
         ld hl,inbuf
         jp rt_sdup
 
-rt_color:                   ; E = primo piano, L = sfondo, H = bordo + 1 (0 = bordo come lo sfondo)
+rt_color:                   ; E = foreground, L = background, H = border + 1 (0 = border like the background)
         ld a,e
         ld (FORCLR),a
         ld a,l
@@ -1182,7 +1182,7 @@ rt_color:                   ; E = primo piano, L = sfondo, H = bordo + 1 (0 = bo
         ld a,h
         or a
         jr nz,.hb
-        ld a,l                  ; senza terzo valore il bordo e' come lo sfondo
+        ld a,l                  ; without a third value the border is like the background
         jr .pb
 .hb:    dec a
 .pb:    ld (BDRCLR),a
@@ -1206,11 +1206,11 @@ rt_wait:                    ; HL = frame da attendere
 
 rt_nyi: ret
         IFNDEF ROMMODE
-rt_farcall: ret                 ; solo per le cartucce
+rt_farcall: ret                 ; cartridges only
 rt_setbank: ret
 rt_datawin: ld hl,0
         ret
-        ENDIF                 ; voci riservate per i prossimi stadi
+        ENDIF                 ; entries reserved for future stages
 
         INCLUDE "rtgfx.asm"
         INCLUDE "rtgtext.asm"
@@ -1230,7 +1230,7 @@ rt_dbg: ret
         IFDEF BINMODE
 rt_dbg: ret
         ELSE
-rt_dbg:                         ; OPTION BREAK: CTRL+STOP riporta all'editor, solo se il programma e' stato lanciato da li
+rt_dbg:                         ; OPTION BREAK: CTRL+STOP returns to the editor, only if the program was launched from there
         ld a,(rt_launch)
         or a
         ret z
@@ -1240,7 +1240,7 @@ rt_dbg:                         ; OPTION BREAK: CTRL+STOP riporta all'editor, so
         push bc
         di
         in a,(0AAh)
-        ld b,a                  ; fila di tastiera selezionata
+        ld b,a                  ; selected keyboard row
         and 0F0h
         or 6
         out (0AAh),a
@@ -1261,7 +1261,7 @@ rt_dbg:                         ; OPTION BREAK: CTRL+STOP riporta all'editor, so
 .no:    pop bc
         ret
 .go:    pop bc
-rt_toide:                       ; chiude i file, azzera il suono e ricarica l'editor senza aspettare un tasto
+rt_toide:                       ; closes the files, silences the sound and reloads the editor without waiting for a key
         ld sp,(0006h)
         call files_close_all
         xor a

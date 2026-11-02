@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Test F5 dell'editor: apre un sorgente BASIC, F5 -> salva, compila (QBC.COM), esegue, ritorna
-all'editor; poi un sorgente con un errore di sintassi: ritorno con messaggio e cursore sulla riga.
-Tutto su MSX-DOS 1 emulato (openMSX NMS-8250), nessun aiuto dal PC."""
+"""Editor F5 test: opens a BASIC source, F5 -> saves, compiles (QBC.COM), runs, returns
+to the editor; then a source with a syntax error: return with a message and the cursor on the line.
+All on emulated MSX-DOS 1 (openMSX NMS-8250), no help from the PC."""
 import os
 import shutil
 import subprocess
@@ -38,9 +38,9 @@ def main():
     sc.text('SAMPRBAS NEW.SPB' + BS + 'r', 30.0)
     sc.dump('r0b_typed')
     sc.tap(7, 0x02, 1, 0.5)                          # F5
-    sc.t += 70.0                                     # salvataggio + QBC + compilazione + scrittura + avvio
+    sc.t += 70.0                                     # save + QBC + compilation + writing + launch
     sc.dump('r1_ran')
-    sc.tap(8, 0x01, 1, 0.5)                          # spazio: il programma termina e ricarica l'editor
+    sc.tap(8, 0x01, 1, 0.5)                          # space: the program ends and reloads the editor
     sc.t += 30.0
     sc.dump('r2_back')
     sc.t += 1.0

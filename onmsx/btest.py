@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""OPTION TARGET BIN: si compila sotto MSX-DOS (QBC -> QBCB -> NOME.BIN), poi si avvia MSX-BASIC senza DOS con il solo .BIN sul disco:
-CLEAR 200,&H83FF / BLOAD"BT.BIN",R. uso: python btest.py"""
+"""OPTION TARGET BIN: compiled under MSX-DOS (QBC -> QBCB -> NAME.BIN), then MSX-BASIC is started without DOS with only the .BIN on the disk:
+CLEAR 200,&H83FF / BLOAD"BT.BIN",R. usage: python btest.py"""
 import os
 import shutil
 import subprocess

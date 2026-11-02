@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Test della grafica (SCREEN 5-8) su openMSX / MSX-DOS 1: compila e avvia i programmi di gtests/,
-poi legge la VRAM e controlla i pixel indicati nei file .chk.
-Formato .chk: 'mode N' poi righe 'px X Y C' (il pixel vale C) oppure 'px X Y !C' (diverso da C).
-uso: python gtest.py [nome ...]"""
+"""Graphics tests (SCREEN 5-8) on openMSX / MSX-DOS 1: compiles and starts the programs in gtests/,
+then reads the VRAM and checks the pixels listed in the .chk files.
+.chk format: 'mode N' then lines 'px X Y C' (the pixel equals C) or 'px X Y !C' (different from C).
+usage: python gtest.py [name ...]"""
 import os
 import shutil
 import subprocess
@@ -99,7 +99,7 @@ def run_cases(names, wait=50.0):
 
 def main():
     build_all()
-    plus = 'GMACHINE' in os.environ              # i test p*.bas servono un MSX2+ (es. Panasonic_FS-A1ST)
+    plus = 'GMACHINE' in os.environ              # the p*.bas tests need an MSX2+ (e.g. Panasonic_FS-A1ST)
     names = sys.argv[1:] or sorted(f[:-4] for f in os.listdir(GTESTS) if f.endswith('.bas') and (plus or not f.startswith('p')))
     run_cases(names)
     for n in names:
@@ -121,12 +121,12 @@ def main():
                 i, r, g, b = (int(z) for z in w[1:5])
                 gr, rb = pal[2 * i + 1] & 7, pal[2 * i]
                 check(((rb >> 4) & 7, gr, rb & 7) == (r, g, b), f'palette {i} = {((rb >> 4) & 7, gr, rb & 7)} (atteso {(r, g, b)})')
-            elif w[0] == 'sppat1':                      # schermi 1-3: generatore a 3800h
+            elif w[0] == 'sppat1':                      # screens 1-3: generator at 3800h
                 pn, size = int(w[1]), int(w[2])
                 want = [int(z) for z in w[3:]]
                 got = list(v[0x3800 + pn * size: 0x3800 + pn * size + len(want)])
                 check(got == want, f'pattern {pn} (schermo 1-3): {got} (atteso {want})')
-            elif w[0] == 'sp1':                         # schermi 1-3: attributi a 1B00h: Y X pattern colore
+            elif w[0] == 'sp1':                         # screens 1-3: attributes at 1B00h: Y X pattern color
                 pl = int(w[1])
                 want = [int(z) for z in w[2:6]]
                 got = list(v[0x1B00 + pl * 4: 0x1B00 + pl * 4 + 4])
@@ -159,13 +159,13 @@ def main():
                 else:
                     lo, hi = int(w[6]), int(w[7])
                     check(lo <= n_ <= hi, f'rettangolo ({x0},{y0})-({x1},{y1}): {n_} pixel di colore {c} (attesi {lo}-{hi})')
-            elif w[0] == 'vb':                          # byte di VRAM (anche 64K-128K)
+            elif w[0] == 'vb':                          # VRAM byte (also 64K-128K)
                 a, want = int(w[1], 0), int(w[2], 0)
                 check(v[a] == want, f'VRAM[{a:05X}] = {v[a]} (atteso {want})')
-            elif w[0] == 'vnz':                         # almeno un byte diverso da zero in [ADDR, ADDR+LEN)
+            elif w[0] == 'vnz':                         # at least one non-zero byte in [ADDR, ADDR+LEN)
                 a, ln = int(w[1], 0), int(w[2], 0)
                 check(any(v[a:a + ln]), f'VRAM[{a:05X}..+{ln}] contiene dati: {list(v[a:a + ln])}')
-            elif w[0] == 'reg':                         # registro del VDP
+            elif w[0] == 'reg':                         # VDP register
                 rg = open(os.path.join(BUILD, n + '.reg'), 'rb').read()
                 r_, want = int(w[1]), int(w[2], 0)
                 check(rg[r_] == want, f'R#{r_} = {rg[r_]} (atteso {want})')

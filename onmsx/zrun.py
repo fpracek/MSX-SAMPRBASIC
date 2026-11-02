@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Esecuzione veloce e senza emulatore MSX: compila con QBC.COM (emulato con un BDOS finto),
-poi esegue il programma generato (BIOS finto: CHPUT/CLS/POSIT/CHGET...) e restituisce lo schermo.
-Serve per sviluppare/diagnosticare; la verifica finale resta qtest.py (openMSX vero)."""
+"""Fast execution without an MSX emulator: compiles with QBC.COM (emulated with a fake BDOS),
+then runs the generated program (fake BIOS: CHPUT/CLS/POSIT/CHGET...) and returns the screen.
+Meant for development/diagnosis; the final check remains qtest.py (real openMSX)."""
 import os
 import sys
 from z80 import Z80Machine
@@ -16,7 +16,7 @@ FILL = int(os.environ.get('ZFILL', '1'))
 
 class Msx:
     def __init__(self, files):
-        self.files = dict(files)            # NOME.EXT -> bytes
+        self.files = dict(files)            # NAME.EXT -> bytes
         self.m = Z80Machine()
         self.vlatch = None
         self.vptr = 0
@@ -31,7 +31,7 @@ class Msx:
         self.keys = []
         self.vram = {}
 
-    def _in(self, p):                       # VDP minimo: porta dati a 17 bit
+    def _in(self, p):                       # minimal VDP: 17-bit data port
         p &= 0xFF
         if p == 0x98:
             v = self.vram.get(self.vptr, 0)
@@ -70,7 +70,7 @@ class Msx:
         import random
         rnd = random.Random(FILL)
         self.w(0, bytes(rnd.randrange(256) for _ in range(0xF000)))
-        self.w(0x2D, b'')                   # ROM-ID: MSX2 (il runtime lo legge per scegliere 40/80 colonne)
+        self.w(0x2D, b'')                   # ROM-ID: MSX2 (the runtime reads it to choose 40/80 columns)
         self.w(0x100, com)
         t = (' ' + tail + '\r').encode()
         self.w(0x80, bytes([len(t)]) + t)
@@ -112,7 +112,7 @@ class Msx:
             m.a = 0
         elif c == 0x1A:
             self.dma = de
-        elif c == 0x27:                                 # lettura a blocchi, record da 1
+        elif c == 0x27:                                 # block read, 1-byte records
             nm = self.fcbname(de)
             pos = self.r16(de + 33)
             cnt = m.hl
@@ -131,7 +131,7 @@ class Msx:
             self.files[nm] = old[:pos] + data + old[pos + len(data):]
             self.w(de + 33, (pos + m.hl).to_bytes(2, 'little'))
             m.a = 0
-        elif c == 0x23:                                 # dimensione del file (record da 1 byte)
+        elif c == 0x23:                                 # file size (1-byte records)
             nm = self.fcbname(de)
             self.w(de + 33, len(self.files[nm]).to_bytes(3, 'little'))
             m.a = 0
@@ -153,7 +153,7 @@ class Msx:
             self.screen = [[' '] * 80 for _ in range(24)]
             self.row = self.col = 0
             self.w(0xF3DD, bytes([1]))
-        elif ix == 0x00C6:                              # POSIT: H = colonna, L = riga (1-based)
+        elif ix == 0x00C6:                              # POSIT: H = column, L = row (1-based)
             self.col, self.row = m.h - 1, m.l - 1
             self.w(0xF3DD, bytes([m.h]))
         elif ix in (0x0062, 0x005F):                    # CHGCLR / CHGMOD
@@ -187,7 +187,7 @@ class Msx:
         m = self.m
         steps = 0
         while True:
-            m.ticks_to_stop = 70_000                    # circa un frame: JIFFY avanza (serve a SLEEP/TIMER)
+            m.ticks_to_stop = 70_000                    # about one frame: JIFFY advances (needed by SLEEP/TIMER)
             ev = m.run()
             steps += 70_000
             if not (ev & 2):
@@ -221,7 +221,7 @@ def compile_and_run(src, name='T.BAS', qbc=None, keys=(13,)):
     res = ms.run()
     info = {'phase1': res}
     cname = name.rsplit('.', 1)[0] + '.COM'
-    if res == 'chain':                                  # il caricatore e' pronto: SAMPRBAS.COM = errore di compilazione, altrimenti NOME.COM
+    if res == 'chain':                                  # the loader is ready: SAMPRBAS.COM = compilation error, otherwise NAME.COM
         fn = ms.r(LDR + 3, 11)
         if fn.startswith(b'SAMPRBAS'):
             info['tail'] = ms.r(0x81, ms.m.memory[0x80]).decode('latin-1').strip()
@@ -250,7 +250,7 @@ def norm(l):
 if __name__ == '__main__':
     tests = os.path.join(HERE, '..', 'tests')
     qt = os.path.join(HERE, 'qtests')
-    names = sys.argv[1:] or ['t1', 't6', 't7'] + sorted(f[:-4] for f in os.listdir(qt) if f.endswith('.bas') and not f.startswith(('f', 'm')) and 'OPTION TARGET' not in open(os.path.join(qt, f)).read())   # f*: file su disco, solo su openMSX
+    names = sys.argv[1:] or ['t1', 't6', 't7'] + sorted(f[:-4] for f in os.listdir(qt) if f.endswith('.bas') and not f.startswith(('f', 'm')) and 'OPTION TARGET' not in open(os.path.join(qt, f)).read())   # f*: files on disk, openMSX only
     fails = 0
     for n in names:
         d = qt if os.path.exists(os.path.join(qt, n + '.bas')) else tests

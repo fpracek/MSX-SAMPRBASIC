@@ -1,12 +1,12 @@
 ; =====================================================================
-; WINDOW: coordinate logiche intere -> pixel della finestra (VIEW) o dello schermo
-; WINDOW [SCREEN] (x1,y1)-(x2,y2): (x1,y1) e' l'angolo logico in basso a sinistra (asse y verso l'alto);
-; con SCREEN l'asse y va verso il basso come nei pixel. Aritmetica a 32 bit con arrotondamento.
+; WINDOW: integer logical coordinates -> pixels of the window (VIEW) or of the screen
+; WINDOW [SCREEN] (x1,y1)-(x2,y2): (x1,y1) is the logical bottom-left corner (y axis pointing up);
+; with SCREEN the y axis points down as in pixels. 32-bit arithmetic with rounding.
 ; =====================================================================
-muldiv:                         ; HL = v (con segno), DE = m (0..32767), BC = d (con segno, != 0) -> HL = v * m / d
+muldiv:                         ; HL = v (signed), DE = m (0..32767), BC = d (signed, != 0) -> HL = v * m / d
         ld a,h
         xor b
-        ld (WSG),a              ; segno del risultato (bit 7)
+        ld (WSG),a              ; sign of the result (bit 7)
         bit 7,h
         call nz,rt_neghl
         bit 7,b
@@ -31,7 +31,7 @@ muldiv:                         ; HL = v (con segno), DE = m (0..32767), BC = d 
         ld hl,(W4+2)
         adc hl,hl
         ld (W4+2),hl
-        sla e                   ; bit alto del moltiplicatore
+        sla e                   ; high bit of the multiplier
         rl d
         jr nc,.nb
         ld hl,(W4)              ; acc += moltiplicando
@@ -45,7 +45,7 @@ muldiv:                         ; HL = v (con segno), DE = m (0..32767), BC = d 
 .nb:    ld hl,WCNT
         dec (hl)
         jr nz,.ml
-        ld hl,(WDV)             ; acc += d / 2 (arrotondamento)
+        ld hl,(WDV)             ; acc += d / 2 (rounding)
         srl h
         rr l
         ld de,(W4)
@@ -59,7 +59,7 @@ muldiv:                         ; HL = v (con segno), DE = m (0..32767), BC = d 
         ld (WREM),hl
         ld a,32
         ld (WCNT),a
-.dv:    ld hl,W4                ; dividendo <<= 1, il bit uscente entra nel resto
+.dv:    ld hl,W4                ; dividend <<= 1, the bit shifted out enters the remainder
         sla (hl)
         inc hl
         rl (hl)
@@ -73,7 +73,7 @@ muldiv:                         ; HL = v (con segno), DE = m (0..32767), BC = d 
         or a
         sbc hl,de
         jr c,.no
-        ld (WREM),hl            ; resto >= d: sottrae e mette 1 nel quoziente
+        ld (WREM),hl            ; remainder >= d: subtract and put 1 in the quotient
         ld hl,W4
         set 0,(hl)
         jr .nx
@@ -88,12 +88,12 @@ muldiv:                         ; HL = v (con segno), DE = m (0..32767), BC = d 
         ret z
         jp rt_neghl
 
-rt_winres:                      ; WINDOW senza argomenti: coordinate = pixel
+rt_winres:                      ; WINDOW without arguments: coordinates = pixels
         xor a
         ld (WACT),a
         ret
 
-rt_window:                      ; (GX1,GY1)-(GX2,GY2) logiche, GFLG = 1 con SCREEN (y verso il basso)
+rt_window:                      ; (GX1,GY1)-(GX2,GY2) logical, GFLG = 1 with SCREEN (y downward)
         call chk_gfx
         ld hl,GX1
         ld de,GX2
@@ -170,7 +170,7 @@ rt_wy:                          ; HL = y logica -> HL = y fisica
         add hl,de
         ret
 
-rt_wr:                          ; HL = raggio logico (come l'asse x) -> HL = raggio in pixel
+rt_wr:                          ; HL = logical radius (like the x axis) -> HL = radius in pixels
         ld a,(WACT)
         or a
         ret z

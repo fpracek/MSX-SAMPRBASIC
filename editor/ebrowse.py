@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Nomi .SPB e finestra di apertura (build .COM, MSX-DOS 1 su NMS-8250; con DOS2=1 e GMACHINE=Panasonic_FS-A1ST anche cartelle).
-Verifica: avvio con il solo nome (esistente / nuovo), estensione .SPB aggiunta, Open con la finestra, Save As a 8 caratteri."""
+"""Names of .SPB files and the open dialog (.COM build, MSX-DOS 1 on NMS-8250; with DOS2=1 and GMACHINE=Panasonic_FS-A1ST also folders).
+Checks: startup with just the name (existing / new), .SPB extension added, Open with the dialog, Save As with 8 characters."""
 import os
 import subprocess
 import sys
@@ -43,11 +43,11 @@ def main():
     sc.text('o', 1.5)
     sc.dump('b2_browser')
     if DOS2:
-        sc.tap(*ENTER, 1, 1.0)               # la prima voce e' la cartella GIOCHI
+        sc.tap(*ENTER, 1, 1.0)               # the first entry is the GIOCHI folder
         sc.dump('b3b_sub')
-        sc.tap(*ENTER, 1, 1.0)               # la prima voce di GIOCHI e' ".." : si torna alla radice
+        sc.tap(*ENTER, 1, 1.0)               # the first entry of GIOCHI is ".." : go back to the root
         sc.dump('b3c_root')
-    sc.text('Z', 0.5)                        # la lettera iniziale porta la selezione su ZULU.SPB
+    sc.text('Z', 0.5)                        # the initial letter moves the selection to ZULU.SPB
     sc.dump('b3_sel')
     sc.tap(*ENTER, 1, 3.0)
     sc.dump('b4_opened')

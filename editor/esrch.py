@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Test di cerca / sostituisci (build ROM, NMS-8250): Ctrl+F, Ctrl+G (con giro intorno al testo),
-maiuscole/minuscole dal menu, termine precedente riusato, Ctrl+T con conferma (Y/N/A),
-sostituzione con testo vuoto, voci del menu Find."""
+"""Find / replace test (ROM build, NMS-8250): Ctrl+F, Ctrl+G (with wrap-around),
+case sensitivity from the menu, previous term reused, Ctrl+T with confirmation (Y/N/A),
+replacement with empty text, Find menu items."""
 import sys
 
 import etest
@@ -35,8 +35,8 @@ def pos(m, off):
 
 
 def find_from(m, term, start, insens=True):
-    """prossima occorrenza da start con giro intorno (come il programma: il giro cerca solo
-    corrispondenze che finiscono prima del cursore). -> (offset, girato)"""
+    """next occurrence from start with wrap-around (like the program: the wrap only looks for
+    matches that end before the cursor). -> (offset, wrapped)"""
     text, t = m.text(), term
     if insens:
         text, t = text.lower(), term.lower()
@@ -70,7 +70,7 @@ def main():
     m = Model()
     NUM = 'numero 3'
 
-    # ---- Ctrl+F: prompt e prima ricerca
+    # ---- Ctrl+F: prompt and first search
     chord(sc, *CTRL_F)
     sc.dump('f1_prompt')
     sc.text(NUM + '\\r', 1.5)
@@ -82,7 +82,7 @@ def main():
     sc.dump('f4_line39')
     chord(sc, *CTRL_G)
     sc.dump('f5_wrap')
-    # ---- maiuscole/minuscole ignorate: "NUMERO 5"
+    # ---- case ignored: "NUMERO 5"
     chord(sc, *CTRL_F)
     sc.dump('f5b_prefilled')
     bs(sc, 8)
@@ -93,21 +93,21 @@ def main():
     sc.tap(*RIGHT, 2, 0.4)
     sc.text('m', 0.8)
     sc.dump('f7_toggle')
-    chord(sc, *CTRL_F)                  # termine precedente gia' scritto: Invio subito
+    chord(sc, *CTRL_F)                  # previous term already filled in: Enter right away
     sc.text('\\r', 1.2)
     sc.dump('f8_notfound')
     sc.tap(*ESC, 1, 0.4)
     sc.tap(*RIGHT, 2, 0.4)
-    sc.text('m', 0.8)                   # di nuovo senza distinzione
+    sc.text('m', 0.8)                   # case-insensitive again
     chord(sc, *CTRL_F)
     sc.text('\\r', 1.5)
     sc.dump('f9_reuse')
-    # ---- torno in cima cercando "001 riga" (gira intorno)
+    # ---- back to the top searching for "001 riga" (wraps around)
     chord(sc, *CTRL_F)
     bs(sc, 8)
     sc.text('001 riga\\r', 1.5)
     sc.dump('f10_top')
-    # ---- Ctrl+T: sostituisci "riga" con "ROW", con conferma
+    # ---- Ctrl+T: replace "riga" with "ROW", with confirmation
     chord(sc, *CTRL_T)
     bs(sc, 8)
     sc.text('riga\\r', 0.8)
@@ -120,19 +120,19 @@ def main():
     sc.dump('f12b_ask5')
     sc.text('a', 6.0)
     sc.dump('f13_done', True)
-    # ---- "ROW" -> testo vuoto, da cima
+    # ---- "ROW" -> empty text, from the top
     chord(sc, *CTRL_F)
-    bs(sc, 4)                           # cancella 'riga'
+    bs(sc, 4)                           # delete 'riga'
     sc.text('001 \\r', 1.5)
     sc.dump('f14_top')
     chord(sc, *CTRL_T)
     bs(sc, 4)
     sc.text('ROW\\r', 0.8)
     bs(sc, 3)
-    sc.text('\\r', 1.5)                 # sostituzione vuota
+    sc.text('\\r', 1.5)                 # empty replacement
     sc.text('a', 6.0)
     sc.dump('f15_empty')
-    # ---- Find... dal menu
+    # ---- Find... from the menu
     sc.tap(*ESC, 1, 0.4)
     sc.tap(*RIGHT, 2, 0.4)
     sc.text('f', 1.0)
@@ -184,7 +184,7 @@ def main():
     check(vs['cur'] == o10 + 8 and vs['curline'] == pos(m, o10)[0], f'decima pressione: curline={vs["curline"]} (atteso {pos(m, o10)[0]})')
     check(any(w for _, w in states[:9]) or w10, 'il giro intorno e\' avvenuto')
     cur = o10 + 8
-    # dopo il giro il cursore e' a riga 3; il file demo salta la riga 35 (cifre soltanto)
+    # after the wrap the cursor is on row 3; the demo file skips row 35 (digits only)
     check(not any('numero' in m.lines[34] for _ in [0]), 'riga 35 senza "numero" (spiega il giro alla nona pressione)')
     print('--- f5b/f6 ricerca senza distinzione di maiuscole')
     rows, vs = L('f5b_prefilled')
@@ -220,7 +220,7 @@ def main():
     (l1, c1) = pos(m, o1)
     check(l1 == 2 and vs['selanc'] == o1 and vs['cur'] == o1 + 4, f'prima corrispondenza: riga {l1} selanc={vs["selanc"]} cur={vs["cur"]}')
     check_view(rows, m, vs['topline'], ((l1, c1), (l1, c1 + 4)), 'f11', 1, 4)
-    # modello: y su riga 2, n su riga 3, y su riga 4, a dalla riga 5
+    # model: y on row 2, n on row 3, y on row 4, a from row 5
     count = 0
     for ln in range(2, 71):
         s = m.lines[ln - 1]

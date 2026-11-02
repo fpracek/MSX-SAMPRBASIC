@@ -1,13 +1,13 @@
 ; =====================================================================
-; Grafica bitmap MSX2: SCREEN 5-8 con il motore comandi del VDP (V9938/V9958)
-; Parametri nella RAM del runtime (vedi rtabi.inc): GX1 GY1 GX2 GY2 GCOL GFLG, ultimo punto LASTX/LASTY.
-; Colore GCOL < 0 = colore corrente (FORCLR; PRESET usa BAKCLR). Coordinate fuori schermo: ritagliate.
+; MSX2 bitmap graphics: SCREEN 5-8 using the VDP command engine (V9938/V9958)
+; Parameters in runtime RAM (see rtabi.inc): GX1 GY1 GX2 GY2 GCOL GFLG, last point LASTX/LASTY.
+; Color GCOL < 0 = current color (FORCLR; PRESET uses BAKCLR). Off-screen coordinates: clipped.
 ; =====================================================================
 CHGMOD  equ 005Fh
 RG9SAV  equ 0FFE8h
 VDPC    equ 99h
 VDPR    equ 9Bh
-GCMD    equ RTRAM+128h          ; DX DY NX NY CLR ARG CMD (11 byte, registri R#36..R#46)
+GCMD    equ RTRAM+128h          ; DX DY NX NY CLR ARG CMD (11 bytes, registers R#36..R#46)
 S1      equ RTRAM+134h
 S2      equ RTRAM+136h
 S3      equ RTRAM+138h
@@ -30,7 +30,7 @@ rt_egfx:
         ld hl,msg_gfx
         jp rt_fatal
 
-rt_screen:                      ; HL = modo 0..8 (CHGMOD del BIOS), 10..12 solo su MSX2+ (V9958)
+rt_screen:                      ; HL = mode 0..8 (BIOS CHGMOD), 10..12 only on MSX2+ (V9958)
         ld a,h
         or a
         jr nz,rt_eifc
@@ -41,7 +41,7 @@ rt_screen:                      ; HL = modo 0..8 (CHGMOD del BIOS), 10..12 solo 
         ld a,(M2FLAG)
         or a
         ld a,b
-        jr nz,.mm               ; MSX1 (TMS9918): solo SCREEN 0-3
+        jr nz,.mm               ; MSX1 (TMS9918): SCREEN 0-3 only
         cp 4
         jr nc,rt_eifc
 .mm:
@@ -57,7 +57,7 @@ rt_screen:                      ; HL = modo 0..8 (CHGMOD del BIOS), 10..12 solo 
         pop af
 .ok:    or a
         jr nz,.go
-        ld b,80                 ; SCREEN 0: testo a 80 colonne (a 40 su MSX1)
+        ld b,80                 ; SCREEN 0: 80-column text (40 on MSX1)
         ld a,(M2FLAG)
         or a
         jr nz,.w0
@@ -75,16 +75,16 @@ rt_screen:                      ; HL = modo 0..8 (CHGMOD del BIOS), 10..12 solo 
         ld (VA16),hl
         cp 10
         jr c,.n1
-        ld a,8                  ; SCREEN 10-12: come lo SCREEN 8, poi R#25 abilita YJK (V9958)
+        ld a,8                  ; SCREEN 10-12: like SCREEN 8, then R#25 enables YJK (V9958)
 .n1:    push ix
         ld ix,CHGMOD
         call rt_bios
         pop ix
         ld a,(SCRREAL)
         cp 4
-        jr nc,.nsp              ; SCREEN 4+: il CLRSPR della BIOS non ritorna (tabelle sprite del modo 2)
+        jr nc,.nsp              ; SCREEN 4+: the BIOS CLRSPR does not return (mode 2 sprite tables)
         push ix
-        ld ix,0069h             ; CLRSPR: come SCREEN del BASIC, via gli sprite lasciati nella VRAM (es. dall'editor)
+        ld ix,0069h             ; CLRSPR: like BASIC's SCREEN, removes the sprites left in VRAM (e.g. by the editor)
         call rt_bios
         pop ix
 .nsp:
@@ -108,21 +108,21 @@ rt_screen:                      ; HL = modo 0..8 (CHGMOD del BIOS), 10..12 solo 
         jr z,.m2
         cp 10
         jr c,.nm
-        ld a,8                  ; SCREEN 10-12: un byte per pixel come lo SCREEN 8
+        ld a,8                  ; SCREEN 10-12: one byte per pixel like SCREEN 8
         ld (SCRMODE),a
         jr .nm
-.m2:    ld a,2                  ; SCREEN 4 ha lo stesso layout (pattern + colori) dello SCREEN 2; SCREEN 3 (multicolore) passa da plot3
+.m2:    ld a,2                  ; SCREEN 4 has the same layout (pattern + colors) as SCREEN 2; SCREEN 3 (multicolor) goes through plot3
         ld (SCRMODE),a
 .nm:    ld a,(SCRMODE)
         cp 2
         jr z,.g
         cp 5
         jr nc,.g
-        call rt_trpon           ; schermi 1, 3, 4: solo gli sprite
+        call rt_trpon           ; screens 1, 3, 4: sprites only
         ret
 .g:     cp 5
-        jr c,.nr9               ; SCREEN 2: 192 righe
-        ld a,(RG9SAV)           ; 212 righe
+        jr c,.nr9               ; SCREEN 2: 192 lines
+        ld a,(RG9SAV)           ; 212 lines
         or 80h
         ld (RG9SAV),a
         di
@@ -135,7 +135,7 @@ rt_screen:                      ; HL = modo 0..8 (CHGMOD del BIOS), 10..12 solo 
         ld (LASTY),hl
         call gmode_init
         call view_reset
-        ld hl,(FONTPTR)         ; il font (768 byte) si riserva una volta sola in cima allo heap
+        ld hl,(FONTPTR)         ; the font (768 bytes) is reserved only once at the top of the heap
         ld a,h
         or l
         jr nz,.hf
@@ -147,12 +147,12 @@ rt_screen:                      ; HL = modo 0..8 (CHGMOD del BIOS), 10..12 solo 
         inc d
         inc d
         inc d
-        inc d                   ; almeno 1 KB di heap resta libero
+        inc d                   ; at least 1 KB of heap stays free
         or a
         sbc hl,de
         pop hl
         jr nc,.fok
-        xor a                   ; senza spazio per il font l'errore va stampato in modo testo (in grafica servirebbe il font stesso)
+        xor a                   ; without room for the font the error must be printed in text mode (in graphics the font itself would be needed)
         ld (SCRMODE),a
         push ix
         ld ix,INITXT
@@ -178,7 +178,7 @@ chk_spr:                        ; sprite: SCREEN 1-8
         jp nc,rt_egfx
         ret
 
-gheight:                        ; -> BC = righe dello schermo (192 in SCREEN 2, 212 in SCREEN 5-8)
+gheight:                        ; -> BC = screen lines (192 in SCREEN 2, 212 in SCREEN 5-8)
         ld a,(SCRMODE)
         ld bc,212
         cp 2
@@ -186,7 +186,7 @@ gheight:                        ; -> BC = righe dello schermo (192 in SCREEN 2, 
         ld bc,192
         ret
 
-grows:                          ; -> A = righe di testo in grafica (24 in SCREEN 2, 26 in SCREEN 5-8)
+grows:                          ; -> A = text rows in graphics (24 in SCREEN 2, 26 in SCREEN 5-8)
         ld a,(SCRMODE)
         cp 2
         ld a,26
@@ -204,14 +204,14 @@ chk_gfx:                        ; SCREEN 2 e 5-8
         jp nc,rt_egfx
         ret
 
-chk_gfx_nm:                     ; come chk_gfx, ma non per lo SCREEN 3 (PAINT, GET, PUT non lo supportano)
+chk_gfx_nm:                     ; like chk_gfx, but not for SCREEN 3 (PAINT, GET, PUT do not support it)
         call chk_gfx
         ld a,(SCRREAL)
         cp 3
         ret nz
         jp rt_egfx
 
-gwidth:                         ; -> BC = larghezza dello schermo
+gwidth:                         ; -> BC = screen width
         ld a,(SCRMODE)
         ld bc,256
         cp 6
@@ -221,7 +221,7 @@ gwidth:                         ; -> BC = larghezza dello schermo
         ld bc,512
 .r:     ret
 
-in_range:                       ; HL = x, DE = y: C se dentro la finestra di ritaglio (VIEW); senza segno dopo la sottrazione del minimo
+in_range:                       ; HL = x, DE = y: C if inside the clipping window (VIEW); unsigned after subtracting the minimum
         push hl
         push de
         ld bc,(VX1)
@@ -248,7 +248,7 @@ in_range:                       ; HL = x, DE = y: C se dentro la finestra di rit
         or a
         ret
 
-vdp_wait:                       ; attende la fine del comando (S#2 bit 0)
+vdp_wait:                       ; waits for the command to finish (S#2 bit 0)
         di
         ld a,2
         out (VDPC),a
@@ -264,21 +264,21 @@ vdp_wait:                       ; attende la fine del comando (S#2 bit 0)
         ei
         ret
 
-vdp_cmd:                        ; esegue il comando descritto in GCMD
+vdp_cmd:                        ; executes the command described in GCMD
         call vdp_wait
         di
         ld a,36
         out (VDPC),a
         ld a,80h+17
         out (VDPC),a
-        ld a,(GOP)              ; operatore logico (solo per i comandi LINE/PSET/LMMV/LMMM)
+        ld a,(GOP)              ; logical operator (only for the LINE/PSET/LMMV/LMMM commands)
         ld hl,GCMD+10
         or (hl)
         ld (hl),a
         ld hl,GCMD
         ld bc,0200h+VDPR        ; DX
         otir
-        ld e,(hl)               ; DY + scostamento della pagina attiva
+        ld e,(hl)               ; DY + offset of the active page
         inc hl
         ld d,(hl)
         inc hl
@@ -304,14 +304,14 @@ gcolor:                         ; A = colore effettivo
 .c:     ld a,l
         ret
 
-gprep:                          ; colore e argomento del comando in GCMD
+gprep:                          ; color and command argument in GCMD
         call gcolor
         ld (GCMD+8),a
         xor a
         ld (GCMD+9),a
         ret
 
-gplot:                          ; HL = x, DE = y: PSET ritagliato con il colore di GCMD
+gplot:                          ; HL = x, DE = y: clipped PSET with the color from GCMD
         call in_range
         ret nc
         ld a,(SCRMODE)
@@ -342,7 +342,7 @@ rt_gpset:
         ld de,(GY1)
         jp gplot
 
-rt_gpoint:                      ; (GX1,GY1) -> HL = colore, -1 fuori dallo schermo
+rt_gpoint:                      ; (GX1,GY1) -> HL = color, -1 if off-screen
         call chk_gfx
         ld hl,(GX1)
         ld de,(GY1)
@@ -401,7 +401,7 @@ rt_gpoint:                      ; (GX1,GY1) -> HL = colore, -1 fuori dallo scher
         ei
         ret
 
-;   (sortp) HL = &a, DE = &b (parole): scambia se b < a (con segno)
+;   (sortp) HL = &a, DE = &b (words): swaps if b < a (signed)
 sortp:
         push hl
         push de
@@ -416,7 +416,7 @@ sortp:
         ld l,c                  ; HL = a
         push bc
         push de
-        call rt_cmp             ; DE = b, HL = a: C se b < a
+        call rt_cmp             ; DE = b, HL = a: C if b < a
         pop de
         pop bc
         jr nc,.n
@@ -433,7 +433,7 @@ sortp:
         pop hl
         ret
 
-rect_draw:                      ; S1,S2,S3,S4 = x1,y1,x2,y2: riempie il rettangolo ritagliato (colore in GCMD+8)
+rect_draw:                      ; S1,S2,S3,S4 = x1,y1,x2,y2: fills the clipped rectangle (color in GCMD+8)
         ld hl,S1
         ld de,S3
         call sortp
@@ -442,7 +442,7 @@ rect_draw:                      ; S1,S2,S3,S4 = x1,y1,x2,y2: riempie il rettango
         call sortp
         ld de,(S1)              ; x1 < VX1 -> VX1
         ld hl,(VX1)
-        call rt_cmp             ; C se x1 < VX1
+        call rt_cmp             ; C if x1 < VX1
         jr nc,.a
         ld hl,(VX1)
         ld (S1),hl
@@ -454,7 +454,7 @@ rect_draw:                      ; S1,S2,S3,S4 = x1,y1,x2,y2: riempie il rettango
         ld (S2),hl
 .b:     ld de,(VX2)             ; x2 > VX2 -> VX2
         ld hl,(S3)
-        call rt_cmp             ; C se VX2 < x2
+        call rt_cmp             ; C if VX2 < x2
         jr nc,.c
         ld hl,(VX2)
         ld (S3),hl
@@ -464,7 +464,7 @@ rect_draw:                      ; S1,S2,S3,S4 = x1,y1,x2,y2: riempie il rettango
         jr nc,.d
         ld hl,(VY2)
         ld (S4),hl
-.d:     ld de,(S3)              ; vuoto se x2 < x1 oppure y2 < y1
+.d:     ld de,(S3)              ; empty if x2 < x1 or y2 < y1
         ld hl,(S1)
         call rt_cmp
         ret c
@@ -518,7 +518,7 @@ rt_gline:                       ; (GX1,GY1)-(GX2,GY2), GFLG: 0 linea, 1 riquadro
         ld hl,(GY2)
         ld (S4),hl
         jp rect_draw
-.box:   ld hl,(GX1)             ; riquadro: quattro lati sottili (rect_draw modifica S1..S4: si ricaricano)
+.box:   ld hl,(GX1)             ; box: four thin sides (rect_draw modifies S1..S4: they are reloaded)
         ld (S1),hl
         ld hl,(GX2)
         ld (S3),hl
@@ -552,7 +552,7 @@ rt_gline:                       ; (GX1,GY1)-(GX2,GY2), GFLG: 0 linea, 1 riquadro
         jp rect_draw
 .line:  ld a,(SCRMODE)
         cp 2
-        jp z,.soft              ; SCREEN 2: niente motore dei comandi
+        jp z,.soft              ; SCREEN 2: no command engine
         ld hl,(GX1)
         ld de,(GY1)
         call in_range
@@ -561,7 +561,7 @@ rt_gline:                       ; (GX1,GY1)-(GX2,GY2), GFLG: 0 linea, 1 riquadro
         ld de,(GY2)
         call in_range
         jr nc,.soft
-        ld c,0                  ; comando LINE hardware
+        ld c,0                  ; hardware LINE command
         ld hl,(GX2)
         ld de,(GX1)
         or a
@@ -604,7 +604,7 @@ rt_gline:                       ; (GX1,GY1)-(GX2,GY2), GFLG: 0 linea, 1 riquadro
         ld a,70h                ; LINE
         ld (GCMD+10),a
         jp vdp_cmd
-.soft:  ld hl,(GX1)             ; Bresenham con ritaglio punto per punto
+.soft:  ld hl,(GX1)             ; Bresenham with point-by-point clipping
         ld (S1),hl
         ld hl,(GY1)
         ld (S2),hl
@@ -653,7 +653,7 @@ rt_gline:                       ; (GX1,GY1)-(GX2,GY2), GFLG: 0 linea, 1 riquadro
         ld (S8),hl              ; e2 = 2*err
         ld de,(S8)
         ld hl,(S4)
-        call rt_cmp             ; C se e2 < dy
+        call rt_cmp             ; C if e2 < dy
         jr c,.skx
         ld hl,(S7)
         ld de,(S4)
@@ -665,7 +665,7 @@ rt_gline:                       ; (GX1,GY1)-(GX2,GY2), GFLG: 0 linea, 1 riquadro
         ld (S1),hl
 .skx:   ld de,(S3)
         ld hl,(S8)
-        call rt_cmp             ; C se dx < e2
+        call rt_cmp             ; C if dx < e2
         jr c,.sky
         ld hl,(S7)
         ld de,(S3)
@@ -677,7 +677,7 @@ rt_gline:                       ; (GX1,GY1)-(GX2,GY2), GFLG: 0 linea, 1 riquadro
         ld (S2),hl
 .sky:   jr .l
 
-pl:                             ; BC = scostamento x, DE = scostamento y dal centro (GX1,GY1)
+pl:                             ; BC = x offset, DE = y offset from the center (GX1,GY1)
         ld hl,(GX1)
         add hl,bc
         push hl
@@ -711,7 +711,7 @@ rt_gcircle:                     ; centro (GX1,GY1), raggio GX2 (GFLG = 1: arco/e
         ld (S3),hl              ; d = 1 - r
 .l:     ld de,(S1)
         ld hl,(S2)
-        call rt_cmp             ; C se x < y: fine
+        call rt_cmp             ; C if x < y: done
         ret c
         ld hl,(S1)
         call rt_neghl
@@ -755,7 +755,7 @@ rt_gcircle:                     ; centro (GX1,GY1), raggio GX2 (GFLG = 1: arco/e
         inc hl
         ld (S3),hl
         jp .l
-.dec:   ld hl,(S1)              ; altrimenti x--, d += 2(y - x) + 1
+.dec:   ld hl,(S1)              ; otherwise x--, d += 2(y - x) + 1
         dec hl
         ld (S1),hl
         ex de,hl
@@ -769,14 +769,14 @@ rt_gcircle:                     ; centro (GX1,GY1), raggio GX2 (GFLG = 1: arco/e
         ld (S3),hl
         jp .l
 
-; ---------------------------------------------------------------- SCREEN 2 (grafica MSX1: pattern 8x1 con colore per gruppo)
-pix_addr2:                      ; HL = x, DE = y -> (P2OFF) = scostamento nelle tabelle, (P2MSK) = maschera del bit
+; ---------------------------------------------------------------- SCREEN 2 (MSX1 graphics: 8x1 patterns with color per group)
+pix_addr2:                      ; HL = x, DE = y -> (P2OFF) = offset into the tables, (P2MSK) = bit mask
         ld a,e
         rrca
         rrca
         rrca
         and 1Fh
-        ld b,a                  ; y >> 3 (byte alto)
+        ld b,a                  ; y >> 3 (high byte)
         ld a,e
         and 7
         ld c,a
@@ -797,7 +797,7 @@ pix_addr2:                      ; HL = x, DE = y -> (P2OFF) = scostamento nelle 
 .d:     ld (P2MSK),a
         ret
 
-plot2:                          ; HL = x, DE = y (dentro lo schermo): punto con il colore di GCMD+8
+plot2:                          ; HL = x, DE = y (inside the screen): point with the color from GCMD+8
         ld a,(SCRREAL)
         cp 3
         jp z,plot3
@@ -809,7 +809,7 @@ plot2:                          ; HL = x, DE = y (dentro lo schermo): punto con 
         xor a
         call vram_set
         in a,(VDPD)
-        ld b,a                  ; B = byte dei colori (primo piano | sfondo)
+        ld b,a                  ; B = color byte (foreground | background)
         pop hl
         ld a,(GCMD+8)
         and 0Fh
@@ -821,12 +821,12 @@ plot2:                          ; HL = x, DE = y (dentro lo schermo): punto con 
         rrca
         and 0Fh
         cp c
-        jr z,.setb              ; colore = primo piano: accende il bit
+        jr z,.setb              ; color = foreground: sets the bit
         ld a,b
         and 0Fh
         cp c
-        jr z,.clrb              ; colore = sfondo: spegne il bit
-        ld a,c                  ; colore nuovo: diventa il primo piano del gruppo
+        jr z,.clrb              ; color = background: clears the bit
+        ld a,c                  ; new color: becomes the foreground of the group
         rlca
         rlca
         rlca
@@ -877,7 +877,7 @@ plot2:                          ; HL = x, DE = y (dentro lo schermo): punto con 
         out (VDPD),a
         ret
 
-getpix2:                        ; HL = x, DE = y -> A = colore del pixel
+getpix2:                        ; HL = x, DE = y -> A = pixel color
         ld a,(SCRREAL)
         cp 3
         jp z,getpix3
@@ -891,7 +891,7 @@ getpix2:                        ; HL = x, DE = y -> A = colore del pixel
         ld b,a
         ld a,(P2MSK)
         and b
-        ld d,a                  ; D != 0 se il bit e' acceso
+        ld d,a                  ; D != 0 if the bit is set
         ld hl,(P2OFF)
         ld bc,(GRPCOL)
         add hl,bc
@@ -910,7 +910,7 @@ getpix2:                        ; HL = x, DE = y -> A = colore del pixel
 .bg:    and 0Fh
         ret
 
-pix_addr3:                      ; SCREEN 3: HL = x, DE = y -> HL = byte del generatore, C bit 2 = 0 se nibble alto (pixel a sinistra)
+pix_addr3:                      ; SCREEN 3: HL = x, DE = y -> HL = generator byte, C bit 2 = 0 if high nibble (left pixel)
         ld a,l
         and 4
         ld c,a
@@ -931,11 +931,11 @@ pix_addr3:                      ; SCREEN 3: HL = x, DE = y -> HL = byte del gene
         and 0F8h
         or b
         ld l,a
-        ld de,(0F3D5h)          ; MLTCGP: generatore dei pattern del multicolore
+        ld de,(0F3D5h)          ; MLTCGP: multicolor pattern generator
         add hl,de
         ret
 
-plot3:                          ; SCREEN 3: blocco 4x4 con il colore di GCMD+8
+plot3:                          ; SCREEN 3: 4x4 block with the color from GCMD+8
         call pix_addr3
         push bc
         push hl
@@ -986,7 +986,7 @@ getpix3:                        ; SCREEN 3: HL = x, DE = y -> A = colore
 .lo:    and 0Fh
         ret
 
-rect_fill2:                     ; S1..S4 = rettangolo (ordinato, ritagliato): punto per punto
+rect_fill2:                     ; S1..S4 = rectangle (sorted, clipped): point by point
         ld hl,(S2)
         ld (S8),hl
 .row:   ld hl,(S1)
@@ -1014,7 +1014,7 @@ rect_fill2:                     ; S1..S4 = rettangolo (ordinato, ritagliato): pu
         jr .row
 
 ; ---------------------------------------------------------------- VIEW
-view_reset:                     ; finestra di ritaglio = schermo intero
+view_reset:                     ; clipping window = full screen
         ld hl,0
         ld (VX1),hl
         ld (VY1),hl
@@ -1032,9 +1032,9 @@ rt_viewr:
         call chk_gfx
         jr view_reset
 
-rt_view:                        ; VIEW (GX1,GY1)-(GX2,GY2): imposta la finestra (ritagliata allo schermo)
+rt_view:                        ; VIEW (GX1,GY1)-(GX2,GY2): sets the window (clipped to the screen)
         call chk_gfx
-        call view_reset         ; (l'ordinamento e il ritaglio si fanno sull'intero schermo)
+        call view_reset         ; (sorting and clipping are done against the whole screen)
         ld hl,(GX1)
         ld (S1),hl
         ld hl,(GY1)

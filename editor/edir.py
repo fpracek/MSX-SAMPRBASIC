@@ -38,11 +38,11 @@ def main():
     sc.t += 80.0
     sc.do('set ::nopatch 1', 0.1)
     sc.dump('d2_ran')
-    sc.tap(8, 0x01, 1, 0.5)                          # spazio: il programma finisce e ricarica l'editor
+    sc.tap(8, 0x01, 1, 0.5)                          # space: the program ends and reloads the editor
     sc.t += 40.0
     sc.do('unset ::nopatch', 0.1)
     sc.dump('d3_back')
-    ecom.chord(sc, *ecom.CTRL_O, gap=1.5)            # la finestra di apertura mostra la directory corrente
+    ecom.chord(sc, *ecom.CTRL_O, gap=1.5)            # the open dialog shows the current directory
     sc.dump('d4_browser')
     tcl = os.path.join(BUILD, 'edir.tcl')
     open(tcl, 'w').write(sc.script())

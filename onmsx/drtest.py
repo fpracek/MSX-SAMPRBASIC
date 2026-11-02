@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Debugger su cartuccia: compila dtests/<nome>.bas (OPTION TARGET ...) e avvia la ROM con i tasti di dtests/<nome>.keys.
-uso: python drtest.py nome"""
+"""Debugger on cartridge: compiles dtests/<name>.bas (OPTION TARGET ...) and starts the ROM with the keys from dtests/<name>.keys.
+usage: python drtest.py name"""
 import os, shutil, subprocess, sys
 import qtest
 from qtest import BUILD, DISK, HERE

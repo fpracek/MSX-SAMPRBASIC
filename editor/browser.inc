@@ -1,6 +1,6 @@
-; ---------------------------------------------------------------- Open: finestra dei file .SPB (e cartelle su DOS 2)
-; Area di lavoro nel gap: [0] numero voci, [1] selezione, [2] prima voce visibile, [3] colonne, [4] DOS 2,
-; [5] temporaneo, [6..] percorso corrente (ASCIIZ, 74 byte), poi le voci da 14 byte: flag (1 = cartella) + nome 8.3 ASCIIZ.
+; ---------------------------------------------------------------- Open: .SPB file window (and folders on DOS 2)
+; Work area in the gap: [0] entry count, [1] selection, [2] first visible entry, [3] columns, [4] DOS 2,
+; [5] temporary, [6..] current path (ASCIIZ, 74 bytes), then the 14-byte entries: flag (1 = folder) + 8.3 ASCIIZ name.
 BW_ENT  equ 80
 BW_MAX  equ 120
 bw_cnt  equ 0
@@ -15,7 +15,7 @@ k_open:
         ld a,0Fh
         call confirm_discard
         ret c
-        ld hl,(len)             ; il gap in fondo al testo e' l'area di lavoro
+        ld hl,(len)             ; the gap at the end of the text is the work area
         call gap_to_ofs
         ld hl,(gsz)
         ld de,2048
@@ -37,8 +37,8 @@ k_open:
         ld (msgptr),hl
         ret
 
-bw_run:                         ; C = annullato; altrimenti fname = file scelto
-        call kw_reset           ; niente colori delle parole chiave sotto la finestra
+bw_run:                         ; C = cancelled; otherwise fname = chosen file
+        call kw_reset           ; no keyword colors under the window
         ld ix,(hscr)
         ld a,(sw)
         ld b,0
@@ -49,7 +49,7 @@ bw_run:                         ; C = annullato; altrimenti fname = file scelto
 .nd:    ld (ix+bw_ncol),b
         ld (ix+bw_dos2),0
         ld b,0
-        ld c,6Fh                ; _DOSVER: solo il DOS 2 risponde con A=0 e B>=2
+        ld c,6Fh                ; _DOSVER: only DOS 2 answers with A=0 and B>=2
         call BDOS
         or a
         jr nz,.d1
@@ -89,7 +89,7 @@ bw_run:                         ; C = annullato; altrimenti fname = file scelto
         cp 'z'+1
         jr nc,.key
         sub 20h
-.ju:    ld b,a                  ; lettera iniziale: salta alla prima voce che comincia cosi'
+.ju:    ld b,a                  ; initial letter: jump to the first entry starting with it
         ld c,0
 .jl:    ld a,(ix+bw_cnt)
         cp c
@@ -166,7 +166,7 @@ bw_run:                         ; C = annullato; altrimenti fname = file scelto
 .cancel: scf
         ret
 
-bw_cap:                         ; A = voci per pagina (22 righe x colonne)
+bw_cap:                         ; A = entries per page (22 rows x columns)
         ld b,(ix+bw_ncol)
         xor a
 .l:     add a,22
@@ -188,7 +188,7 @@ bw_entry:                       ; A = indice -> HL = voce
         add hl,de
         ret
 
-bw_add:                         ; HL = nome ASCIIZ, A = flag (1 = cartella)
+bw_add:                         ; HL = ASCIIZ name, A = flag (1 = folder)
         push hl
         ld ix,(hscr)
         ld (ix+bw_tmp),a
@@ -219,7 +219,7 @@ bw_add:                         ; HL = nome ASCIIZ, A = flag (1 = cartella)
 bw_scan:
         call bw_scan0
         ; fall through
-bw_sort:                        ; cartelle prima, poi file; ordine alfabetico (bubble sort sulle voci da 14 byte)
+bw_sort:                        ; folders first, then files; alphabetical order (bubble sort on the 14-byte entries)
         ld ix,(hscr)
         ld a,(ix+bw_cnt)
         cp 2
@@ -282,7 +282,7 @@ bw_sort:                        ; cartelle prima, poi file; ordine alfabetico (b
         djnz .pass
         ret
 
-bw_scan0:                       ; elenca cartelle e file .SPB della directory corrente
+bw_scan0:                       ; list folders and .SPB files of the current directory
         ld ix,(hscr)
         ld (ix+bw_cnt),0
         ld (ix+bw_path),0
@@ -351,7 +351,7 @@ bw_scan0:                       ; elenca cartelle e file .SPB della directory co
         ld de,iobuf
         ld c,F_DMA
         call BDOS
-        ld c,11h                ; ricerca del primo
+        ld c,11h                ; search for the first
 .s1:    ld de,fcb
         call BDOS
         cp 0FFh
@@ -369,10 +369,10 @@ bw_scan0:                       ; elenca cartelle e file .SPB della directory co
         ld hl,msgbuf
         xor a
         call bw_add
-        ld c,12h                ; ricerca del successivo
+        ld c,12h                ; search for the next one
         jr .s1
 
-bw_fmt:                         ; HL = voce di directory (nome 8+3 in forma FCB) -> "NOME.SPB" in msgbuf
+bw_fmt:                         ; HL = directory entry (8+3 name in FCB form) -> "NAME.SPB" in msgbuf
         push hl
         inc hl
         ld de,msgbuf
@@ -422,7 +422,7 @@ bw_draw:
         ld hl,msgbuf
         call show_row0
         ld ix,(hscr)
-        call bw_cap             ; pagina che contiene la selezione
+        call bw_cap             ; page containing the selection
         ld c,a
         ld a,(ix+bw_sel)
         ld b,0
@@ -436,7 +436,7 @@ bw_draw:
         ld a,d
         jr .t
 .td:    ld (ix+bw_top),b
-        ld (ix+bw_tmp),b        ; indice della voce che si sta disegnando
+        ld (ix+bw_tmp),b        ; index of the entry being drawn
         ld d,1
 .row:   push de
         ld hl,rowbuf

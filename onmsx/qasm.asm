@@ -1,41 +1,41 @@
 ; =====================================================================
-; QASM.OVL - assembler Z80 in linea (overlay del compilatore, caricato a 8000h)
-; Il compilatore lo carica quando il sorgente contiene "__ASM" e lo chiama con
-;   HL = SRC (inizio sorgente), BC = SRCMAX (byte disponibili)
-; Ogni blocco  __ASM ... __ENDASM  si riscrive sul posto in righe "# elementi": una riga per
-; ogni riga del blocco (la numerazione delle righe non cambia). Elementi (separati da virgole):
+; QASM.OVL - inline Z80 assembler (compiler overlay, loaded at 8000h)
+; The compiler loads it when the source contains "__ASM" and calls it with
+;   HL = SRC (start of source), BC = SRCMAX (bytes available)
+; Each block  __ASM ... __ENDASM  is rewritten in place as "# elements" lines: one line for
+; each line of the block (line numbering does not change). Elements (comma-separated):
 ;   n          byte
-;   n:NOME     byte (codice di JP/CALL) + indirizzo dell'etichetta BASIC NOME
-;   NOME[+k]   indirizzo (word) della variabile BASIC NOME
-;   +k         indirizzo (word) = inizio del blocco + k  (etichette locali)
-; La prima riga porta "# *" (inizio blocco).
-; Ritorno: CF = 0 ok; CF = 1: A = errore (17 sintassi, 18 valore, 19 simbolo/blocco, 10 sorgente
-; troppo grande), DE = riga.
+;   n:NAME     byte (JP/CALL opcode) + address of the BASIC label NAME
+;   NAME[+k]   address (word) of the BASIC variable NAME
+;   +k         address (word) = start of the block + k  (local labels)
+; The first line carries "# *" (block start).
+; Return: CF = 0 ok; CF = 1: A = error (17 syntax, 18 value, 19 symbol/block, 10 source
+; too large), DE = line.
 ; =====================================================================
 ER_SYN  equ 17
 ER_RNG  equ 18
 ER_SYM  equ 19
 ER_BIG  equ 10
 
-TMP     equ 0A000h              ; uscita del blocco
+TMP     equ 0A000h              ; block exit
 TMPEND  equ 0BF00h
 VARS    equ 9800h
-LBUF    equ VARS                ; riga corrente (256)
-OP1BUF  equ VARS+101h           ; operando 1 (255) preceduto da una sentinella
+LBUF    equ VARS                ; current line (256)
+OP1BUF  equ VARS+101h           ; operand 1 (255) preceded by a sentinel
 OP2BUF  equ VARS+201h
-OP1     equ VARS+300h           ; struttura operando (19 byte)
+OP1     equ VARS+300h           ; operand structure (19 bytes)
 OP2     equ VARS+320h
-SYMTAB  equ VARS+340h           ; 64 simboli x 15 byte
+SYMTAB  equ VARS+340h           ; 64 symbols x 15 bytes
 SYMMAX  equ 64
 SV      equ VARS+0700h          ; variabili scalari
 
-O_T     equ 0                   ; tipo
-O_C     equ 1                   ; codice registro / condizione
+O_T     equ 0                   ; type
+O_C     equ 1                   ; register code / condition
 O_P     equ 2                   ; prefisso DD/FD
-O_D     equ 3                   ; spostamento
-O_V     equ 4                   ; valore (word)
-O_K     equ 6                   ; 0 assoluto, 1 relativo al blocco, 2 esterno
-O_N     equ 7                   ; nome esterno (12)
+O_D     equ 3                   ; displacement
+O_V     equ 4                   ; value (word)
+O_K     equ 6                   ; 0 absolute, 1 block-relative, 2 external
+O_N     equ 7                   ; external name (12)
 
 T_NONE  equ 0
 T_R8    equ 1
@@ -153,7 +153,7 @@ skipsp:
 .s:     inc hl
         jr skipsp
 
-matchk:                         ; HL = testo, DE = modello maiuscolo 0-terminato: Z se coincide (HL avanza)
+matchk:                         ; HL = text, DE = 0-terminated uppercase pattern: Z if it matches (HL advances)
         ld a,(de)
         or a
         ret z
@@ -166,7 +166,7 @@ matchk:                         ; HL = testo, DE = modello maiuscolo 0-terminato
         inc de
         jr matchk
 
-isid:                           ; A = carattere: CF = 1 se e' un carattere di identificatore
+isid:                           ; A = character: CF = 1 if it is an identifier character
         cp '0'
         jr c,.sp
         cp '9'+1
@@ -189,7 +189,7 @@ isid:                           ; A = carattere: CF = 1 se e' un carattere di id
 .y:     scf
         ret
 
-nextline:                       ; HL = inizio della riga successiva; lno++
+nextline:                       ; HL = start of the next line; lno++
 .l:     ld a,(hl)
         or a
         ret z
@@ -201,7 +201,7 @@ nextline:                       ; HL = inizio della riga successiva; lno++
         ld (lno),de
         ret
 
-is_asm:                         ; HL = inizio riga: Z se la riga e' "__ASM" o "OPTION ASM"
+is_asm:                         ; HL = start of line: Z if the line is "__ASM" or "OPTION ASM"
         call skipsp
         push hl
         ld de,k_asm
@@ -230,7 +230,7 @@ k_asm:  db "__ASM",0
 k_end:  db "__ENDASM",0
 k_equ:  db "EQU",0
 
-doblock:                        ; HL = inizio della riga __ASM -> HL = punto dopo il testo riscritto
+doblock:                        ; HL = start of the __ASM line -> HL = point after the rewritten text
         ld (bstart),hl
         ld de,(lno)
         ld (blno),de
@@ -247,7 +247,7 @@ doblock:                        ; HL = inizio della riga __ASM -> HL = punto dop
         ld a,(hl)
         and 0DFh
         cp 'O'
-        jr z,.eof               ; OPTION ASM: il blocco arriva fino alla fine del file
+        jr z,.eof               ; OPTION ASM: the block extends to the end of the file
         ld de,(blno)
         ld (curl),de
         jp err_sym              ; __ENDASM mancante
@@ -344,7 +344,7 @@ runpass:
         ld de,(blno)
         ld (lno),de
         ld hl,(bstart)
-        call getline            ; riga __ASM
+        call getline            ; __ASM line
         ld a,(pass)
         cp 2
         jr nz,.l
@@ -368,7 +368,7 @@ runpass:
         jr .l
 
 ; ---------------------------------------------------------------- uscita
-wchar:                          ; A -> uscita (solo seconda passata)
+wchar:                          ; A -> output (second pass only)
         push hl
         push af
         ld a,(pass)
@@ -393,7 +393,7 @@ weol:
         ld a,10
         jp wchar
 
-sepchar:                        ; ' ' prima del primo elemento, ',' dopo
+sepchar:                        ; ' ' before the first element, ',' after
         ld a,(itfirst)
         or a
         ld a,','
@@ -403,7 +403,7 @@ sepchar:                        ; ' ' prima del primo elemento, ',' dopo
         ld a,' '
 .c:     jp wchar
 
-wdec:                           ; HL senza segno -> testo decimale
+wdec:                           ; unsigned HL -> decimal text
         push bc
         push de
         push hl
@@ -468,7 +468,7 @@ pcadd:                          ; pc += A
         pop hl
         ret
 
-emitv:                          ; IX = operando: word secondo il tipo di valore
+emitv:                          ; IX = operand: word according to the value type
         ld a,(ix+O_K)
         or a
         jr z,.abs
@@ -514,7 +514,7 @@ emitv:                          ; IX = operando: word secondo il tipo di valore
         ld a,(ix+O_V+1)
         jp emb
 
-emjump:                         ; A = codice operativo, IX = indirizzo: JP/CALL (anche verso etichette BASIC)
+emjump:                         ; A = opcode, IX = address: JP/CALL (also to BASIC labels)
         ld c,a
         ld a,(ix+O_K)
         cp 2
@@ -544,7 +544,7 @@ emjump:                         ; A = codice operativo, IX = indirizzo: JP/CALL 
         inc hl
         jr .nl
 
-emp:                            ; prefisso DD/FD se c'e'
+emp:                            ; DD/FD prefix if present
         ld a,(ix+O_P)
         or a
         ret z
@@ -555,7 +555,7 @@ emdisp:
         ret z
         ld a,(ix+O_D)
         jp emb
-emb8:                           ; byte immediato (-128..255)
+emb8:                           ; immediate byte (-128..255)
         ld a,(ix+O_K)
         or a
         jp nz,err_syn
@@ -570,8 +570,8 @@ emb8:                           ; byte immediato (-128..255)
 .ok:    ld a,(ix+O_V)
         jp emb
 
-; ---------------------------------------------------------------- riga
-getline:                        ; HL = riga di ingresso -> LBUF (maiuscole, senza commento); HL = riga successiva
+; ---------------------------------------------------------------- line
+getline:                        ; HL = input line -> LBUF (uppercase, no comment); HL = next line
         ld de,(lno)
         ld (curl),de
         inc de
@@ -598,7 +598,7 @@ getline:                        ; HL = riga di ingresso -> LBUF (maiuscole, senz
         jr z,.dq
         cp 27h
         jr nz,.up
-        ld a,e                  ; apostrofo: carattere letterale se non segue un carattere alfanumerico (AF')
+        ld a,e                  ; apostrophe: literal character if not followed by an alphanumeric character (AF')
         or a
         jr z,.lit
         dec de
@@ -657,7 +657,7 @@ getline:                        ; HL = riga di ingresso -> LBUF (maiuscole, senz
         ld (de),a
         ret
 
-rdtok:                          ; HL -> TOKBUF (carattere di identificatore, max 11); B = lunghezza
+rdtok:                          ; HL -> TOKBUF (identifier character, max 11); B = length
         ld de,tokbuf
         ld b,0
 .l:     ld a,(hl)
@@ -700,7 +700,7 @@ asmline:
         ldir
         ld hl,LBUF
         call skipsp
-        call skiptok            ; HL dopo T1
+        call skiptok            ; HL after T1
         ld (afterT1),hl
         call skipsp
         cp ':'
@@ -793,14 +793,14 @@ asmline:
         call defsym
 .eol:   jp weol
 
-skiptok:                        ; HL oltre un token di identificatore
+skiptok:                        ; HL past an identifier token
 .l:     ld a,(hl)
         call isid
         ret nc
         inc hl
         jr .l
 
-tokeq:                          ; TOKBUF = stringa DE: Z se uguali; DE sul terminatore
+tokeq:                          ; TOKBUF = string DE: Z if equal; DE on the terminator
         push hl
         ld hl,tokbuf
 .l:     ld a,(de)
@@ -821,7 +821,7 @@ tokeq:                          ; TOKBUF = stringa DE: Z se uguali; DE sul termi
         ret
 
 ; ---------------------------------------------------------------- simboli
-symfind:                        ; SYMKEY -> HL = record, NC se trovato; C altrimenti
+symfind:                        ; SYMKEY -> HL = record, NC if found; C otherwise
         ld a,(nsym)
         or a
         scf
@@ -848,7 +848,7 @@ symfind:                        ; SYMKEY -> HL = record, NC se trovato; C altrim
         scf
         ret
 
-mkkey:                          ; TOKBUF/LABBUF (HL) -> SYMKEY (12 byte, riempito con zeri)
+mkkey:                          ; TOKBUF/LABBUF (HL) -> SYMKEY (12 bytes, zero-padded)
         ld de,symkey
         ld b,12
 .l:     ld a,(hl)
@@ -868,7 +868,7 @@ mkkey:                          ; TOKBUF/LABBUF (HL) -> SYMKEY (12 byte, riempit
         djnz .zl
         ret
 
-deflabel:                       ; LABBUF = etichetta relativa al blocco (solo prima passata)
+deflabel:                       ; LABBUF = block-relative label (first pass only)
         ld a,(pass)
         cp 1
         ret nz
@@ -903,8 +903,8 @@ defsym2:
         ld hl,symkey
         ld bc,12
         ldir
-        pop hl                  ; valore
-        pop af                  ; tipo
+        pop hl                  ; value
+        pop af                  ; type
         ld (de),a
         inc de
         ld a,l
@@ -914,7 +914,7 @@ defsym2:
         ld (de),a
         ret
 
-defsym:                         ; EQU: valore (ex_v), tipo (ex_k)
+defsym:                         ; EQU: value (ex_v), type (ex_k)
         ld a,(pass)
         cp 1
         ret nz
@@ -923,7 +923,7 @@ defsym:                         ; EQU: valore (ex_v), tipo (ex_k)
         jr defsym2
 
 ; ---------------------------------------------------------------- operandi
-getitem:                        ; HL = testo, DE = destinazione: copia fino alla virgola (livello 0) senza spazi
+getitem:                        ; HL = text, DE = destination: copies up to the comma (level 0) without spaces
         xor a
         ld (depth),a
 .l:     ld a,(hl)
@@ -1003,7 +1003,7 @@ getitem:                        ; HL = testo, DE = destinazione: copia fino alla
         ld (de),a
         ret
 
-doops:                          ; HL = testo: OP1, OP2
+doops:                          ; HL = text: OP1, OP2
         ld de,OP1BUF
         call getitem
         or a
@@ -1023,7 +1023,7 @@ doops:                          ; HL = testo: OP1, OP2
         ld ix,OP1
         jp classify
 
-classify:                       ; HL = testo operando, IX = struttura
+classify:                       ; HL = operand text, IX = structure
         xor a
         ld (ix+O_T),a
         ld (ix+O_C),a
@@ -1085,7 +1085,7 @@ classify:                       ; HL = testo operando, IX = struttura
         jr z,.i3
         cp '-'
         jr nz,.nidx
-.i3:    pop af                  ; scarta il vecchio HL
+.i3:    pop af                  ; discards the old HL
         ld (ix+O_P),b
         ld (ix+O_T),T_R8
         ld (ix+O_C),6
@@ -1133,7 +1133,7 @@ classify:                       ; HL = testo operando, IX = struttura
         ld (ix+O_K),a
         ret
 
-streq:                          ; HL = testo, DE = nome: Z se coincide; DE sul terminatore; HL conservato
+streq:                          ; HL = text, DE = name: Z if it matches; DE on the terminator; HL preserved
         push hl
 .l:     ld a,(de)
         cp (hl)
@@ -1153,7 +1153,7 @@ streq:                          ; HL = testo, DE = nome: Z se coincide; DE sul t
         ret
 
 ; ---------------------------------------------------------------- espressioni
-expr:                           ; HL = testo -> HL dopo l'espressione; DE = valore, A = tipo (0 ass., 1 rel., 2 esterno)
+expr:                           ; HL = text -> HL after the expression; DE = value, A = type (0 abs., 1 rel., 2 external)
         ld de,0
         ld (ex_v),de
         xor a
@@ -1216,7 +1216,7 @@ combine:
         pop hl
         ret
 
-term:                           ; HL = testo -> tv, tk; HL oltre il termine
+term:                           ; HL = text -> tv, tk; HL past the term
         ld a,(hl)
         cp '$'
         jr z,.dollar
@@ -1276,7 +1276,7 @@ term:                           ; HL = testo -> tv, tk; HL oltre il termine
         pop hl
         ret
 
-rdnum:                          ; HL = cifre -> NTOK (0-terminato); HL dopo le cifre
+rdnum:                          ; HL = digits -> NTOK (0-terminated); HL after the digits
         ld de,ntok
 .l:     ld a,(hl)
         call isalnum
@@ -1289,7 +1289,7 @@ rdnum:                          ; HL = cifre -> NTOK (0-terminato); HL dopo le c
         ld (de),a
         ret
 
-numbase:                        ; NTOK -> HL = cifre, C = base (toglie il suffisso H/B)
+numbase:                        ; NTOK -> HL = digits, C = base (strips the H/B suffix)
         ld hl,ntok
         call strend
         dec hl
@@ -1337,7 +1337,7 @@ strend:                         ; HL -> terminatore
         inc hl
         jr .l
 
-isalnum:                        ; CF = 1 se 0-9 A-Z
+isalnum:                        ; CF = 1 if 0-9 A-Z
         cp '0'
         jr c,.n
         cp '9'+1
@@ -1351,7 +1351,7 @@ isalnum:                        ; CF = 1 se 0-9 A-Z
 .y:     scf
         ret
 
-ishex:                          ; CF = 1 se cifra esadecimale
+ishex:                          ; CF = 1 if hex digit
         cp '0'
         jr c,.n
         cp '9'+1
@@ -1423,10 +1423,10 @@ mulacc:                         ; DE = DE * base (base = 2, 10 o 16)
         ex de,hl
         ret
 
-ident:                          ; HL = inizio dell'identificatore
+ident:                          ; HL = start of the identifier
         push hl
         call rdtok
-        push hl                 ; fine
+        push hl                 ; end
         ld hl,tokbuf
         call mkkey
         call symfind
@@ -1483,7 +1483,7 @@ h_imp2: ld a,0EDh
         call emb
         jp asmline.eol
 
-cond_of:                        ; IX = operando -> A = codice (0-7), CF = 1 se non e' una condizione
+cond_of:                        ; IX = operand -> A = code (0-7), CF = 1 if not a condition
         ld a,(ix+O_T)
         cp T_COND
         jr nz,.r8
@@ -1562,7 +1562,7 @@ h_alu:  ld a,(OP2+O_T)
         jp nz,err_syn
 .ed:    ld a,(OP1+O_P)
         or a
-        jp nz,err_syn           ; ADC/SBC solo HL
+        jp nz,err_syn           ; ADC/SBC only HL
         ld a,0EDh
         call emb
         ld a,(OP2+O_C)
@@ -1906,7 +1906,7 @@ h_call: ld ix,OP1
         call emjump
         jp asmline.eol
 
-jr_target:                      ; IX = operando: A = spostamento (pc_off e' gia' oltre l'opcode)
+jr_target:                      ; IX = operand: A = displacement (pc_off is already past the opcode)
         ld a,(pass)
         cp 2
         jr z,.p2
@@ -2090,7 +2090,7 @@ h_bit:  ld ix,OP2
         add a,(hl)
         ld c,a
         jp cbop
-cbop:                           ; IX = registro/indicizzato, C = base: [prefisso] CB [spostamento] base+r
+cbop:                           ; IX = register/indexed, C = base: [prefix] CB [displacement] base+r
         ld a,(ix+O_T)
         cp T_R8
         jp nz,err_syn
@@ -2192,7 +2192,7 @@ h_out:  ld a,(OP1+O_T)
         jp asmline.eol
 
 ; ---------------------------------------------------------------- DB / DW / DS
-dirs:                           ; HL = testo dopo il mnemonico
+dirs:                           ; HL = text after the mnemonic
         ld a,(cclass)
         cp 20
         jp z,.ds

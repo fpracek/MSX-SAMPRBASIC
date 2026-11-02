@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Test del suono: compila e avvia i programmi di stests/ su openMSX, registra i registri del PSG ogni 50 ms
-e confronta le sequenze con i .chk. uso: python stest.py [nome ...]
-.chk: 'seq C P1 P2 ...' = periodi (registri 0-1/2-3/4-5) della voce C (0-2) quando il volume e' > 0, senza ripetizioni;
-      'reg N V' = ultimo valore del registro N; 'dur C P MIN MAX' = quanto dura il periodo P sulla voce C (secondi)"""
+"""Sound tests: compiles and starts the programs in stests/ on openMSX, records the PSG registers every 50 ms
+and compares the sequences with the .chk files. usage: python stest.py [name ...]
+.chk: 'seq C P1 P2 ...' = periods (registers 0-1/2-3/4-5) of voice C (0-2) while the volume is > 0, without repetitions;
+      'reg N V' = last value of register N; 'dur C P MIN MAX' = how long period P lasts on voice C (seconds)"""
 import os, shutil, subprocess, sys
 import qtest
 
@@ -51,7 +51,7 @@ def main():
         src = open(os.path.join(STESTS, n + '.bas')).read()
         open(os.path.join(DISK, n.upper() + '.BAS'), 'wb').write(src.replace('\n', '\r\n').encode('latin-1'))
         lines.append('after time %.1f {type "QBC %s.BAS\\r"}' % (t, n.upper()))
-        # il compilatore impiega circa 12 s; poi il programma suona
+        # the compiler takes about 12 s; then the program plays
         lines.append('after time %.1f {poll [open "%s/%s.psg" w] %d}' % (t + 1, BUILD.replace(chr(92), '/'), n, int(40 / STEP)))
         t += 52.0
         lines.append('after time %.1f {reset}' % t)
@@ -90,14 +90,14 @@ def main():
                 cnt = sum(1 for r in regs if (r[2 * c] | ((r[2 * c + 1] & 15) << 8)) == per and r[8 + c] & 15)
                 d = cnt * STEP
                 check(lo <= d <= hi, f'voce {c} periodo {per}: {d:.2f} s (attesi {lo}-{hi})')
-            elif w[0] == 'maxvol':                      # volume massimo raggiunto dalla voce C
+            elif w[0] == 'maxvol':                      # maximum volume reached by voice C
                 c, v = int(w[1]), int(w[2])
                 got = max(r[8 + c] & 15 for r in regs)
                 check(got == v, f'voce {c}: volume massimo {got} (atteso {v})')
-            elif w[0] == 'anysound':                    # almeno una voce ha volume > 0 in qualche istante (BEEP)
+            elif w[0] == 'anysound':                    # at least one voice has volume > 0 at some instant (BEEP)
                 ok = any(any(r[8 + i] & 31 for i in range(3)) for r in regs)
                 check(ok, 'suono udibile')
-            elif w[0] == 'chord':                       # tutte le voci suonano contemporaneamente: periodi alla stessa riga
+            elif w[0] == 'chord':                       # all voices play simultaneously: periods on the same row
                 want = [int(x) for x in w[1:4]]
                 ok = any([r[0] | ((r[1] & 15) << 8), r[2] | ((r[3] & 15) << 8), r[4] | ((r[5] & 15) << 8)] == want and
                          all(r[8 + i] & 15 for i in range(3)) for r in regs)

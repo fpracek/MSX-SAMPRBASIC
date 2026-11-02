@@ -1,6 +1,6 @@
 ; =====================================================================
-; Accesso diretto alla VRAM e al VDP, joystick, colori degli sprite
-; VPOKE/VPEEK/VFILL/VWRITE/VREAD$ (VBANK sceglie i 64 KB bassi o alti della VRAM da 128 KB),
+; Direct access to VRAM and the VDP, joystick, sprite colors
+; VPOKE/VPEEK/VFILL/VWRITE/VREAD$ (VBANK selects the low or high 64 KB of the 128 KB VRAM),
 ; BASE(n), VDP(n), STICK, STRIG, COLOR SPRITE
 ; =====================================================================
 GTSTCK  equ 00D5h
@@ -8,11 +8,11 @@ GTTRIG  equ 00D8h
 RG0SAV  equ 0F3DFh
 RG8SAV  equ 0FFE7h
 
-ubank_on:                       ; i comandi utente usano il banco scelto con VBANK
+ubank_on:                       ; user commands use the bank selected with VBANK
         ld a,(UBANK)
         ld (VA16),a
         ret
-ubank_off:                      ; torna alla pagina attiva (A16 per i comandi di grafica)
+ubank_off:                      ; back to the active page (A16 for graphics commands)
         ld a,(APHI)
         ld (VA16),a
         ret
@@ -23,7 +23,7 @@ rt_vbank:                       ; HL = 0 (primi 64 KB) o 1 (secondi 64 KB)
         ld (UBANK),a
         ret
 
-rt_vpoke:                       ; DE = indirizzo, HL = valore
+rt_vpoke:                       ; DE = address, HL = value
         call ubank_on
         ld a,l
         push af
@@ -34,7 +34,7 @@ rt_vpoke:                       ; DE = indirizzo, HL = valore
         out (VDPD),a
         jr ubank_off
 
-rt_vpeek:                       ; HL = indirizzo -> HL = byte
+rt_vpeek:                       ; HL = address -> HL = byte
         call ubank_on
         xor a
         call vram_set
@@ -43,7 +43,7 @@ rt_vpeek:                       ; HL = indirizzo -> HL = byte
         ld h,0
         jr ubank_off
 
-rt_vfill:                       ; VFILL GX1 = indirizzo, GY1 = quanti byte, GX2 = valore
+rt_vfill:                       ; VFILL GX1 = address, GY1 = byte count, GX2 = value
         call ubank_on
         ld hl,(GX1)
         ld a,40h
@@ -59,7 +59,7 @@ rt_vfill:                       ; VFILL GX1 = indirizzo, GY1 = quanti byte, GX2 
         dec bc
         jr .l
 
-rt_vwrite:                      ; VWRITE GX1 = indirizzo, HL = stringa
+rt_vwrite:                      ; VWRITE GX1 = address, HL = string
         push hl
         call ubank_on
         ld hl,(GX1)
@@ -75,7 +75,7 @@ rt_vwrite:                      ; VWRITE GX1 = indirizzo, HL = stringa
         otir
         jr ubank_off
 
-rt_vread:                       ; VREAD$(GX1 = indirizzo, HL = quanti byte 0-255) -> stringa temporanea
+rt_vread:                       ; VREAD$(GX1 = address, HL = byte count 0-255) -> temporary string
         ld a,h
         or a
         jp nz,rt_eifc
@@ -84,7 +84,7 @@ rt_vread:                       ; VREAD$(GX1 = indirizzo, HL = quanti byte 0-255
         jr nz,.n
         ld hl,rt_empty
         ret
-.n:     call rt_alloc           ; A = lunghezza -> HL = stringa
+.n:     call rt_alloc           ; A = length -> HL = string
         push hl
         call ubank_on
         ld hl,(GX1)
@@ -100,7 +100,7 @@ rt_vread:                       ; VREAD$(GX1 = indirizzo, HL = quanti byte 0-255
         pop hl
         ret
 
-rt_base:                        ; BASE(n) 0-44: indirizzo delle tabelle del VDP per lo schermo n/5, tabella n mod 5
+rt_base:                        ; BASE(n) 0-44: address of the VDP tables for screen n/5, table n mod 5
         ld a,h
         or a
         jp nz,rt_eifc
@@ -109,7 +109,7 @@ rt_base:                        ; BASE(n) 0-44: indirizzo delle tabelle del VDP 
         jp nc,rt_eifc
         cp 20
         jr nc,.m2
-        add a,a                 ; schermi 0-3: variabili del BIOS (TXTNAM ecc.), 5 parole per schermo
+        add a,a                 ; screens 0-3: BIOS variables (TXTNAM etc.), 5 words per screen
         ld l,a
         ld h,0
         ld de,0F3B3h
@@ -119,7 +119,7 @@ rt_base:                        ; BASE(n) 0-44: indirizzo delle tabelle del VDP 
         ld d,(hl)
         ex de,hl
         ret
-.m2:    sub 20                  ; schermi 4-8: valori predefiniti del BASIC
+.m2:    sub 20                  ; screens 4-8: BASIC defaults
         ld l,a
         ld h,0
         add hl,hl
@@ -131,13 +131,13 @@ rt_base:                        ; BASE(n) 0-44: indirizzo delle tabelle del VDP 
         ex de,hl
         ret
 
-basetab: dw 1800h,2000h,0000h,1E00h,3800h      ; schermo 4: nomi, colori, pattern, attributi sprite, pattern sprite
-        dw 0000h,0000h,0000h,7600h,7800h       ; schermo 5
-        dw 0000h,0000h,0000h,7600h,7800h       ; schermo 6
-        dw 0000h,0000h,0000h,0FA00h,0F000h     ; schermo 7
-        dw 0000h,0000h,0000h,0FA00h,0F000h     ; schermo 8
+basetab: dw 1800h,2000h,0000h,1E00h,3800h      ; screen 4: names, colors, patterns, sprite attributes, sprite patterns
+        dw 0000h,0000h,0000h,7600h,7800h       ; screen 5
+        dw 0000h,0000h,0000h,7600h,7800h       ; screen 6
+        dw 0000h,0000h,0000h,0FA00h,0F000h     ; screen 7
+        dw 0000h,0000h,0000h,0FA00h,0F000h     ; screen 8
 
-vdp_status:                     ; A = numero del registro di stato -> A = valore (legge e ripristina S#0)
+vdp_status:                     ; A = status register number -> A = value (reads and restores S#0)
         di
         out (VDPC),a
         ld a,8Fh
@@ -152,7 +152,7 @@ vdp_status:                     ; A = numero del registro di stato -> A = valore
         ei
         ret
 
-rt_vdp:                         ; VDP(n): 0-7 = R#0-7, 8 = S#0, 9-24 = R#8-23 (valori salvati dal BIOS), -1..-9 = S#1-9
+rt_vdp:                         ; VDP(n): 0-7 = R#0-7, 8 = S#0, 9-24 = R#8-23 (values saved by the BIOS), -1..-9 = S#1-9
         bit 7,h
         jr z,.pos
         ld a,l                  ; negativo: -k = S#k
@@ -206,7 +206,7 @@ rt_vdpset:                      ; VDP(n) = v: GX1 = n (0-7, 9-24), GY1 = v
         cp 9
         jr c,.lo
         dec a                   ; 9-24 -> R#8-23
-.lo:    ld c,a                  ; C = registro
+.lo:    ld c,a                  ; C = register
         ld hl,RG0SAV
         cp 8
         jr c,.sv
@@ -215,7 +215,7 @@ rt_vdpset:                      ; VDP(n) = v: GX1 = n (0-7, 9-24), GY1 = v
         ld d,0
         add hl,de
         ld a,(GY1)
-        ld (hl),a               ; copia del BIOS
+        ld (hl),a               ; BIOS copy
         di
         out (VDPC),a
         ld a,c
@@ -234,7 +234,7 @@ rt_stick:                       ; STICK(n): 0 = cursori, 1-2 = joystick -> 0..8
         ld h,0
         ret
 
-rt_strig:                       ; STRIG(n): 0 = spazio, 1-4 = pulsanti -> -1 se premuto
+rt_strig:                       ; STRIG(n): 0 = space, 1-4 = buttons -> -1 if pressed
         ld a,l
         push ix
         ld ix,GTTRIG
@@ -244,8 +244,8 @@ rt_strig:                       ; STRIG(n): 0 = spazio, 1-4 = pulsanti -> -1 se 
         ld h,a
         ret
 
-; ---------------------------------------------------------------- colori degli sprite
-rt_sprcol:                      ; COLOR SPRITE(n) = c: GX1 = piano, GCOL = colore (tutte le righe)
+; ---------------------------------------------------------------- sprite colors
+rt_sprcol:                      ; COLOR SPRITE(n) = c: GX1 = plane, GCOL = color (all lines)
         call chk_spr
         ld hl,(GX1)
         ld a,h
@@ -262,7 +262,7 @@ rt_sprcol:                      ; COLOR SPRITE(n) = c: GX1 = piano, GCOL = color
         ld a,(SCRREAL)
         cp 4
         jr nc,.m2
-        ld a,(S1)               ; modo sprite 1: il colore e' il 4o byte dell'attributo (EC si conserva)
+        ld a,(S1)               ; sprite mode 1: the color is the 4th byte of the attribute (EC is preserved)
         ld e,a
         ld d,0
         sla e
@@ -287,7 +287,7 @@ rt_sprcol:                      ; COLOR SPRITE(n) = c: GX1 = piano, GCOL = color
         ld a,b
         out (VDPD),a
         ret
-.m2:    ld de,-200h             ; modo sprite 2: 16 righe nella tabella dei colori
+.m2:    ld de,-200h             ; sprite mode 2: 16 lines in the color table
         add hl,de
         ld a,(S1)
         ld e,a
@@ -309,12 +309,12 @@ rt_sprcol:                      ; COLOR SPRITE(n) = c: GX1 = piano, GCOL = color
         djnz .c
         ret
 
-rt_sprcols:                     ; COLOR SPRITE$(n) = stringa: GX1 = piano, HL = stringa (fino a 16 colori, uno per riga)
+rt_sprcols:                     ; COLOR SPRITE$(n) = string: GX1 = plane, HL = string (up to 16 colors, one per line)
         push hl
         call chk_spr
         ld a,(SCRREAL)
         cp 4
-        jp c,rt_eifc            ; solo modo sprite 2 (schermi 4-8)
+        jp c,rt_eifc            ; sprite mode 2 only (screens 4-8)
         ld hl,(GX1)
         ld a,h
         or a
@@ -353,7 +353,7 @@ rt_sprcols:                     ; COLOR SPRITE$(n) = stringa: GX1 = piano, HL = 
         otir
         ret
 
-; ---------------------------------------------------------------- pagine, COPY, scorrimento
+; ---------------------------------------------------------------- pages, COPY, scrolling
 pgy:                            ; HL = pagina (< 0 = attiva) -> HL = pagina * 256
         bit 7,h
         jr z,.p
@@ -407,7 +407,7 @@ rt_setpage:                     ; SET PAGE GX1 = pagina visibile, GY1 = pagina a
         cp 7
         ld a,e
         jr nc,.hi
-        and 1                   ; schermi 5-6: 32 KB per pagina
+        and 1                   ; screens 5-6: 32 KB per page
         rrca
         ld h,a
         ld l,0
@@ -415,13 +415,13 @@ rt_setpage:                     ; SET PAGE GX1 = pagina visibile, GY1 = pagina a
         ld a,e
         srl a
         jr .set
-.hi:    ld hl,0                 ; schermi 7-8: 64 KB per pagina
+.hi:    ld hl,0                 ; screens 7-8: 64 KB per page
         ld (APLO),hl
 .set:   ld (APHI),a
         ld (VA16),a
         ret
 
-rt_copy:                        ; COPY (GX1,GY1)-(GX2,GY2),CSP TO (CDX,CDY),CDP con operatore GOP
+rt_copy:                        ; COPY (GX1,GY1)-(GX2,GY2),CSP TO (CDX,CDY),CDP with operator GOP
         ld a,(SCRMODE)
         cp 5
         jp c,rt_egfx
@@ -456,7 +456,7 @@ rt_copy:                        ; COPY (GX1,GY1)-(GX2,GY2),CSP TO (CDX,CDY),CDP 
         ld de,(APY)
         or a
         sbc hl,de
-        ld (GCMD+2),hl          ; DY relativo (vdp_cmd riaggiunge la pagina attiva)
+        ld (GCMD+2),hl          ; relative DY (vdp_cmd adds the active page back)
         ld hl,(GX1)
         ld (S1),hl
         ld hl,(CDX)
@@ -469,8 +469,8 @@ rt_copy:                        ; COPY (GX1,GY1)-(GX2,GY2),CSP TO (CDX,CDY),CDP 
         or a
         sbc hl,de
         jr z,.same
-        jr c,.go                ; destinazione piu' in alto: dall'alto
-        ld a,8                  ; piu' in basso: dal basso (DIY)
+        jr c,.go                ; destination higher up: from the top
+        ld a,8                  ; lower down: from the bottom (DIY)
         ld (GCMD+9),a
         ld hl,(GCMD+6)
         dec hl
@@ -483,7 +483,7 @@ rt_copy:                        ; COPY (GX1,GY1)-(GX2,GY2),CSP TO (CDX,CDY),CDP 
         add hl,de
         ld (GCMD+2),hl
         jr .go
-.same:  ld hl,(CDX)             ; stesse righe: se la destinazione e' a destra, dalla destra (DIX)
+.same:  ld hl,(CDX)             ; same lines: if the destination is to the right, copy from the right (DIX)
         ld de,(S1)
         or a
         sbc hl,de
@@ -512,7 +512,7 @@ rt_copy:                        ; COPY (GX1,GY1)-(GX2,GY2),CSP TO (CDX,CDY),CDP 
 rt_scroll:                      ; SET SCROLL GX1 = x, GY1 = y: R#23 (verticale), R#26/R#27 (orizzontale, V9958)
         ld hl,(GX1)
         ld a,(GY1)
-        ld (RG8SAV+15),a        ; copia del BIOS di R#23 (il debugger la ripristina)
+        ld (RG8SAV+15),a        ; BIOS copy of R#23 (the debugger restores it)
         di
         out (VDPC),a
         ld a,80h+23
@@ -543,8 +543,8 @@ rt_scroll:                      ; SET SCROLL GX1 = x, GY1 = y: R#23 (verticale),
         ret
 
 ; ---------------------------------------------------------------- DATA / READ / RESTORE
-; Blocchi nel codice: jp oltre, poi elementi (0,word = intero | 1,len,testo = stringa), 2, word = prossimo blocco (0 = ultimo)
-rt_read:                        ; A = 0 intero / 1 stringa -> HL = valore (o puntatore alla stringa)
+; Blocks in the code: jp past, then elements (0,word = integer | 1,len,text = string), 2, word = next block (0 = last)
+rt_read:                        ; A = 0 integer / 1 string -> HL = value (or pointer to the string)
         ld c,a
         ld hl,(DPTR)
 .f:     ld a,h
@@ -553,7 +553,7 @@ rt_read:                        ; A = 0 intero / 1 stringa -> HL = valore (o pun
         ld a,(hl)
         cp 2
         jr nz,.it
-        inc hl                  ; fine blocco: segue il collegamento
+        inc hl                  ; end of block: follow the link
         ld e,(hl)
         inc hl
         ld d,(hl)
@@ -585,7 +585,7 @@ rt_read:                        ; A = 0 intero / 1 stringa -> HL = valore (o pun
 .tm:    ld hl,msg_tmm
         jp rt_fatal
 
-rt_restore:                     ; HL = 0: dall'inizio; altrimenti indirizzo di un'etichetta posta subito prima di un DATA
+rt_restore:                     ; HL = 0: from the start; otherwise address of a label placed right before a DATA
         ld a,h
         or l
         jr nz,.l
@@ -601,7 +601,7 @@ rt_restore:                     ; HL = 0: dall'inizio; altrimenti indirizzo di u
         ld (DPTR),hl
         ret
 
-rt_vcopy:                       ; VCOPY GX1 = indirizzo in memoria, GY1 = indirizzo VRAM, GX2 = quanti byte
+rt_vcopy:                       ; VCOPY GX1 = memory address, GY1 = VRAM address, GX2 = byte count
         call ubank_on
         ld hl,(GY1)
         ld a,40h

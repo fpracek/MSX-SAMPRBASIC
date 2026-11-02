@@ -1,5 +1,5 @@
-; Runtime BINMODE: nessun DOS (file = errore), WRITE
-; --- i file richiedono MSX-DOS: nelle cartucce sono errori
+; BINMODE runtime: no DOS (files = error), WRITE
+; --- files require MSX-DOS: in cartridges they are errors
 msg_nodos: db msg_nodos_e-msg_nodos-1,"Error: Files need MSX-DOS"
 msg_nodos_e:
 e_nodos: ld hl,msg_nodos
@@ -27,7 +27,7 @@ curcol:
         dec a
         ret
 
-rt_wint:                        ; WRITE: intero senza spazi
+rt_wint:                        ; WRITE: integer without spaces
         bit 7,h
         jr z,.p
         ld a,'-'
@@ -37,7 +37,7 @@ rt_wint:                        ; WRITE: intero senza spazi
         call rt_neghl
 .p:     jp rt_udec
 
-rt_wstr:                        ; WRITE: stringa tra virgolette
+rt_wstr:                        ; WRITE: quoted string
         push hl
         ld a,'"'
         call rt_putc

@@ -1,6 +1,6 @@
-; ---------------------------------------------------------------- variabili locali e comando E (solo .COM)
+; ---------------------------------------------------------------- local variables and E command (.COM only)
         IFNDEF ROMMODE
-dbg_findr:                      ; -> IY = record della routine che contiene la riga corrente; C se nessuna
+dbg_findr:                      ; -> IY = record of the routine containing the current line; C if none
         ld hl,(DBGT)
         ld a,h
         or l
@@ -14,7 +14,7 @@ dbg_findr:                      ; -> IY = record della routine che contiene la r
         add hl,hl
         add hl,hl
         add hl,hl
-        add hl,de               ; dopo i record delle globali: puntatore all'ultimo record delle locali
+        add hl,de               ; after the globals' records: pointer to the last locals record
         ld a,(hl)
         inc hl
         ld h,(hl)
@@ -30,14 +30,14 @@ dbg_findr:                      ; -> IY = record della routine che contiene la r
         ld l,(ix+D_LINE)
         ld h,(ix+D_LINE+1)
         or a
-        sbc hl,de               ; riga - inizio
+        sbc hl,de               ; line - start
         jr c,.nx
         ld e,(ix+D_LINE)
         ld d,(ix+D_LINE+1)
         ld l,(iy+4)
         ld h,(iy+5)
         or a
-        sbc hl,de               ; fine - riga
+        sbc hl,de               ; end - line
         ret nc                  ; trovata
 .nx:    ld l,(iy+0)
         ld h,(iy+1)
@@ -45,7 +45,7 @@ dbg_findr:                      ; -> IY = record della routine che contiene la r
 .no:    scf
         ret
 
-dbg_laddr:                      ; IY = record locale -> HL = indirizzo del valore; C se non mostrabile (condivise, array)
+dbg_laddr:                      ; IY = local record -> HL = address of the value; C if not displayable (shared, arrays)
         ld a,(iy+12)
         cp 2
         jr z,.no
@@ -58,7 +58,7 @@ dbg_laddr:                      ; IY = record locale -> HL = indirizzo del valor
         ld d,(iy+14)
         cp 1
         jr z,.o
-        ld d,0                  ; scostamento a 8 bit con segno
+        ld d,0                  ; signed 8-bit offset
         bit 7,e
         jr z,.o
         dec d
@@ -66,7 +66,7 @@ dbg_laddr:                      ; IY = record locale -> HL = indirizzo del valor
         ld a,(iy+12)
         cp 4
         jr nz,.ok
-        ld e,(hl)               ; parametro stringa: il frame contiene il puntatore al buffer
+        ld e,(hl)               ; string parameter: the frame holds the pointer to the buffer
         inc hl
         ld d,(hl)
         ex de,hl
@@ -75,7 +75,7 @@ dbg_laddr:                      ; IY = record locale -> HL = indirizzo del valor
 .no:    scf
         ret
 
-dbg_vlocals:                    ; righe delle variabili locali della routine corrente (prefisso '>')
+dbg_vlocals:                    ; rows of the current routine's local variables (prefix '>')
         call dbg_findr
         ret c
         ld b,(iy+6)
@@ -101,7 +101,7 @@ dbg_vlocals:                    ; righe delle variabili locali della routine cor
         dec b
         jr .r
 
-dbg_qbp:                        ; HL = buffer di testo del comando E (conserva DE)
+dbg_qbp:                        ; HL = text buffer of the E command (preserves DE)
         push de
         ld hl,(DBGP)
         ld de,D_QB
@@ -109,7 +109,7 @@ dbg_qbp:                        ; HL = buffer di testo del comando E (conserva D
         pop de
         ret
 
-dbg_qread:                      ; legge il nome della variabile; C se annullato
+dbg_qread:                      ; reads the variable name; C if cancelled
         ld ix,(DBGP)
         xor a
         ld (ix+D_ND),a
@@ -176,13 +176,13 @@ dbg_qread:                      ; legge il nome della variabile; C se annullato
 .done:  ld ix,(DBGP)
         ld a,(ix+D_ND)
         or a
-        jr z,.esc               ; testo vuoto: niente da cercare
+        jr z,.esc               ; empty text: nothing to search for
         or a
         ret
 .esc:   scf
         ret
 
-dbg_qparse:                     ; testo "NOME[$][(n)]" -> modello di 12 byte (qbuf+24) e indice (D_QX)
+dbg_qparse:                     ; text "NAME[$][(n)]" -> 12-byte pattern (qbuf+24) and index (D_QX)
         ld ix,(DBGP)
         xor a
         ld (ix+D_QX),a
@@ -201,7 +201,7 @@ dbg_qparse:                     ; testo "NOME[$][(n)]" -> modello di 12 byte (qb
         ld de,24
         add hl,de
         ex de,hl                ; DE = modello
-        call dbg_qbp            ; HL = testo
+        call dbg_qbp            ; HL = text
         ld b,11
 .pn:    ld a,(hl)
         or a
@@ -258,7 +258,7 @@ dbg_qparse:                     ; testo "NOME[$][(n)]" -> modello di 12 byte (qb
         ld (ix+D_QX+2),d
         ret
 
-dbg_cmpn:                       ; IY = record: Z se il nome coincide con il modello
+dbg_cmpn:                       ; IY = record: Z if the name matches the pattern
         call dbg_qbp
         ld de,24
         add hl,de               ; HL = modello
@@ -290,7 +290,7 @@ dbg_cmpn:                       ; IY = record: Z se il nome coincide con il mode
 .b:     cp c
         ret
 
-dbg_qfind:                      ; -> NC: A = 0 scalare (IY record, HL indirizzo) o A = 1 array globale (IY record); C se non trovata
+dbg_qfind:                      ; -> NC: A = 0 scalar (IY record, HL address) or A = 1 global array (IY record); C if not found
         call dbg_findr
         jr c,.glob
         ld b,(iy+6)
@@ -312,7 +312,7 @@ dbg_qfind:                      ; -> NC: A = 0 scalare (IY record, HL indirizzo)
         pop de
         pop bc
         xor a
-        ret                     ; xor a lascia NC
+        ret                     ; xor a leaves NC
 .ln:    pop hl
         ld de,16
         add hl,de
@@ -355,7 +355,7 @@ dbg_qfind:                      ; -> NC: A = 0 scalare (IY record, HL indirizzo)
 .nf:    scf
         ret
 
-dbg_qmsg:                       ; HL = messaggio -> riga 21
+dbg_qmsg:                       ; HL = message -> row 21
         push hl
         call dbg_lclr
         pop hl
@@ -363,7 +363,7 @@ dbg_qmsg:                       ; HL = messaggio -> riga 21
         ld a,21
         jp dbg_row
 
-dbg_query:                      ; comando E: nome della variabile (anche A(3), N$) -> valore
+dbg_query:                      ; E command: variable name (also A(3), N$) -> value
         call dbg_qread
         ret c
         call dbg_qparse
@@ -371,7 +371,7 @@ dbg_query:                      ; comando E: nome della variabile (anche A(3), N
         jp c,.nf
         or a
         jr nz,.arr
-        ld ix,(DBGP)            ; scalare
+        ld ix,(DBGP)            ; scalar
         ld (ix+D_QX),0
         ld (ix+D_VS),0
         ld (ix+D_VR),21
@@ -398,9 +398,9 @@ dbg_query:                      ; comando E: nome della variabile (anche A(3), N
         ld a,(iy+11)
         cp '$'
         jr z,.es
-        add hl,hl               ; interi: 2 byte per elemento
+        add hl,hl               ; integers: 2 bytes per element
         jr .ea
-.es:    ld h,l                  ; stringhe: 256 byte per elemento
+.es:    ld h,l                  ; strings: 256 bytes per element
         ld l,0
 .ea:    ld e,(iy+12)
         ld d,(iy+13)

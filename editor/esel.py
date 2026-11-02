@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Test della selezione (build ROM, NMS-8250): Shift+frecce, copia/incolla/taglia,
-sostituzione digitando, Canc/BS sulla selezione, trascinamento col mouse (con
-auto-scorrimento), Ctrl+A.  Un modello Python del testo calcola le celle attese."""
+"""Selection test (ROM build, NMS-8250): Shift+arrows, copy/paste/cut,
+replacement by typing, Del/BS on the selection, mouse dragging (with
+auto-scroll), Ctrl+A.  A Python model of the text computes the expected cells."""
 import sys
 
 import etest
@@ -67,7 +67,7 @@ def parse_row(row):
 
 
 def expect_row(m, ln, sel):
-    """celle attese (carattere, selezionata) per la riga ln; sel = (a, b) o None"""
+    """expected cells (character, selected) for row ln; sel = (a, b) or None"""
     s = m.lines[ln - 1]
     out = []
     for j in range(79):
@@ -82,7 +82,7 @@ def expect_row(m, ln, sel):
 def check_rows(rows, m, first, last, sel, label, ptr=None):
     def exp(r):
         e = expect_row(m, r, sel)
-        if ptr and ptr[0] == r:                  # il puntatore del mouse inverte la cella sotto di se
+        if ptr and ptr[0] == r:                  # the mouse pointer inverts the cell under it
             e[ptr[1]] = (e[ptr[1]][0], not e[ptr[1]][1])
         return e
     bad = [r for r in range(first, last + 1)
@@ -97,43 +97,43 @@ def main():
     m = Model()
 
     sc.dump('e0_start')
-    # 1) Shift+Destra x5
+    # 1) Shift+Right x5
     shift_tap(sc, 8, 0x80, 5)
     sc.dump('e1_sel5', True)
-    # 2) Shift+Giu x2
+    # 2) Shift+Down x2
     shift_tap(sc, 8, 0x40, 2)
     sc.dump('e2_sel3lines', True)
     # 3) Ctrl+C
     chord(sc, *C_C)
     sc.dump('e3_copied')
-    # 4) Giu senza Shift: la selezione sparisce
+    # 4) Down without Shift: the selection disappears
     sc.tap(8, 0x40, 1, 0.4)
     sc.dump('e4_cleared')
     # 5) Ctrl+V
     chord(sc, *C_V)
     sc.dump('e5_pasted', True)
-    # 6) Shift+Destra x3, digito Z
+    # 6) Shift+Right x3, type Z
     shift_tap(sc, 8, 0x80, 3)
     sc.text('Z', 0.8)
     sc.dump('e6_replaced')
-    # 7) Home, Shift+Fine (SELECT), Ctrl+X
+    # 7) Home, Shift+End (SELECT), Ctrl+X
     sc.tap(8, 0x02, 1, 0.4)
     shift_tap(sc, 7, 0x40, 1)
     sc.dump('e7a_lineselected')
     chord(sc, *C_X)
     sc.dump('e7_cut')
-    # 8) Ctrl+V: la riga torna
+    # 8) Ctrl+V: the line comes back
     chord(sc, *C_V)
     sc.dump('e8_repasted')
-    # 9) Shift+Sinistra x2, Canc -> toglie 2 caratteri
+    # 9) Shift+Left x2, Del -> removes 2 characters
     shift_tap(sc, 8, 0x10, 2)
     sc.tap(8, 0x08, 1, 0.5)
     sc.dump('e9_del')
-    # 10) Shift+Sinistra x2, BS
+    # 10) Shift+Left x2, BS
     shift_tap(sc, 8, 0x10, 2)
     sc.tap(7, 0x20, 1, 0.5)
     sc.dump('e10_bs')
-    # 11) mouse: trascinamento da (3,2) a (8,4)
+    # 11) mouse: drag from (3,2) to (8,4)
     sc.poke8('mmode', 1)
     sc.pointer(3, 2)
     sc.poke8('tm_btn', 1, 0.4)
@@ -143,7 +143,7 @@ def main():
     sc.poke8('tm_btn', 0, 0.4)
     chord(sc, *C_C)
     sc.dump('e11b_copied')
-    # 12) auto-scorrimento: premo a (5,10), tengo il puntatore sulla riga 23
+    # 12) auto-scroll: press at (5,10), hold the pointer on row 23
     sc.pointer(5, 10)
     sc.poke8('tm_btn', 1, 0.4)
     sc.poke16('mpy', 23 * 8 + 3, 1.5)
@@ -183,7 +183,7 @@ def main():
     check_rows(rows, m, 1, 6, None, 'e4')
 
     print('--- e5 incolla')
-    m.replace((4, 5), (4, 5), sel_text)           # il cursore era a (4,5)
+    m.replace((4, 5), (4, 5), sel_text)           # the cursor was at (4,5)
     rows, vs = vs_('e5_pasted')
     check(vs['nlines'] == 73, f'nlines={vs["nlines"]}')
     check(vs['curline'] == 6 and vs['cur'] == m.off(6, 5), f'cursore (curline={vs["curline"]}, cur={vs["cur"]}) atteso {m.off(6, 5)}')

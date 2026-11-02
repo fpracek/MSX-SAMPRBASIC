@@ -1,7 +1,7 @@
 ; =====================================================================
-; MSXQB runtime - ROM 16K a 4000h, MSX2, SCREEN 0 testo 80 colonne
-; Convenzioni: interi 16 bit con segno in HL; stringhe = puntatore a
-; [len][dati...], max 255. Stringa vuota condivisa = rt_empty.
+; MSXQB runtime - 16K ROM at 4000h, MSX2, SCREEN 0 80-column text
+; Conventions: signed 16-bit integers in HL; strings = pointer to
+; [len][data...], max 255. Shared empty string = rt_empty.
 ; =====================================================================
 CHPUT   equ 00A2h
 CHGET   equ 009Fh
@@ -21,14 +21,14 @@ FORCLR  equ 0F3E9h
 BAKCLR  equ 0F3EAh
 BDRCLR  equ 0F3EBh
 
-; --- RAM del runtime (pagina 3) ---
+; --- Runtime RAM (page 3) ---
 heapp   equ 0C000h
 rndseed equ 0C002h
 sc_a    equ 0C004h
 sc_b    equ 0C006h
-numbuf  equ 0C008h          ; 8 byte
-inbuf   equ 0C010h          ; 256 byte
-DATA_BASE equ 0C110h        ; qui iniziano le variabili del programma
+numbuf  equ 0C008h          ; 8 bytes
+inbuf   equ 0C010h          ; 256 bytes
+DATA_BASE equ 0C110h        ; program variables start here
 HEAPEND equ 0E800h
 
         DEVICE NOSLOT64K
@@ -49,7 +49,7 @@ rt_start:
         call ERAFNK
         xor a
         call CLS
-        ld hl,DATA_BASE             ; azzera variabili e array del programma
+        ld hl,DATA_BASE             ; clears the program's variables and arrays
         ld de,DATA_BASE+1
         ld bc,HEAPBASE-DATA_BASE-1
         ld (hl),0
@@ -115,7 +115,7 @@ rt_pnl:
         ld a,0Ah
         jp rt_putc
 
-rt_zone:                    ; virgola nel PRINT: prossima zona da 14
+rt_zone:                    ; comma in PRINT: next 14-column zone
 .l:     ld a,' '
         call rt_putc
         ld a,(CSRX)
@@ -138,7 +138,7 @@ rt_pint:                    ; stampa HL: segno/spazio, cifre, spazio
         ld a,' '
         jp rt_putc
 
-rt_udec:                    ; HL senza segno
+rt_udec:                    ; HL unsigned
         ld c,0
         ld de,10000
         call .dg
@@ -168,7 +168,7 @@ rt_cls:
         xor a
         jp CLS
 
-rt_color:                   ; E = primo piano, L = sfondo
+rt_color:                   ; E = foreground, L = background
         ld a,e
         ld (FORCLR),a
         ld a,l
@@ -222,7 +222,7 @@ rt_mul:                     ; HL = HL*DE
         jr nz,.l
         ret
 
-rt_div:                     ; HL = HL\DE (con segno), DE = resto
+rt_div:                     ; HL = HL\DE (signed), DE = remainder
         ld a,d
         or e
         jp z,rt_ediv
@@ -270,7 +270,7 @@ rt_mod:                     ; HL = HL MOD DE
         ex de,hl
         ret
 
-rt_div10:                   ; HL/10 senza segno -> HL, A = resto
+rt_div10:                   ; HL/10 unsigned -> HL, A = remainder
         xor a
         ld b,16
 .l:     add hl,hl
@@ -282,7 +282,7 @@ rt_div10:                   ; HL/10 senza segno -> HL, A = resto
 .n:     djnz .l
         ret
 
-; confronto con segno: DE = sinistro, HL = destro -> Z uguale, C se DE<HL
+; signed compare: DE = left, HL = right -> Z equal, C if DE<HL
 rt_cmp:
         ld a,d
         xor h
@@ -325,7 +325,7 @@ b_le:   ld hl,-1
         inc hl
         ret
 
-rt_chk:                     ; HL = indice, DE = numero elementi
+rt_chk:                     ; HL = index, DE = number of elements
         or a
         sbc hl,de
         jp nc,rt_esub
@@ -369,7 +369,7 @@ rt_rnd:                     ; HL = n -> 0..n-1
         ret
 
 ; ---------------------------------------------------------------- stringhe
-rt_alloc:                   ; A = lunghezza -> HL = nuova stringa (len impostata)
+rt_alloc:                   ; A = length -> HL = new string (len set)
         push de
         push bc
         ld hl,(heapp)
@@ -387,21 +387,21 @@ rt_alloc:                   ; A = lunghezza -> HL = nuova stringa (len impostata
         jp nc,rt_oom
         ld (heapp),hl
         pop hl
-        ld a,c              ; C = len+1 (inc bc): la lunghezza vera e' C-1
+        ld a,c              ; C = len+1 (inc bc): the real length is C-1
         dec a
         ld (hl),a
         pop bc
         pop de
         ret
 
-rt_scopy:                   ; HL = sorgente, DE = buffer destinazione
+rt_scopy:                   ; HL = source, DE = destination buffer
         ld c,(hl)
         ld b,0
         inc bc
         ldir
         ret
 
-rt_sdup:                    ; HL = stringa -> copia temporanea
+rt_sdup:                    ; HL = string -> temporary copy
         ld a,(hl)
         or a
         jr nz,.n
@@ -655,7 +655,7 @@ rt_val:                     ; HL = stringa -> intero
         ret z
         jp rt_neghl
 
-; confronto stringhe: DE = sinistra, HL = destra -> Z uguale, C se DE<HL
+; string compare: DE = left, HL = right -> Z equal, C if DE<HL
 rt_scmp:
         ld a,(de)
         ld b,a
@@ -698,7 +698,7 @@ rt_inkey:
         dec hl
         ret
 
-rt_input:                   ; legge una riga -> stringa temporanea
+rt_input:                   ; reads a line -> temporary string
         ld hl,inbuf+1
         ld b,0
 .k:     push hl

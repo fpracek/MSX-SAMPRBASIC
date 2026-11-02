@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Test F5 dell'editor: apre un sorgente BASIC, F5 -> salva, compila (QBC.COM), esegue, ritorna
-all'editor; poi un sorgente con un errore di sintassi: ritorno con messaggio e cursore sulla riga.
-Tutto su MSX-DOS 1 emulato (openMSX NMS-8250), nessun aiuto dal PC."""
+"""Editor F5 test: opens a BASIC source, F5 -> saves, compiles (QBC.COM), runs, returns
+to the editor; then a source with a syntax error: return with a message and the cursor on the line.
+All on emulated MSX-DOS 1 (openMSX NMS-8250), no help from the PC."""
 import os
 import shutil
 import subprocess
@@ -38,22 +38,22 @@ def main():
     sc.text('SAMPRBAS NEW.SPB' + BS + 'r', 30.0)
     sc.dump('r0b_typed')
     sc.tap(7, 0x02, 1, 0.5)                          # F5
-    sc.t += 70.0                                     # salvataggio + QBC + compilazione + scrittura + avvio
-    sc.do('set ::nopatch 1', 0.1)                    # il programma e' in esecuzione: la RAM dell'editor non vale
+    sc.t += 70.0                                     # save + QBC + compilation + writing + launch
+    sc.do('set ::nopatch 1', 0.1)                    # the program is running: the editor's RAM is not valid
     sc.dump('r1_ran')
-    sc.tap(8, 0x01, 1, 0.5)                          # spazio: il programma termina e ricarica l'editor
+    sc.tap(8, 0x01, 1, 0.5)                          # space: the program ends and reloads the editor
     sc.t += 30.0
     sc.do('unset ::nopatch', 0.1)
     sc.dump('r2_back')
-    sc.tap(7, 0x02, 1, 0.5)                          # F5 di nuovo: testo invariato e compilato -> rilancia NOME.COM subito
-    sc.t += 12.0                                     # (una ricompilazione ne richiederebbe molti di piu')
+    sc.tap(7, 0x02, 1, 0.5)                          # F5 again: text unchanged and compiled -> relaunches NAME.COM immediately
+    sc.t += 12.0                                     # (a recompilation would take many more)
     sc.do('set ::nopatch 1', 0.1)
     sc.dump('r2c_rerun')
-    sc.tap(8, 0x01, 1, 0.5)                          # spazio: ritorna all'editor
+    sc.tap(8, 0x01, 1, 0.5)                          # space: returns to the editor
     sc.t += 30.0
     sc.do('unset ::nopatch', 0.1)
     sc.dump('r2d_back2')
-    ecom.chord(sc, *ecom.CTRL_O, gap=1.0)            # apre ERR.SPB
+    ecom.chord(sc, *ecom.CTRL_O, gap=1.0)            # opens ERR.SPB
     sc.text('E', 0.5)
     sc.tap(7, 0x80, 1, 8.0)
     sc.dump('r2b_err_loaded')

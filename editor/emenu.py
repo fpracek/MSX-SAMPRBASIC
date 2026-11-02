@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Test della barra dei menu (build ROM, NMS-8250): apertura con ESC e con il mouse, frecce,
-passaggio tra menu, tasti rapidi, Invio, hover e clic del mouse, chiusura, voci con effetto."""
+"""Menu bar test (ROM build, NMS-8250): opening with ESC and with the mouse, arrows,
+switching between menus, hotkeys, Enter, mouse hover and click, closing, items with an effect."""
 import sys
 
 import etest
@@ -38,71 +38,71 @@ def main():
     sc.dump('m1_open', True)
     key(sc, DOWN, 2)
     sc.dump('m2_down2')
-    key(sc, UP, 3)                      # da 2: 1, 0, poi avvolge a 4
+    key(sc, UP, 3)                      # from 2: 1, 0, then wraps to 4
     sc.dump('m3_wrap')
     key(sc, RIGHT)
     sc.dump('m4_edit', True)
-    key(sc, RIGHT, 4)                   # Find, Help, Run, poi avvolge a File
+    key(sc, RIGHT, 4)                   # Find, Help, Run, then wraps to File
     sc.dump('m5_wrapmenu')
     key(sc, ESC)
     sc.dump('m6_closed')
-    # tasto rapido: ESC, Destra (Edit), 'a' = Select all
+    # hotkey: ESC, Right (Edit), 'a' = Select all
     key(sc, ESC)
     key(sc, RIGHT)
     sc.text('a', 0.8)
     sc.dump('m7_hotkey')
-    # Invio su "Copy" con tutto selezionato: clipboard troppo piccola -> avviso
+    # Enter on "Copy" with everything selected: clipboard too small -> warning
     key(sc, ESC)
     key(sc, RIGHT)
     key(sc, DOWN, 3)                    # Undo, Redo, Cut, Copy
     key(sc, ENTER)
     sc.dump('m8_enter_copy')
-    key(sc, DOWN)                       # annulla la selezione
-    # mouse: clic sul titolo Edit (colonne 6-11)
+    key(sc, DOWN)                       # cancel the selection
+    # mouse: click on the Edit title (columns 6-11)
     sc.poke8('mmode', 1)
     sc.pointer(8, 0)
     sc.click(0.2)
     sc.dump('m9_mouse_open', True)
-    sc.pointer(10, 3)                   # hover sulla voce 1 (Redo)
+    sc.pointer(10, 3)                   # hover over item 1 (Redo)
     sc.wait(0.3)
     sc.dump('m10_hover')
-    sc.pointer(10, 8)                   # clic su "Select all" (voce 6)
+    sc.pointer(10, 8)                   # click on "Select all" (item 6)
     sc.click(0.2)
     sc.dump('m11_click_item')
-    # clic fuori dal menu: lo chiude senza spostare il cursore
+    # click outside the menu: closes it without moving the cursor
     key(sc, ESC)
     sc.pointer(40, 10)
     sc.click(0.2)
     sc.dump('m12_click_outside')
-    # Help -> About con la tastiera
+    # Help -> About with the keyboard
     key(sc, ESC)
     key(sc, RIGHT, 3)
     key(sc, DOWN, 4)
     key(sc, ENTER)
     sc.dump('m13_about')
-    key(sc, ENTER)                      # Invio: chiude la finestra
+    key(sc, ENTER)                      # Enter: closes the window
     sc.dump('m13_closed_enter')
     key(sc, ESC)
     key(sc, RIGHT, 3)
     key(sc, DOWN, 4)
     key(sc, ENTER)
-    key(sc, ESC)                        # Esc: chiude
+    key(sc, ESC)                        # Esc: closes
     sc.dump('m13_closed_esc')
     key(sc, ESC)
     key(sc, RIGHT, 3)
     key(sc, DOWN, 4)
     key(sc, ENTER)
-    sc.pointer(39, 13)                  # clic sul tasto OK
+    sc.pointer(39, 13)                  # click on the OK button
     sc.click(0.2)
     sc.dump('m13_closed_click')
-    # clic sul titolo mentre un altro menu e' aperto: passa a quello
+    # click on a title while another menu is open: switches to that one
     sc.pointer(2, 0)
-    sc.click(0.2)                       # apre File
+    sc.click(0.2)                       # opens File
     sc.pointer(20, 0)
-    sc.click(0.2)                       # Help al posto di File
+    sc.click(0.2)                       # Help instead of File
     sc.dump('m14_switch')
     sc.pointer(20, 0)
-    sc.click(0.2)                       # stesso titolo: chiude
+    sc.click(0.2)                       # same title: closes
     sc.dump('m15_toggle_close')
 
     etest.run(sc)

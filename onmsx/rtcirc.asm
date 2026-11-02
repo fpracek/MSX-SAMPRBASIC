@@ -1,7 +1,7 @@
 ; =====================================================================
-; CIRCLE ad arco o ellisse: CIRCLE (x,y), r[, colore[, inizio[, fine[, aspetto]]]]
+; CIRCLE arc or ellipse: CIRCLE (x,y), r[, color[, start[, end[, aspect]]]]
 ; Angoli in GRADI (0 = destra, antiorario), aspetto in PERCENTUALE (100 = cerchio, 50 = ellisse bassa).
-; Poligonale con un segmento per grado, tracciata con rt_gline (ritagliata).
+; Polygon with one segment per degree, drawn with rt_gline (clipped).
 ; =====================================================================
 sintab:
         dw 0,4,9,13,18,22,27,31,36,40
@@ -15,7 +15,7 @@ sintab:
         dw 252,253,254,254,255,255,255,256,256,256
         dw 256
 
-sin256:                         ; HL = angolo in gradi -> HL = seno * 256 (con segno)
+sin256:                         ; HL = angle in degrees -> HL = sine * 256 (signed)
 .neg:   bit 7,h
         jr z,.pos
         ld de,360
@@ -33,7 +33,7 @@ sin256:                         ; HL = angolo in gradi -> HL = seno * 256 (con s
         call sinq               ; 180..359: -sin(a - 180)
         jp rt_neghl
 .first: add hl,de               ; 0..179
-sinq:   ld a,l                  ; 0..179 -> sin (91..179 si specchiano su 89..1)
+sinq:   ld a,l                  ; 0..179 -> sin (91..179 mirror onto 89..1)
         cp 91
         jr c,.ok
         ld a,180
@@ -49,7 +49,7 @@ sinq:   ld a,l                  ; 0..179 -> sin (91..179 si specchiano su 89..1)
         ex de,hl
         ret
 
-smul:                           ; HL = valore con segno (seno*256), DE = raggio >= 0 -> HL = valore*raggio/256 (arrotondato)
+smul:                           ; HL = signed value (sine*256), DE = radius >= 0 -> HL = value*radius/256 (rounded)
         ld a,h
         push af
         bit 7,h
@@ -80,7 +80,7 @@ circ_arc:
         ld (CCY),hl
         ld hl,(GY2)             ; angolo iniziale
         ld (CANG),hl
-        ld de,(CEND)            ; gradi da percorrere = fine - inizio (+ 360 se <= 0)
+        ld de,(CEND)            ; degrees to sweep = end - start (+ 360 if <= 0)
         ex de,hl
         or a
         sbc hl,de
@@ -118,7 +118,7 @@ circ_arc:
         xor a
         ld (CFIRST),a
         jr .nx
-.seg:   ld hl,(CPX)             ; segmento dal punto precedente
+.seg:   ld hl,(CPX)             ; segment from the previous point
         ld (GX1),hl
         ld hl,(CPY)
         ld (GY1),hl

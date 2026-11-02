@@ -1,5 +1,5 @@
-; Runtime ROMMODE: stub dei file (nessun DOS) e WRITE
-; --- i file richiedono MSX-DOS: nelle cartucce sono errori
+; ROMMODE runtime: file stubs (no DOS) and WRITE
+; --- files require MSX-DOS: in cartridges they are errors
 msg_nodos: db msg_nodos_e-msg_nodos-1,"Error: Files need MSX-DOS"
 msg_nodos_e:
 e_nodos: ld hl,msg_nodos
@@ -27,7 +27,7 @@ curcol:
         dec a
         ret
 
-rt_wint:                        ; WRITE: intero senza spazi
+rt_wint:                        ; WRITE: integer without spaces
         bit 7,h
         jr z,.p
         ld a,'-'
@@ -37,7 +37,7 @@ rt_wint:                        ; WRITE: intero senza spazi
         call rt_neghl
 .p:     jp rt_udec
 
-rt_wstr:                        ; WRITE: stringa tra virgolette
+rt_wstr:                        ; WRITE: quoted string
         push hl
         ld a,'"'
         call rt_putc
@@ -46,9 +46,9 @@ rt_wstr:                        ; WRITE: stringa tra virgolette
         ld a,'"'
         jp rt_putc
 
-; --- chiamate fra segmenti: A = indice nella tabella FARTAB (4 byte: banco, 0, indirizzo)
-; Lo stato di ritorno sta in una pila software (indirizzo + banco) in C000h-C08Fh, cosi' il frame dello stack
-; vista dalla routine chiamata resta [ritorno][argomenti]
+; --- calls between segments: A = index into the FARTAB table (4 bytes: bank, 0, address)
+; The return state is kept in a software stack (address + bank) at C000h-C08Fh, so the stack frame
+; as seen by the called routine remains [return][arguments]
 FARTAB  equ 7F00h
 FSTK    equ 0C000h
 rt_farcall:
@@ -58,15 +58,15 @@ rt_farcall:
         add hl,hl
         ld de,FARTAB
         add hl,de
-        ld c,(hl)               ; C = banco di destinazione
+        ld c,(hl)               ; C = destination bank
         inc hl
         inc hl
         ld e,(hl)
         inc hl
-        ld d,(hl)               ; DE = indirizzo
+        ld d,(hl)               ; DE = address
         di
         exx
-        pop de                  ; DE' = ritorno del chiamante
+        pop de                  ; DE' = caller's return
         ld hl,(FARSP)
         ld (hl),e
         inc hl
@@ -105,8 +105,8 @@ far_ret:
         ei
         ret
 
-rom_vars:                       ; dopo l'azzeramento della RAM: pila delle chiamate, registro della finestra di codice
-        in a,(0A8h)             ; slot della pagina 3 (RAM, mapper): serve a MGET/MPUT/...
+rom_vars:                       ; after clearing RAM: call stack, code window register
+        in a,(0A8h)             ; page 3 slot (RAM, mapper): needed by MGET/MPUT/...
         rlca
         rlca
         and 3
@@ -159,7 +159,7 @@ rom_vars:                       ; dopo l'azzeramento della RAM: pila delle chiam
         ld (DWREG),de
         ld a,(rt_target)
         cp 4
-        ld a,2                  ; banchi da 8 KB: la finestra di codice parte dal banco 2
+        ld a,2                  ; 8 KB banks: the code window starts at bank 2
         jr nz,.b
         ld a,1                  ; ASCII16: banco 1
 .b:     ld (CURBANK),a
@@ -168,7 +168,7 @@ cwregs: dw 7000h, 7000h, 8000h, 9000h
 
 dwregs: dw 7800h, 7000h, 0A000h, 0B000h
 
-rt_setbank:                     ; SETBANK n: il segmento n compare nella finestra dati
+rt_setbank:                     ; SETBANK n: segment n appears in the data window
         ld a,(rt_target)
         cp 3
         jp c,rt_eifc
@@ -182,8 +182,8 @@ rt_setbank:                     ; SETBANK n: il segmento n compare nella finestr
         ld a,(rt_target)
         cp 4
         ld a,b
-        jr z,.w                 ; ASCII16: banco = segmento, nella stessa finestra del codice
-        inc a                   ; banchi da 8 KB: il segmento n e' il banco n+1
+        jr z,.w                 ; ASCII16: bank = segment, in the same window as the code
+        inc a                   ; 8 KB banks: segment n is bank n+1
 .w:     ld hl,(DWREG)
         ld (hl),a
         ld hl,(CWREG)
@@ -191,10 +191,10 @@ rt_setbank:                     ; SETBANK n: il segmento n compare nella finestr
         or a
         sbc hl,de
         ret nz
-        ld (CURBANK),a          ; stessa finestra: il banco corrente cambia
+        ld (CURBANK),a          ; same window: the current bank changes
         ret
 
-rt_datawin:                     ; DATAWIN -> indirizzo della finestra dati (8000h per ASCII16, A000h per gli altri)
+rt_datawin:                     ; DATAWIN -> address of the data window (8000h for ASCII16, A000h for the others)
         ld hl,8000h
         ld a,(rt_target)
         cp 4

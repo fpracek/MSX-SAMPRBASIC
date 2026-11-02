@@ -1,8 +1,8 @@
 ; =====================================================================
-; File sequenziali di testo (MSX-DOS 1/2, FCB + record casuali da 128 byte): OPEN, CLOSE, PRINT#, WRITE#,
-; INPUT#, LINE INPUT#, EOF, KILL. Fino a 3 file (#1-#3), i descrittori stanno in cima allo heap.
-; Descrittore (176 byte): +0 FCB (37), +37 modo (0 chiuso, 1 lettura, 2 scrittura, 3 aggiunta),
-; +38 posizione nel buffer, +39 byte validi (lettura), +40 fine file, +41 colonna, +42 prossimo record (word), +48 buffer 128
+; Sequential text files (MSX-DOS 1/2, FCB + 128-byte random records): OPEN, CLOSE, PRINT#, WRITE#,
+; INPUT#, LINE INPUT#, EOF, KILL. Up to 3 files (#1-#3), descriptors sit at the top of the heap.
+; Descriptor (176 bytes): +0 FCB (37), +37 mode (0 closed, 1 read, 2 write, 3 append),
+; +38 position in buffer, +39 valid bytes (read), +40 end of file, +41 column, +42 next record (word), +48 buffer 128
 ; =====================================================================
 FS_MODE equ 37
 FS_POS  equ 38
@@ -11,10 +11,10 @@ FS_EOF  equ 40
 FS_COL  equ 41
 FS_REC  equ 42
 FS_BUF  equ 48
-FS_RLEN equ 44                  ; lunghezza del record (accesso casuale)
+FS_RLEN equ 44                  ; record length (random access)
 FS_NFLD equ 45                  ; campi FIELD definiti
-FS_FOFS equ 46                  ; scostamento del prossimo campo
-FS_FLD  equ 176                 ; tabella dei campi: 8 x (variabile, scostamento, larghezza)
+FS_FOFS equ 46                  ; offset of the next field
+FS_FLD  equ 176                 ; field table: 8 x (variable, offset, width)
 FS_SIZE equ 208
 FS_POOL equ 3*FS_SIZE
 
@@ -42,14 +42,14 @@ e_bfm:  ld hl,msg_bfm
 e_pae:  ld hl,msg_pae
         jp rt_fatal
 
-bdos:                           ; C = funzione, DE = parametro (conserva IX)
+bdos:                           ; C = function, DE = parameter (preserves IX)
         push ix
         call 0005h
         pop ix
         or a
         ret
 
-ensure_pool:                    ; riserva i 3 descrittori (una volta sola)
+ensure_pool:                    ; reserves the 3 descriptors (only once)
         ld hl,(FILEP)
         ld a,h
         or l
@@ -77,7 +77,7 @@ ensure_pool:                    ; riserva i 3 descrittori (una volta sola)
         ldir
         ret
 
-slotof:                         ; HL = numero (1-3) -> IX = descrittore
+slotof:                         ; HL = number (1-3) -> IX = descriptor
         ld a,h
         or a
         jp nz,e_bfn
@@ -100,14 +100,14 @@ slotof:                         ; HL = numero (1-3) -> IX = descrittore
         pop ix
         ret
 
-slot_open:                      ; come slotof, ma il file deve essere aperto
+slot_open:                      ; like slotof, but the file must be open
         call slotof
         ld a,(ix+FS_MODE)
         or a
         jp z,e_bfn
         ret
 
-setdma:                         ; DMA = buffer del descrittore IX
+setdma:                         ; DMA = buffer of descriptor IX
         push ix
         pop hl
         ld de,FS_BUF
@@ -128,7 +128,7 @@ fcbde:  push ix
         pop de
         ret
 
-rdrec:                          ; legge il record FS_REC nel buffer: Z = ok
+rdrec:                          ; reads record FS_REC into the buffer: Z = ok
         call setdma
         call fcbde
         ld a,(ix+FS_MODE)
@@ -141,7 +141,7 @@ rdrec:                          ; legge il record FS_REC nel buffer: Z = ok
         ld c,21h                ; aggiunta: record casuale
 .go:    jp bdos
 
-wrrec:                          ; scrive il buffer nel record FS_REC e avanza
+wrrec:                          ; writes the buffer to record FS_REC and advances
         call setdma
         call setrec
         call fcbde
@@ -153,7 +153,7 @@ wrrec:                          ; scrive il buffer nel record FS_REC e avanza
         inc (ix+FS_REC+1)
         ret
 
-parsefn:                        ; HL = stringa (lunghezza, testo), IX = FCB da riempire
+parsefn:                        ; HL = string (length, text), IX = FCB to fill
         push hl
         push ix
         pop hl
@@ -248,7 +248,7 @@ fupper: cp 'a'
         sub 32
         ret
 
-rt_open:                        ; OPEN HL = nome, GX1 = numero, GY1 = modo (1 lettura, 2 scrittura, 3 aggiunta)
+rt_open:                        ; OPEN HL = name, GX1 = number, GY1 = mode (1 read, 2 write, 3 append)
         push hl
         call ensure_pool
         ld hl,(GX1)
@@ -274,7 +274,7 @@ rt_open:                        ; OPEN HL = nome, GX1 = numero, GY1 = modo (1 le
         jp z,.rnd
         cp 3
         jp nz,e_bfm
-        call fcbde              ; aggiunta: apre, altrimenti crea
+        call fcbde              ; append: open, otherwise create
         ld c,0Fh
         call bdos
         jp nz,.mk
@@ -286,7 +286,7 @@ rt_open:                        ; OPEN HL = nome, GX1 = numero, GY1 = modo (1 le
         ld a,h
         or l
         jr z,.apdone
-        dec hl                  ; ultimo record: va riletto e si riparte dal primo ^Z
+        dec hl                  ; last record: must be re-read and we restart from the first ^Z
         ld (ix+FS_REC),l
         ld (ix+FS_REC+1),h
         call rdrec
@@ -303,7 +303,7 @@ rt_open:                        ; OPEN HL = nome, GX1 = numero, GY1 = modo (1 le
         inc hl
         inc c
         djnz .sz
-        ld l,(ix+FS_REC)        ; record pieno: si prosegue con il successivo
+        ld l,(ix+FS_REC)        ; record full: continue with the next one
         ld h,(ix+FS_REC+1)
         inc hl
         ld (ix+FS_REC),l
@@ -313,7 +313,7 @@ rt_open:                        ; OPEN HL = nome, GX1 = numero, GY1 = modo (1 le
 .apdone:
         ld (ix+FS_MODE),3
         ret
-.rnd:   ld hl,(GX2)             ; accesso casuale: lunghezza del record 1-128; si apre il file o lo si crea
+.rnd:   ld hl,(GX2)             ; random access: record length 1-128; the file is opened or created
         ld a,h
         or a
         jp nz,rt_eifc
@@ -363,8 +363,8 @@ close_slot:                     ; IX = descrittore
         cp 1
         jr z,.cl
         cp 4
-        jr z,.cl                ; accesso casuale: niente da scaricare
-        ld a,(ix+FS_POS)        ; scritture: riempie il resto con ^Z e scrive
+        jr z,.cl                ; random access: nothing to flush
+        ld a,(ix+FS_POS)        ; writes: fills the rest with ^Z and writes
         or a
         jr z,.cl
         push ix
@@ -388,7 +388,7 @@ close_slot:                     ; IX = descrittore
         ld (ix+FS_MODE),0
         ret
 
-rt_close:                       ; CLOSE HL = numero (0 = tutti)
+rt_close:                       ; CLOSE HL = number (0 = all)
         ld a,h
         or l
         jr z,files_close_all
@@ -417,7 +417,7 @@ files_close_all:
         ld (OUTSEL),a
         ret
 
-rt_outsel:                      ; HL = numero del file di PRINT# (0 = schermo)
+rt_outsel:                      ; HL = PRINT# file number (0 = screen)
         ld a,h
         or l
         jr z,.set
@@ -460,7 +460,7 @@ fputc:                          ; A = carattere, IX = descrittore (scrittura)
         ld (ix+FS_POS),0
         ret
 
-fput_sel:                       ; carattere di rt_putc verso il file selezionato
+fput_sel:                       ; rt_putc character to the selected file
         push hl
         push de
         push bc
@@ -478,7 +478,7 @@ fput_sel:                       ; carattere di rt_putc verso il file selezionato
         pop hl
         ret
 
-curcol:                         ; -> A = colonna (0 = inizio riga) dell'uscita corrente
+curcol:                         ; -> A = column (0 = start of line) of the current output
         ld a,(OUTSEL)
         or a
         jr nz,.f
@@ -495,7 +495,7 @@ curcol:                         ; -> A = colonna (0 = inizio riga) dell'uscita c
         pop ix
         ret
 
-fgetc:                          ; IX = descrittore -> A = carattere, C = fine file (conserva BC e HL)
+fgetc:                          ; IX = descriptor -> A = character, C = end of file (preserves BC and HL)
         push bc
         push hl
         call fgetc0
@@ -536,11 +536,11 @@ fgetc0:
 .ok:    or a
         ret
 
-funget:                         ; rimette indietro l'ultimo carattere letto
+funget:                         ; puts back the last character read
         dec (ix+FS_POS)
         ret
 
-rt_feof:                        ; EOF(n) -> HL = -1 se fine file
+rt_feof:                        ; EOF(n) -> HL = -1 if end of file
         call slot_open
         ld hl,-1
         ld a,(ix+FS_MODE)
@@ -552,14 +552,14 @@ rt_feof:                        ; EOF(n) -> HL = -1 se fine file
         ld hl,0
         ret
 
-fin_start:                      ; HL = numero: IX = file in lettura
+fin_start:                      ; HL = number: IX = file open for reading
         call slot_open
         ld a,(ix+FS_MODE)
         cp 1
         jp nz,e_bfm
         ret
 
-fin_done:                       ; B = lunghezza raccolta in inbuf -> stringa temporanea
+fin_done:                       ; B = length collected in inbuf -> temporary string
         ld a,b
         ld (inbuf),a
         ld hl,inbuf
@@ -593,7 +593,7 @@ rt_fline:                       ; LINE INPUT # -> HL = stringa
         call funget
 .end:   jp fin_done
 
-rt_finput:                      ; INPUT # (un campo) -> HL = stringa
+rt_finput:                      ; INPUT # (one field) -> HL = string
         call fin_start
         ld hl,inbuf+1
         ld b,0
@@ -609,7 +609,7 @@ rt_finput:                      ; INPUT # (un campo) -> HL = stringa
         jr z,.end
         cp '"'
         jr z,.q
-.u:     ld c,a                  ; campo senza virgolette: fino a virgola o fine riga
+.u:     ld c,a                  ; unquoted field: up to comma or end of line
         ld a,b
         cp 250
         jr nc,.un
@@ -626,7 +626,7 @@ rt_finput:                      ; INPUT # (un campo) -> HL = stringa
         cp 10
         jr z,.end
         jr .u
-.q:     call fgetc              ; campo tra virgolette
+.q:     call fgetc              ; quoted field
         jr c,.end
         cp '"'
         jr z,.qe
@@ -639,7 +639,7 @@ rt_finput:                      ; INPUT # (un campo) -> HL = stringa
         inc hl
         inc b
         jr .q
-.qe:    call fgetc              ; dopo la chiusura: si scarta fino al separatore
+.qe:    call fgetc              ; after the closing quote: discard up to the separator
         jr c,.end
         cp ','
         jr z,.end
@@ -655,7 +655,7 @@ rt_finput:                      ; INPUT # (un campo) -> HL = stringa
         call funget
 .end:   jp fin_done
 
-rt_kill:                        ; KILL HL = nome
+rt_kill:                        ; KILL HL = name
         push ix
         ld ix,inbuf
         call parsefn
@@ -666,7 +666,7 @@ rt_kill:                        ; KILL HL = nome
         jp nz,e_fnf
         ret
 
-rt_wint:                        ; WRITE: intero senza spazi
+rt_wint:                        ; WRITE: integer without spaces
         bit 7,h
         jr z,.p
         ld a,'-'
@@ -676,7 +676,7 @@ rt_wint:                        ; WRITE: intero senza spazi
         call rt_neghl
 .p:     jp rt_udec
 
-rt_wstr:                        ; WRITE: stringa tra virgolette
+rt_wstr:                        ; WRITE: quoted string
         push hl
         ld a,'"'
         call rt_putc
@@ -685,10 +685,10 @@ rt_wstr:                        ; WRITE: stringa tra virgolette
         ld a,'"'
         jp rt_putc
 
-; --- BSAVE / BLOAD: formato binario MSX (FEh, inizio, fine, esecuzione) + dati; l'FCB e il buffer stanno in inbuf
+; --- BSAVE / BLOAD: MSX binary format (FEh, start, end, execution) + data; the FCB and the buffer live in inbuf
 BBUF    equ inbuf+40
 
-bfcb_init:                      ; HL = nome: IX = FCB (inbuf), numero di record 0, record da 1 byte
+bfcb_init:                      ; HL = name: IX = FCB (inbuf), record number 0, 1-byte records
         ld ix,inbuf
         jp parsefn
 
@@ -701,7 +701,7 @@ bfcb_rec:
         ld (ix+35),a
         ret
 
-rt_bsave:                       ; BSAVE HL = nome, GX1 = inizio, GY1 = lunghezza, GX2 = 1 se dalla VRAM
+rt_bsave:                       ; BSAVE HL = name, GX1 = start, GY1 = length, GX2 = 1 if from VRAM
         push ix
         call bfcb_init
         ld de,inbuf
@@ -806,7 +806,7 @@ rt_bsave:                       ; BSAVE HL = nome, GX1 = inizio, GY1 = lunghezza
         pop ix
         ret
 
-rt_bload:                       ; BLOAD HL = nome, GX1 = scostamento, GY1 = 1 se verso la VRAM
+rt_bload:                       ; BLOAD HL = name, GX1 = offset, GY1 = 1 if to VRAM
         push ix
         call bfcb_init
         ld de,inbuf
@@ -824,18 +824,18 @@ rt_bload:                       ; BLOAD HL = nome, GX1 = scostamento, GY1 = 1 se
         ld a,(BBUF)
         cp 0FEh
         jp nz,e_bfm
-        ld hl,(BBUF+3)          ; lunghezza = fine - inizio + 1
+        ld hl,(BBUF+3)          ; length = end - start + 1
         ld de,(BBUF+1)
         or a
         sbc hl,de
         inc hl
         push hl
         ex de,hl
-        ld hl,(BBUF+1)          ; destinazione = inizio + scostamento
+        ld hl,(BBUF+1)          ; destination = start + offset
         ld de,(GX1)
         add hl,de
         ld (GX1),hl
-        pop hl                  ; HL = lunghezza
+        pop hl                  ; HL = length
         ld (GY2),hl
         ld a,(GY1)
         or a
@@ -900,9 +900,9 @@ rt_bload:                       ; BLOAD HL = nome, GX1 = scostamento, GY1 = 1 se
         pop ix
         ret
 
-; --- accesso casuale: record di 1-128 byte; i campi FIELD si copiano nelle variabili stringa dopo GET e dalle variabili
-; nel buffer prima di PUT (LSET e' un semplice assegnamento: PUT completa con spazi)
-rt_field:                       ; HL = variabile stringa, GX1 = file, GY1 = larghezza, GX2 = 1 per il primo campo
+; --- random access: records of 1-128 bytes; FIELD fields are copied into the string variables after GET and from the variables
+; into the buffer before PUT (LSET is a plain assignment: PUT pads with spaces)
+rt_field:                       ; HL = string variable, GX1 = file, GY1 = width, GX2 = 1 for the first field
         push hl
         ld hl,(GX1)
         call slot_open
@@ -946,12 +946,12 @@ rt_field:                       ; HL = variabile stringa, GX1 = file, GY1 = larg
         ld b,(ix+FS_RLEN)
         inc b
         cp b
-        jp nc,rt_eifc           ; i campi non possono superare il record
+        jp nc,rt_eifc           ; fields cannot exceed the record
         ld (ix+FS_FOFS),a
         inc (ix+FS_NFLD)
         ret
 
-rec_pos:                        ; -> FCB: posizione in byte di GY1 (0 = prossimo record); HL = lunghezza del record
+rec_pos:                        ; -> FCB: byte position of GY1 (0 = next record); HL = record length
         ld l,(ix+FS_REC)
         ld h,(ix+FS_REC+1)
         ld de,(GY1)
@@ -988,7 +988,7 @@ rec_pos:                        ; -> FCB: posizione in byte di GY1 (0 = prossimo
         ld h,0
         ret
 
-fld_ptr:                        ; B = indice del campo -> HL = voce
+fld_ptr:                        ; B = field index -> HL = entry
         ld a,b
         ld e,a
         ld d,0
@@ -1009,7 +1009,7 @@ rt_fget:                        ; GET #n [, record]
         ld a,(ix+FS_MODE)
         cp 4
         jp nz,e_bfm
-        call rec_pos            ; HL = lunghezza del record
+        call rec_pos            ; HL = record length
         push hl
         push ix
         pop hl
@@ -1020,7 +1020,7 @@ rt_fget:                        ; GET #n [, record]
         inc de
         ld (hl),0
         ld bc,127
-        ldir                    ; il buffer si azzera (record oltre la fine del file)
+        ldir                    ; the buffer is cleared (record beyond end of file)
         push ix
         pop hl
         ld de,FS_BUF
@@ -1032,7 +1032,7 @@ rt_fget:                        ; GET #n [, record]
         call fcbde
         ld c,27h
         call bdos
-        ld a,(ix+FS_NFLD)       ; buffer -> variabili dei campi
+        ld a,(ix+FS_NFLD)       ; buffer -> field variables
         or a
         ret z
         ld b,a
@@ -1044,7 +1044,7 @@ rt_fget:                        ; GET #n [, record]
         inc hl
         ld d,(hl)               ; DE = variabile
         inc hl
-        ld a,(hl)               ; scostamento
+        ld a,(hl)               ; offset
         inc hl
         ld c,(hl)               ; larghezza
         push de
@@ -1054,10 +1054,10 @@ rt_fget:                        ; GET #n [, record]
         add hl,de
         ld e,a
         ld d,0
-        add hl,de               ; HL = origine nel buffer
+        add hl,de               ; HL = source in the buffer
         pop de
         ld a,c
-        ld (de),a               ; lunghezza = larghezza
+        ld (de),a               ; length = width
         inc de
         ld b,0
         ldir
@@ -1072,7 +1072,7 @@ rt_fput:                        ; PUT #n [, record]
         ld a,(ix+FS_MODE)
         cp 4
         jp nz,e_bfm
-        ld a,(ix+FS_NFLD)       ; variabili dei campi -> buffer (con spazi in coda)
+        ld a,(ix+FS_NFLD)       ; field variables -> buffer (with trailing spaces)
         or a
         jr z,.go
         ld b,a
@@ -1084,7 +1084,7 @@ rt_fput:                        ; PUT #n [, record]
         inc hl
         ld d,(hl)               ; DE = variabile
         inc hl
-        ld a,(hl)               ; scostamento
+        ld a,(hl)               ; offset
         inc hl
         ld c,(hl)               ; larghezza
         push de
@@ -1095,14 +1095,14 @@ rt_fput:                        ; PUT #n [, record]
         ld e,a
         ld d,0
         add hl,de
-        ex de,hl                ; DE = destinazione
-        pop hl                  ; HL = variabile (lunghezza, testo)
+        ex de,hl                ; DE = destination
+        pop hl                  ; HL = variable (length, text)
         ld a,(hl)
         inc hl
         cp c
         jr c,.sh
         ld a,c
-.sh:    ld b,a                  ; B = byte da copiare
+.sh:    ld b,a                  ; B = bytes to copy
         ld a,c
         sub b
         ld c,a                  ; C = spazi in coda
@@ -1141,7 +1141,7 @@ rt_fput:                        ; PUT #n [, record]
         jp nz,e_dio
         ret
 
-rt_flof:                        ; LOF(n) -> HL = numero di record (dimensione nell'FCB / lunghezza del record, per eccesso)
+rt_flof:                        ; LOF(n) -> HL = number of records (size in the FCB / record length, rounded up)
         call slot_open
         ld a,(ix+FS_MODE)
         cp 4
@@ -1161,7 +1161,7 @@ rt_flof:                        ; LOF(n) -> HL = numero di record (dimensione ne
         inc hl
         ret
 
-div8:                           ; A = resto, D = byte seguente, C = divisore (< 129) -> A = nuovo resto, E = quoziente
+div8:                           ; A = remainder, D = next byte, C = divisor (< 129) -> A = new remainder, E = quotient
         ld b,8
         ld e,0
 .l:     sla d
@@ -1176,7 +1176,7 @@ div8:                           ; A = resto, D = byte seguente, C = divisore (< 
 .nx:    djnz .l
         ret
 
-rt_rset:                        ; RSET: HL = stringa, DE = variabile: allineata a destra nella larghezza del suo campo FIELD
+rt_rset:                        ; RSET: HL = string, DE = variable: right-aligned within the width of its FIELD field
         ld (S1),de
         push hl
         ld hl,0

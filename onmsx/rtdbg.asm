@@ -1,36 +1,36 @@
 ; =====================================================================
-; Debugger a strumentazione (OPTION DEBUG)
-; Il compilatore mette prima di ogni istruzione:  ld hl,<riga> ; call RT_DBG
-; Passo-passo, breakpoint per riga, CTRL-STOP interrompe l'esecuzione, variabili globali scalari
-; (solo .COM). Lo schermo del programma si salva cosi': registri VDP (copie del BIOS), 960 byte di
-; VRAM per la tabella dei nomi e 512 per i glifi ASCII 32-95; poi si passa a TEXT 1 (40x24),
-; attivando il VDP in modo testo prima di leggere la VRAM (negli schermi 6 e 7 gli indirizzi sono
-; interlacciati: si salva e si ripristina sempre con la stessa mappatura).
-; Lo stato (circa 1.6 KB) si prende dall'alto dell'heap alla prima chiamata.
+; Instrumented debugger (OPTION DEBUG)
+; The compiler puts before every statement:  ld hl,<line> ; call RT_DBG
+; Single-step, breakpoints by line, CTRL-STOP interrupts execution, global scalar variables
+; (.COM only). The program's screen is saved as follows: VDP registers (BIOS copies), 960 bytes of
+; VRAM for the name table and 512 for the ASCII 32-95 glyphs; then it switches to TEXT 1 (40x24),
+; enabling the VDP in text mode before reading the VRAM (in screens 6 and 7 the addresses are
+; interleaved: always save and restore with the same mapping).
+; The state (about 1.6 KB) is taken from the top of the heap on the first call.
 ; =====================================================================
 INTFLG  equ 0FC9Bh
 RG25SA  equ 0FFFAh
-D_MODE  equ 0                   ; 1 = passo-passo, 0 = esegui fino a un breakpoint
+D_MODE  equ 0                   ; 1 = single-step, 0 = run until a breakpoint
 D_NBP   equ 1
 D_BP    equ 2                   ; 8 word
 D_LINE  equ 18
-D_VPG   equ 20                  ; pagina delle variabili
+D_VPG   equ 20                  ; variables page
 D_VPTR  equ 22
 D_VN    equ 24
 D_VS    equ 25
 D_VR    equ 26
 D_IN    equ 27                  ; word
 D_ND    equ 29
-D_FR    equ 30                  ; word: IX del programma (frame della routine corrente)
+D_FR    equ 30                  ; word: program's IX (frame of the current routine)
 D_QX    equ 60                  ; comando E: indice dell'array (flag, word)
-D_VM    equ 63                  ; limite di riga per dbg_vline (18 = pannello, 22 = comando E)
-D_QB    equ 1600                ; comando E: testo (24 byte) e modello del nome (12 byte)
-D_REGS  equ 32                  ; R#0-R#27 (28 byte)
-D_LBUF  equ 64                  ; 40 byte: riga di testo
-D_BUF   equ 128                 ; 960 byte tabella nomi + 512 byte glifi
+D_VM    equ 63                  ; line limit for dbg_vline (18 = panel, 22 = E command)
+D_QB    equ 1600                ; E command: text (24 bytes) and name pattern (12 bytes)
+D_REGS  equ 32                  ; R#0-R#27 (28 bytes)
+D_LBUF  equ 64                  ; 40 bytes: text line
+D_BUF   equ 128                 ; 960 bytes name table + 512 bytes glyphs
 DBGSIZE equ 0670h
 
-rt_dbg:                         ; HL = riga sorgente; conserva tutti i registri
+rt_dbg:                         ; HL = source line; preserves all registers
         push af
         push bc
         push de
@@ -45,7 +45,7 @@ rt_dbg:                         ; HL = riga sorgente; conserva tutti i registri
         call dbg_init
         pop hl
 .have:  push ix
-        pop bc                  ; IX del programma = frame della routine corrente
+        pop bc                  ; program's IX = frame of the current routine
         ld ix,(DBGP)
         ld (ix+D_FR),c
         ld (ix+D_FR+1),b
@@ -102,11 +102,11 @@ dbg_init:
         ld bc,127
         ldir
         ld hl,(DBGP)
-        ld (hl),1               ; si parte in passo-passo
+        ld (hl),1               ; starts in single-step mode
         ret
 
 ; ---------------------------------------------------------------- VDP
-dbg_wreg:                       ; A = valore, C = registro (conserva BC, DE, HL)
+dbg_wreg:                       ; A = value, C = register (preserves BC, DE, HL)
         di
         out (VDPC),a
         ld a,c
@@ -115,7 +115,7 @@ dbg_wreg:                       ; A = valore, C = registro (conserva BC, DE, HL)
         ei
         ret
 
-dbg_vset:                       ; HL = indirizzo (< 16 KB), A = 0 lettura / 40h scrittura
+dbg_vset:                       ; HL = address (< 16 KB), A = 0 read / 40h write
         ld c,a
         di
         xor a
@@ -131,7 +131,7 @@ dbg_vset:                       ; HL = indirizzo (< 16 KB), A = 0 lettura / 40h 
         ei
         ret
 
-dbg_rd:                         ; BC byte dalla VRAM a (HL)
+dbg_rd:                         ; BC bytes from VRAM to (HL)
         in a,(VDPD)
         ld (hl),a
         inc hl
@@ -141,7 +141,7 @@ dbg_rd:                         ; BC byte dalla VRAM a (HL)
         jr nz,dbg_rd
         ret
 
-dbg_wr:                         ; BC byte da (HL) alla VRAM
+dbg_wr:                         ; BC bytes from (HL) to VRAM
         ld a,(hl)
         out (VDPD),a
         inc hl
@@ -160,7 +160,7 @@ dbg_bufp:                       ; -> HL = buffer VRAM salvata
 dbg_enter:
         ld a,(M2FLAG)
         or a
-        call nz,vdp_wait        ; MSX1: niente motore comandi (e R#15 non esiste)
+        call nz,vdp_wait        ; MSX1: no command engine (and R#15 does not exist)
         ld hl,(DBGP)
         ld de,D_REGS
         add hl,de
@@ -171,11 +171,11 @@ dbg_enter:
         ld hl,RG8SAV
         ld bc,16
         ldir
-        inc de                  ; R#24 non esiste
+        inc de                  ; R#24 does not exist
         ld hl,RG25SA
         ld bc,3
         ldir
-        ld c,1                  ; TEXT 1, schermo spento
+        ld c,1                  ; TEXT 1, screen off
         ld a,0B0h
         call dbg_wreg
         xor a
@@ -195,7 +195,7 @@ dbg_enter:
         call dbg_wreg
         ld a,(M2FLAG)
         or a
-        jp z,.nv                ; MSX1: solo R#0-R#7 (i numeri maggiori si sovrapporrebbero ai primi)
+        jp z,.nv                ; MSX1: only R#0-R#7 (higher numbers would overlap the first ones)
         ld a,(RG8SAV+1)
         and 7Fh
         ld c,9
@@ -216,7 +216,7 @@ dbg_enter:
         xor a
         ld c,27
         call dbg_wreg
-.nv:    ld hl,0                 ; salva la VRAM
+.nv:    ld hl,0                 ; saves the VRAM
         xor a
         call dbg_vset
         call dbg_bufp
@@ -229,7 +229,7 @@ dbg_enter:
         pop hl
         ld bc,512
         call dbg_rd
-        ld hl,0900h             ; font del BIOS: ASCII 32-95
+        ld hl,0900h             ; BIOS font: ASCII 32-95
         ld a,40h
         call dbg_vset
         ld hl,4
@@ -249,7 +249,7 @@ dbg_enter:
         ld a,b
         or c
         jr nz,.f
-        ld hl,0                 ; tabella dei nomi vuota
+        ld hl,0                 ; empty name table
         ld a,40h
         call dbg_vset
         ld bc,960
@@ -286,14 +286,14 @@ dbg_leave:
         ld a,(M2FLAG)
         or a
         jr nz,.r
-        ld b,8                  ; MSX1: si ripristinano solo R#0-R#7
+        ld b,8                  ; MSX1: only R#0-R#7 are restored
 .r:     ld a,c
         cp 1
         jr z,.s
         cp 14
         jr c,.w
         cp 18
-        jr c,.s                 ; R#14-17 (banco, stato, palette, puntatore) non si toccano
+        jr c,.s                 ; R#14-17 (bank, status, palette, pointer) are left untouched
 .w:     ld a,(hl)
         call dbg_wreg
 .s:     inc hl
@@ -327,8 +327,8 @@ dbg_leave:
         ld c,1
         jp dbg_wreg
 
-; ---------------------------------------------------------------- testo
-dbg_lclr:                       ; riga di testo = 40 spazi, DE = inizio
+; ---------------------------------------------------------------- text
+dbg_lclr:                       ; text line = 40 spaces, DE = start
         ld hl,(DBGP)
         ld de,D_LBUF
         add hl,de
@@ -342,7 +342,7 @@ dbg_lclr:                       ; riga di testo = 40 spazi, DE = inizio
         pop de
         ret
 
-dbg_cat:                        ; HL = testo 0-terminato -> (DE), DE avanza
+dbg_cat:                        ; HL = 0-terminated text -> (DE), DE advances
         ld a,(hl)
         or a
         ret z
@@ -351,7 +351,7 @@ dbg_cat:                        ; HL = testo 0-terminato -> (DE), DE avanza
         inc de
         jr dbg_cat
 
-dbg_row:                        ; A = riga: la riga di testo va nella tabella dei nomi
+dbg_row:                        ; A = row: the text line goes into the name table
         ld l,a
         ld h,0
         ld d,h
@@ -396,7 +396,7 @@ dbg_div10:                      ; HL / 10 -> HL, A = resto
 .n:     djnz .d
         ret
 
-dbg_udec:                       ; HL senza segno -> testo in (DE), DE avanza
+dbg_udec:                       ; HL unsigned -> text in (DE), DE advances
         ld c,0
 .l:     push bc
         call dbg_div10
@@ -414,7 +414,7 @@ dbg_udec:                       ; HL senza segno -> testo in (DE), DE avanza
         jr nz,.o
         ret
 
-dbg_dec:                        ; HL con segno
+dbg_dec:                        ; HL signed
         bit 7,h
         jr z,dbg_udec
         ld a,'-'
@@ -428,7 +428,7 @@ dbg_dec:                        ; HL con segno
         ld h,a
         jr dbg_udec
 
-dbg_key:                        ; -> A = tasto (maiuscolo), senza cursore del BIOS
+dbg_key:                        ; -> A = key (uppercase), without the BIOS cursor
 .w:     ld ix,CHSNS
         call rt_bios
         jr z,.w
@@ -475,7 +475,7 @@ dbg_draw:
         djnz .sp
         ld a,1
         call dbg_row
-        ld c,2                  ; righe 2-17 vuote
+        ld c,2                  ; rows 2-17 empty
 .bl:    push bc
         call dbg_lclr
         pop bc
@@ -571,14 +571,14 @@ dbg_vars:
         pop iy                  ; IY = record
         ld a,(iy+14)
         or (iy+15)
-        jr nz,.loop             ; gli array non si mostrano
+        jr nz,.loop             ; arrays are not shown
         ld l,(iy+12)
         ld h,(iy+13)
         ld c,0
         call dbg_vline
         jr .loop
 
-dbg_vline:                      ; IY = record (nome +0, suffisso +11), HL = indirizzo del valore, C = prefisso (0 = nessuno)
+dbg_vline:                      ; IY = record (name +0, suffix +11), HL = value address, C = prefix (0 = none)
         ld ix,(DBGP)
         ld a,(ix+D_VS)
         or a
@@ -640,7 +640,7 @@ dbg_vline:                      ; IY = record (nome +0, suffisso +11), HL = indi
         ld l,a
         call dbg_dec
         jr .put
-.str:   ld a,'"'                 ; la variabile stringa e' il buffer [len][dati]
+.str:   ld a,'"'                 ; the string variable is the buffer [len][data]
         ld (de),a
         inc de
         call dbg_cats
@@ -652,7 +652,7 @@ dbg_vline:                      ; IY = record (nome +0, suffisso +11), HL = indi
         inc (ix+D_VR)
         jp dbg_row
 
-dbg_cats:                       ; HL = stringa [len][dati] -> (DE), al massimo 22 caratteri
+dbg_cats:                       ; HL = string [len][data] -> (DE), at most 22 characters
         ld b,(hl)
         inc hl
         ld a,b
@@ -689,7 +689,7 @@ dbg_nextpg:
         ret
 
 ; ---------------------------------------------------------------- breakpoint
-dbg_bptoggle:                   ; HL = riga: aggiunge o toglie
+dbg_bptoggle:                   ; HL = line: adds or removes
         ld ix,(DBGP)
         push ix
         pop de
@@ -801,7 +801,7 @@ dbg_prompt:
         ld a,(ix+D_ND)
         or a
         jr nz,.have
-        ld l,(ix+D_LINE)        ; senza cifre: la riga corrente
+        ld l,(ix+D_LINE)        ; no digits: the current line
         ld h,(ix+D_LINE+1)
         jr .tog
 .have:  ld l,(ix+D_IN)
@@ -809,7 +809,7 @@ dbg_prompt:
         ld a,h
         or l
         jr nz,.tog
-        ld (ix+D_NBP),0         ; 0: toglie tutti
+        ld (ix+D_NBP),0         ; 0: removes all
         ret
 .tog:   jp dbg_bptoggle
 
@@ -817,7 +817,7 @@ dbg_prompt:
 dbg_ui:
         call dbg_enter
 .draw:  call dbg_draw
-        ld c,1                  ; schermo acceso
+        ld c,1                  ; screen on
         ld a,0F0h
         call dbg_wreg
 .k:     call dbg_key

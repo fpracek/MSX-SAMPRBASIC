@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Compila un .bas, assembla, esegue in openMSX headless (NMS-8250 = MSX2)
-e confronta lo schermo (VRAM name table, 80 colonne) con il file .exp.
+"""Compiles a .bas, assembles it, runs it in headless openMSX (NMS-8250 = MSX2)
+and compares the screen (VRAM name table, 80 columns) with the .exp file.
 
-uso: python build.py tests/t1.bas [--keep]
+usage: python build.py tests/t1.bas [--keep]
 """
 import os
 import subprocess
@@ -82,7 +82,7 @@ if __name__ == '__main__':
     exp_path = os.path.splitext(bas)[0] + '.exp'
     if os.path.exists(exp_path):
         exp = [l.rstrip() for l in open(exp_path).read().rstrip('\n').split('\n')]
-        # lo schermo puo' contenere righe di BIOS iniziali: confronta le prime righe
+        # the screen may contain initial BIOS lines: compare the first lines
         ok = lines[:len(exp)] == exp
         print('OK' if ok else 'DIFFERENZE')
         if not ok:

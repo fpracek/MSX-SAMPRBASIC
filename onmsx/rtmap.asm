@@ -1,16 +1,16 @@
 ; =====================================================================
-; Mapper RAM (MSX2): segmenti da 16 KB visti attraverso la pagina 2 (8000h-BFFF, porta FEh).
-; MAPPERSEGS, MGET, MPUT, MREAD, MWRITE. Nei .COM la pagina 2 e' la RAM del mapper (si accede direttamente e si
-; ripristina il segmento di prima); nelle cartucce la pagina 2 e' la ROM e si usano RDSLT/WRSLT sullo slot RAM.
-; Gli indirizzi di memoria dei blocchi non devono cadere in 8000h-BFFFh.
+; Mapper RAM (MSX2): 16 KB segments seen through page 2 (8000h-BFFF, port FEh).
+; MAPPERSEGS, MGET, MPUT, MREAD, MWRITE. In .COM files page 2 is the mapper RAM (accessed directly and it is
+; restores the previous segment); in cartridges page 2 is the ROM and RDSLT/WRSLT are used on the RAM slot.
+; The memory addresses of the blocks must not fall in 8000h-BFFFh.
 ; =====================================================================
 MAPFE   equ 0FEh
 RAMAD2  equ 0F343h
 RDSLTB  equ 000Ch
 WRSLTB  equ 0014h
-MPROBE  equ 9000h               ; byte di prova (offset 1000h del segmento)
+MPROBE  equ 9000h               ; test byte (offset 1000h of the segment)
 
-mp_rd:                          ; HL = indirizzo (pagina 2) -> A
+mp_rd:                          ; HL = address (page 2) -> A
         IFDEF ROMMODE
         push bc
         push de
@@ -25,7 +25,7 @@ mp_rd:                          ; HL = indirizzo (pagina 2) -> A
         ENDIF
         ret
 
-mp_wr:                          ; HL = indirizzo (pagina 2), A = valore
+mp_wr:                          ; HL = address (page 2), A = value
         IFDEF ROMMODE
         push bc
         push de
@@ -41,7 +41,7 @@ mp_wr:                          ; HL = indirizzo (pagina 2), A = valore
         ENDIF
         ret
 
-mp_sel:                         ; A = segmento: si ricorda quello attuale
+mp_sel:                         ; A = segment: remembers the current one
         push af
         in a,(MAPFE)
         ld (MSAVE),a
@@ -54,7 +54,7 @@ mp_rest:
         out (MAPFE),a
         ret
 
-mp_probe:                       ; B = n: NZ se il segmento n e' lo stesso di 0 (alias: il mapper non arriva a n)
+mp_probe:                       ; B = n: NZ if segment n is the same as 0 (alias: the mapper does not reach n)
         ld a,b
         ld (MTB),a
         xor a
@@ -85,7 +85,7 @@ mp_probe:                       ; B = n: NZ se il segmento n e' lo stesso di 0 (
         pop af
         ret
 
-mp_detect:                      ; -> HL = numero di segmenti (0 = niente mapper)
+mp_detect:                      ; -> HL = number of segments (0 = no mapper)
         ld a,(MAPK)
         or a
         jr z,.do
@@ -105,14 +105,14 @@ mp_detect:                      ; -> HL = numero di segmenti (0 = niente mapper)
 .al:    ld l,b
         ld h,0
         jr .r
-.big:   ld hl,256               ; nessun alias fino a 128: 256 segmenti
+.big:   ld hl,256               ; no aliasing up to 128: 256 segments
 .r:     ld a,l
         cp 4
         jr nc,.ok
         ld a,h
         or a
         jr nz,.ok
-        ld hl,0                 ; meno di 4 segmenti: niente mapper
+        ld hl,0                 ; fewer than 4 segments: no mapper
 .ok:    ld (MAPN),hl
         ld a,1
         ld (MAPK),a
@@ -123,7 +123,7 @@ mp_detect:                      ; -> HL = numero di segmenti (0 = niente mapper)
 rt_mapsegs:
         jp mp_detect
 
-rt_mget:                        ; MGET(GX1 = segmento, HL = offset) -> HL = byte
+rt_mget:                        ; MGET(GX1 = segment, HL = offset) -> HL = byte
         push hl
         call mp_chk
         pop hl
@@ -144,7 +144,7 @@ rt_mget:                        ; MGET(GX1 = segmento, HL = offset) -> HL = byte
         ld h,0
         ret
 
-rt_mput:                        ; MPUT GX1 = segmento, GY1 = offset, GX2 = valore
+rt_mput:                        ; MPUT GX1 = segment, GY1 = offset, GX2 = value
         call mp_chk
         ld hl,(GY1)
         ld a,h
@@ -163,7 +163,7 @@ rt_mput:                        ; MPUT GX1 = segmento, GY1 = offset, GX2 = valor
         ei
         ret
 
-mp_chk:                         ; il segmento GX1 deve esistere
+mp_chk:                         ; segment GX1 must exist
         call mp_detect
         ld a,h
         or l
@@ -174,13 +174,13 @@ mp_chk:                         ; il segmento GX1 deve esistere
         jp nz,rt_eifc
         ld a,h
         or a
-        ret nz                  ; 256 segmenti: qualsiasi valore a 8 bit
+        ret nz                  ; 256 segments: any 8-bit value
         ld a,e
         cp l
         ret c
         jp rt_eifc
 
-mp_range:                       ; GY1 = offset, GY2 = quanti, GX2 = indirizzo: controlli comuni -> HL = 8000h + offset, DE = indirizzo, BC = quanti
+mp_range:                       ; GY1 = offset, GY2 = count, GX2 = address: common checks -> HL = 8000h + offset, DE = address, BC = count
         call mp_chk
         ld hl,(GY1)
         ld bc,(GY2)
@@ -201,7 +201,7 @@ mp_range:                       ; GY1 = offset, GY2 = quanti, GX2 = indirizzo: c
         ld de,8000h
         add hl,de
         ld de,(GX2)
-        ld a,d                  ; la memoria non puo' stare in 8000h-BFFFh
+        ld a,d                  ; the memory cannot lie in 8000h-BFFFh
         and 0C0h
         cp 80h
         jp z,rt_eifc
@@ -216,7 +216,7 @@ mp_range:                       ; GY1 = offset, GY2 = quanti, GX2 = indirizzo: c
         pop hl
         ret
 
-rt_mread:                       ; MREAD segmento, offset, indirizzo, quanti: mapper -> memoria
+rt_mread:                       ; MREAD segment, offset, address, count: mapper -> memory
         call mp_range
         ld a,b
         or c
@@ -246,7 +246,7 @@ rt_mread:                       ; MREAD segmento, offset, indirizzo, quanti: map
         ei
         ret
 
-rt_mwrite:                      ; MWRITE segmento, offset, indirizzo, quanti: memoria -> mapper
+rt_mwrite:                      ; MWRITE segment, offset, address, count: memory -> mapper
         call mp_range
         ld a,b
         or c
@@ -270,18 +270,18 @@ rt_mwrite:                      ; MWRITE segmento, offset, indirizzo, quanti: me
         or c
         jr nz,.w
         ELSE
-        ex de,hl                ; HL = memoria, DE = mapper
+        ex de,hl                ; HL = memory, DE = mapper
         ldir
         ENDIF
         call mp_rest
         ei
         ret
 
-; --- allocazione dei segmenti: con MSX-DOS 2 si usano le routine di supporto del mapper (EXTBIO), altrimenti
-; si prendono i segmenti dall'alto verso il basso (DOS 1 e cartucce non li usano)
+; --- segment allocation: with MSX-DOS 2 the mapper support routines (EXTBIO) are used, otherwise
+; segments are taken from the top down (DOS 1 and cartridges do not use them)
 EXTBIO  equ 0FFCAh
 
-mp_jt:                          ; -> HL = tabella delle routine del mapper (0 = nessun supporto)
+mp_jt:                          ; -> HL = mapper routine table (0 = no support)
         IFDEF ROMMODE
         ld hl,0
         ret
@@ -292,7 +292,7 @@ mp_jt:                          ; -> HL = tabella delle routine del mapper (0 = 
         ret
         ENDIF
 
-rt_malloc:                      ; MALLOC -> HL = numero di un segmento libero
+rt_malloc:                      ; MALLOC -> HL = number of a free segment
         call mp_detect
         ld a,h
         or l
@@ -306,7 +306,7 @@ rt_malloc:                      ; MALLOC -> HL = numero di un segmento libero
         ld (MJT),hl
         xor a
         ld b,a
-        ld hl,(MJT)             ; ALL_SEG: A = 0 (segmento utente), B = 0 (mapper primario) -> A = segmento
+        ld hl,(MJT)             ; ALL_SEG: A = 0 (user segment), B = 0 (primary mapper) -> A = segment
         di
         call .call
         ei
@@ -315,7 +315,7 @@ rt_malloc:                      ; MALLOC -> HL = numero di un segmento libero
         ld h,0
         ret
 .call:  jp (hl)
-.fb:    pop hl                  ; senza supporto: dall'alto
+.fb:    pop hl                  ; without support: from the top
         ld a,(MALN)
         inc a
         ld b,a
@@ -323,7 +323,7 @@ rt_malloc:                      ; MALLOC -> HL = numero di un segmento libero
         sub b
         jp c,rt_eifc
         cp 4
-        jp c,rt_eifc            ; i primi segmenti sono del sistema
+        jp c,rt_eifc            ; the first segments belong to the system
         ld c,a
         ld a,b
         ld (MALN),a
@@ -331,7 +331,7 @@ rt_malloc:                      ; MALLOC -> HL = numero di un segmento libero
         ld h,0
         ret
 
-rt_mfree:                       ; MFREE HL = segmento
+rt_mfree:                       ; MFREE HL = segment
         call mp_jt
         ld a,h
         or l
@@ -356,8 +356,8 @@ rt_mfree:                       ; MFREE HL = segmento
         ld (MALN),a
         ret
 
-; --- array di interi nel mapper: descrittore = numero di elementi (word) + fino a 4 segmenti (byte)
-mp_zero:                        ; A = segmento: lo azzera
+; --- integer arrays in the mapper: descriptor = number of elements (word) + up to 4 segments (bytes)
+mp_zero:                        ; A = segment: clears it
         di
         call mp_sel
         IFDEF ROMMODE
@@ -381,7 +381,7 @@ mp_zero:                        ; A = segmento: lo azzera
         ei
         ret
 
-rt_mdim:                        ; HL = descrittore, DE = numero di elementi
+rt_mdim:                        ; HL = descriptor, DE = number of elements
         ld (hl),e
         inc hl
         ld (hl),d
@@ -414,12 +414,12 @@ rt_mdim:                        ; HL = descrittore, DE = numero di elementi
         pop hl
         ret
 
-mp_elem:                        ; HL = indice, DE = descrittore -> HL = indirizzo in pagina 2, A = segmento
+mp_elem:                        ; HL = index, DE = descriptor -> HL = address in page 2, A = segment
         ex de,hl                ; HL = descrittore, DE = indice
         ld c,(hl)
         inc hl
         ld b,(hl)
-        inc hl                  ; BC = numero di elementi, HL = &segmenti
+        inc hl                  ; BC = number of elements, HL = &segments
         push hl
         ld h,d
         ld l,e
@@ -447,7 +447,7 @@ mp_elem:                        ; HL = indice, DE = descrittore -> HL = indirizz
         ld a,(MTB)
         ret
 
-rt_maget:                       ; HL = indice, DE = descrittore -> HL = valore
+rt_maget:                       ; HL = index, DE = descriptor -> HL = value
         call mp_elem
         di
         push hl
@@ -466,7 +466,7 @@ rt_maget:                       ; HL = indice, DE = descrittore -> HL = valore
         ei
         ret
 
-rt_maput:                       ; HL = valore, DE = indice, BC = descrittore
+rt_maput:                       ; HL = value, DE = index, BC = descriptor
         push hl
         ld h,b
         ld l,c
@@ -488,7 +488,7 @@ rt_maput:                       ; HL = valore, DE = indice, BC = descrittore
         ei
         ret
 
-rt_mki:                         ; MKI$(HL) -> stringa di 2 byte (little endian)
+rt_mki:                         ; MKI$(HL) -> 2-byte string (little endian)
         push hl
         ld a,2
         call rt_alloc
@@ -501,7 +501,7 @@ rt_mki:                         ; MKI$(HL) -> stringa di 2 byte (little endian)
         pop hl
         ret
 
-rt_cvi:                         ; CVI(HL = stringa di almeno 2 byte) -> intero
+rt_cvi:                         ; CVI(HL = string of at least 2 bytes) -> integer
         ld a,(hl)
         cp 2
         jp c,rt_eifc

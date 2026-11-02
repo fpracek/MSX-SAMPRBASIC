@@ -1,11 +1,11 @@
 ; =====================================================================
 ; MSXQB compilatore su MSX (QBC.COM) - stadio 1
-; BASIC -> codice macchina Z80 (programma .COM con il runtime rtcom.asm).
-; Una passata, emissione diretta; HL = accumulatore, operando sinistro sullo stack.
-; Input: riga di comando " NOME.SPB"  ->  scrive NOME.COM e lo avvia.
-; Errore: ricarica l'editor con " NOME.SPB E<riga> <codice>".
-; Memoria: codice 0100h-3EFFh, tabelle 3F00h-4EFFh, sorgente 4F00h-7FFFh,
-;          output 8000h-BEFFh (indirizzi virtuali da 0100h: virt = fisico - 7F00h).
+; BASIC -> Z80 machine code (.COM program with the rtcom.asm runtime).
+; Single pass, direct emission; HL = accumulator, left operand on the stack.
+; Input: command line " NAME.SPB"  ->  writes NAME.COM and starts it.
+; Error: reloads the editor with " NAME.SPB E<line> <code>".
+; Memory: code 0100h-3EFFh, tables 3F00h-4EFFh, source 4F00h-7FFFh,
+;          output 8000h-BEFFh (virtual addresses from 0100h: virt = physical - 7F00h).
 ; =====================================================================
         INCLUDE "rtabi.inc"
 BDOS    equ 0005h
@@ -18,7 +18,7 @@ F_BWR   equ 26h
 F_BRD   equ 27h
 
         IFDEF ROMMODE
-SRC     equ 4400h               ; il compilatore per cartucce non ha OPTION NUMBERED: le tabelle stanno nella RAM alta
+SRC     equ 4400h               ; the cartridge compiler has no OPTION NUMBERED: the tables live in high RAM
 SRCMAX  equ 3BFEh
         ELSE
         IFDEF BINMODE
@@ -34,28 +34,28 @@ SRCMAX  equ 30FEh
         ENDIF
 OUT0    equ 8000h
         IFDEF ROMMODE
-HDRB    equ OUT0+(RT_EMPTY-IMGBASE)     ; intestazione del runtime dentro il buffer (il runtime e' nel buffer)
+HDRB    equ OUT0+(RT_EMPTY-IMGBASE)     ; runtime header inside the buffer (the runtime is in the buffer)
         ELSE
-HDRB    equ ST+232              ; .COM: il runtime non sta nel buffer (si copia dal file RT.BIN): i campi si tengono qui
+HDRB    equ ST+232              ; .COM: the runtime is not in the buffer (copied from the RT.BIN file): the fields are kept here
         ENDIF
 HDRNAME equ HDRB+(RT_NAME-RT_EMPTY)
 HDRDSZ  equ HDRB+(RT_DSIZE-RT_EMPTY)
 HDRDAT  equ HDRB+(RT_DATA0-RT_EMPTY)
 HDRTGT  equ HDRB+(RT_TARGET-RT_EMPTY)
 HDRLEN  equ RT_TARGET+1-RT_EMPTY
-RTSTAMP equ 0C200h               ; 20 byte: timbro di RT.BIN (COM)
-RTCHK   equ 0CA00h               ; primo blocco del NOME.COM esistente (dopo la compilazione l'indice NUMBERED non serve piu')
-rtsz    equ ST+254              ; w  dimensione di RT.BIN (.COM)
+RTSTAMP equ 0C200h               ; 20 bytes: RT.BIN stamp (COM)
+RTCHK   equ 0CA00h               ; first block of the existing NAME.COM (after compilation the NUMBERED index is no longer needed)
+rtsz    equ ST+254              ; w  size of RT.BIN (.COM)
         IFDEF ROMMODE
-IMGBASE equ 4000h               ; indirizzo virtuale dell'inizio dell'immagine (cartuccia in pagina 1)
+IMGBASE equ 4000h               ; virtual address of the image start (cartridge in page 1)
         ELSE
         IFDEF BINMODE
-IMGBASE equ 8400h               ; BIN: immagine caricata a 8400h con BLOAD
+IMGBASE equ 8400h               ; BIN: image loaded at 8400h with BLOAD
         ELSE
 IMGBASE equ 0100h
         ENDIF
         ENDIF
-OUTLIM  equ 0BFh                ; alto byte: oltre BF00h il programma e' troppo grande
+OUTLIM  equ 0BFh                ; high byte: beyond BF00h the program is too large
 LDR     equ 0C000h
 
         IFDEF ROMMODE
@@ -66,7 +66,7 @@ LABT    equ 3F00h
         ELSE
 LABT    equ 3F00h
         ENDIF
-;              ; etichette: 96 x 20 byte
+;              ; labels: 96 x 20 bytes
         ENDIF
 LABREC  equ 20
 MAXLAB  equ 96
@@ -78,7 +78,7 @@ VART    equ 4680h
         ELSE
 VART    equ 4680h
         ENDIF
-;               ; variabili/array: 100 x 16 byte
+;               ; variables/arrays: 100 x 16 bytes
         ENDIF
 VARREC  equ 16
 MAXVAR  equ 100
@@ -90,24 +90,24 @@ BLKS    equ 4CC0h
         ELSE
 BLKS    equ 4CC0h
         ENDIF
-;               ; stack dei blocchi: 24 x 10 byte
+;               ; block stack: 24 x 10 bytes
         ENDIF
 BLKREC  equ 10
 MAXBLK  equ 24
 
 ST      equ 0C100h
-lp      equ ST+0                ; w  puntatore nel sorgente
-lineno  equ ST+2                ; w  riga corrente
-tline   equ ST+4                ; w  riga del token corrente
+lp      equ ST+0                ; w  pointer into the source
+lineno  equ ST+2                ; w  current line
+tline   equ ST+4                ; w  line of the current token
 ttype   equ ST+6                ; b
 tval    equ ST+7                ; w
-tlen    equ ST+9                ; b  lunghezza stringa
-tsuf    equ ST+10               ; b  suffisso '$' presente
+tlen    equ ST+9                ; b  string length
+tsuf    equ ST+10               ; b  '$' suffix present
 iseof   equ ST+11               ; b
-tbuf    equ ST+12               ; 16 byte: identificatore maiuscolo (0-terminato)
+tbuf    equ ST+12               ; 16 bytes: uppercase identifier (0-terminated)
 LEXSZ   equ 28
 lexsv   equ ST+32
-outp    equ ST+64               ; w  puntatore fisico di emissione
+outp    equ ST+64               ; w  physical emit pointer
 nlab    equ ST+66
 nvar    equ ST+67
 nblk    equ ST+68
@@ -115,31 +115,31 @@ errcode equ ST+69
 tmpv    equ ST+70               ; w
 tmps    equ ST+72               ; w
 namep   equ ST+74               ; w
-fname   equ ST+80               ; 16 byte
-oname   equ ST+96               ; 16 byte
-fcb     equ ST+112              ; 37 byte
+fname   equ ST+80               ; 16 bytes
+oname   equ ST+96               ; 16 bytes
+fcb     equ ST+112              ; 37 bytes
 mode    equ ST+150              ; b  0 mista, 1 NUMBERED, 2 LABELS
-onel    equ ST+151              ; b  line_loop si ferma a fine riga
+onel    equ ST+151              ; b  line_loop stops at end of line
 entp    equ ST+152              ; w
 entend  equ ST+154              ; w
 en_num  equ ST+156              ; w
 en_ptr  equ ST+158              ; w
 en_ln   equ ST+160              ; w
 en_pos  equ ST+162              ; w
-etype   equ ST+164              ; b  tipo dell'ultima espressione (0 intero, 1 stringa)
-tmpf    equ ST+165              ; b  l'istruzione ha creato stringhe temporanee
-dptr    equ ST+166              ; w  prossimo byte libero nell'area dati del programma
-dlim    equ ST+168              ; w  limite dell'area dati
-nbuf    equ ST+170              ; 16 byte: nome normalizzato (per le funzioni predefinite)
-vtyp    equ ST+186              ; b  tipo dell'ultima variabile cercata
+etype   equ ST+164              ; b  type of the last expression (0 integer, 1 string)
+tmpf    equ ST+165              ; b  the statement created temporary strings
+dptr    equ ST+166              ; w  next free byte in the program's data area
+dlim    equ ST+168              ; w  data area limit
+nbuf    equ ST+170              ; 16 bytes: normalized name (for predefined functions)
+vtyp    equ ST+186              ; b  type of the last variable looked up
 fi_s    equ ST+188              ; w
-voff    equ ST+220              ; w  fisico - virtuale (cambia con il segmento)
-outlim  equ ST+222              ; b  alto byte oltre il quale l'output e' troppo grande
-target  equ ST+223              ; b  tipo di cartuccia (0 COM)
-curseg  equ ST+224              ; b  segmento in compilazione (0 = fisso)
-pseg    equ ST+225              ; b  segmento corrente durante la pre-scansione
+voff    equ ST+220              ; w  physical - virtual (changes with the segment)
+outlim  equ ST+222              ; b  high byte beyond which the output is too large
+target  equ ST+223              ; b  cartridge type (0 COM)
+curseg  equ ST+224              ; b  segment being compiled (0 = fixed)
+pseg    equ ST+225              ; b  current segment during the pre-scan
 nfar    equ ST+226              ; b  voci usate in FARTAB
-romopen equ ST+227              ; b  il file ROM e' gia' stato creato
+romopen equ ST+227              ; b  the ROM file has already been created
         IFDEF ROMMODE
 FARTABC equ 4100h
 SEGT    equ 4180h
@@ -151,66 +151,66 @@ FARTABC equ 4AC0h
         ELSE
 FARTABC equ 4AC0h
         ENDIF
-;               ; FARTAB in costruzione: 32 x 4 byte (banco, 0, indirizzo)
+;               ; FARTAB under construction: 32 x 4 bytes (bank, 0, address)
         IFDEF BINMODE
 SEGT    equ 4B40h
         ELSE
 SEGT    equ 4B40h
         ENDIF
-;               ; segmento di ogni SUB/FUNCTION (indice nel record)
+;               ; segment of each SUB/FUNCTION (index in the record)
         IFDEF BINMODE
 FCBSV   equ 4E68h
         ELSE
 FCBSV   equ 4E68h
         ENDIF
-;               ; copia dell'FCB di uscita durante INCBIN
+;               ; copy of the output FCB during INCBIN
         IFDEF BINMODE
 FARX    equ 4B54h
         ELSE
 FARX    equ 4B54h
         ENDIF
-;               ; indice FARTAB di ogni SUB/FUNCTION (FFh = nessuno)
+;               ; FARTAB index of each SUB/FUNCTION (FFh = none)
         ENDIF
-dbgpa   equ ST+217              ; w  operando (fisico) da correggere con l'indirizzo della tabella delle variabili
-dbgf    equ ST+219              ; b  OPTION DEBUG attivo
-brkf    equ ST+231              ; b  OPTION BREAK attivo (.COM)
-asmbase equ ST+60               ; w  inizio del blocco di assembler in linea (indirizzo virtuale)
-usewin  equ ST+216              ; b  il sorgente usa WINDOW: le coordinate grafiche vengono convertite
+dbgpa   equ ST+217              ; w  operand (physical) to be patched with the address of the variable table
+dbgf    equ ST+219              ; b  OPTION DEBUG active
+brkf    equ ST+231              ; b  OPTION BREAK active (.COM)
+asmbase equ ST+60               ; w  start of the inline assembler block (virtual address)
+usewin  equ ST+216              ; b  the source uses WINDOW: graphic coordinates are converted
 nfunc   equ ST+192              ; b
 npart   equ ST+193              ; b
 nloc    equ ST+194              ; b
 nint    equ ST+195              ; b  variabili intere locali create
 nstr    equ ST+196              ; b  stringhe locali create
-tmpk    equ ST+197              ; b  tipo di riferimento a variabile (vedi emit_ldv)
-ca_i    equ ST+198              ; b  chiamata in corso: indice dell'argomento
+tmpk    equ ST+197              ; b  variable reference type (see emit_ldv)
+ca_i    equ ST+198              ; b  call in progress: argument index
 ca_paren equ ST+199             ; b  chiamata in corso: parentesi presente
 mapf    equ ST+228              ; b  DIM ... MAPPER in corso
-mapcnt  equ ST+229              ; w  numero di elementi dell'array nel mapper
-fcur    equ ST+200              ; w  record della funzione in compilazione (0 = livello principale)
-fexit   equ ST+202              ; w  catena degli EXIT SUB/FUNCTION
-fskiph  equ ST+204              ; w  catena del salto che scavalca il corpo
-framep  equ ST+206              ; w  indirizzo fisico dell'operando del frame
+mapcnt  equ ST+229              ; w  number of array elements in the mapper
+fcur    equ ST+200              ; w  record of the function being compiled (0 = main level)
+fexit   equ ST+202              ; w  EXIT SUB/FUNCTION chain
+fskiph  equ ST+204              ; w  chain of the jump that skips over the body
+framep  equ ST+206              ; w  physical address of the frame operand
 d2flag  equ 0C21Eh              ; b  1 = MSX-DOS 2 (directory, variabili d'ambiente)
-PATHBUF equ 0C0C0h              ; 64 byte: percorso letto dall'ambiente
-mfile   equ 0C218h              ; b  ROM a segmenti su piu' file (NOME000, NOME001...)
-mfcur   equ 0C219h              ; b  numero del file in compilazione
-mforig  equ 0C21Ah              ; 3 byte: cifre del nome ricevuto (se ricondotto a NOME000)
-mfkind  equ 0C21Fh              ; b  tipo del file trovato da mf_have: 0 nessuno, 1 .SPB, 2 .BIN
-mfbin   equ ST+231              ; b  1 = il segmento corrente e' un .BIN (nessun epilogo da emettere)
-mfred   equ 0C21Dh              ; b  1 = il nome ricevuto era un segmento diverso da 000
-dbglast equ 0C214h             ; w  OPTION DEBUG: ultimo record delle variabili locali emesso (0 = nessuno)
-dbgfs   equ 0C216h              ; w  OPTION DEBUG: prima riga del corpo della routine in compilazione
+PATHBUF equ 0C0C0h              ; 64 bytes: path read from the environment
+mfile   equ 0C218h              ; b  ROM segmented across several files (NAME000, NAME001...)
+mfcur   equ 0C219h              ; b  number of the file being compiled
+mforig  equ 0C21Ah              ; 3 bytes: digits of the received name (if reduced to NAME000)
+mfkind  equ 0C21Fh              ; b  type of the file found by mf_have: 0 none, 1 .SPB, 2 .BIN
+mfbin   equ ST+231              ; b  1 = the current segment is a .BIN (no epilogue to emit)
+mfred   equ 0C21Dh              ; b  1 = the received name was a segment other than 000
+dbglast equ 0C214h             ; w  OPTION DEBUG: last local variables record emitted (0 = none)
+dbgfs   equ 0C216h              ; w  OPTION DEBUG: first line of the body of the routine being compiled
 ca_rec  equ ST+208              ; w  chiamata in corso: record
-chfail  equ ST+210              ; w  catena per CASE a TO b
+chfail  equ ST+210              ; w  chain for CASE a TO b
 rf_rec  equ ST+212              ; w
-ENT     equ 0CA00h              ; indice righe NUMBERED: 6 byte (numero, puntatore, riga) in RAM alta
+ENT     equ 0CA00h              ; NUMBERED line index: 6 bytes (number, pointer, line) in high RAM
 ENTMAX  equ 0D7F0h
-FUNT    equ 0C220h              ; SUB/FUNCTION: 20 x 24 byte (RAM alta, solo durante la compilazione)
+FUNT    equ 0C220h              ; SUB/FUNCTION: 20 x 24 bytes (high RAM, only during compilation)
 FUNREC  equ 24
 MAXFUN  equ 20
-PART    equ 0C600h               ; parametri: 64 x 16 byte (nome 12, tipo)
+PART    equ 0C600h               ; parameters: 64 x 16 bytes (name 12, type)
 MAXPAR  equ 64
-LOCT    equ 0C400h               ; locali/parametri della funzione in compilazione: 24 x 16 byte
+LOCT    equ 0C400h               ; locals/parameters of the function being compiled: 24 x 16 bytes
 MAXLOC  equ 32
 
 T_EOL   equ 0
@@ -375,7 +375,7 @@ start:
         xor a
         ld (mfred),a
         call d2_detect
-        call cd_proj            ; DOS 2: si lavora nella directory del progetto
+        call cd_proj            ; DOS 2: work in the project directory
         call getname
         call read_source
         IFNDEF ROMMODE
@@ -394,7 +394,7 @@ start:
         jp bin_done
         ENDIF
         ENDIF
-        ; avvia il programma dal disco: il caricatore (a C000h) legge NOME.COM
+        ; starts the program from disk: the loader (at C000h) reads NAME.COM
         ld hl,oname
         ld (namep),hl
         call mk_fcb
@@ -409,7 +409,7 @@ start:
         jp LDR
 
 ; ---------------------------------------------------------------- errori
-error:                          ; A = codice, (tline) = riga
+error:                          ; A = code, (tline) = line
         ld (errcode),a
 fail:   ld de,0081h
         ld a,' '
@@ -448,13 +448,13 @@ fail:   ld de,0081h
         ld a,l
         ld (0080h),a
         call cd_home
-        ld hl,ldr_img           ; ricarica l'editor (ldr_fn = SAMPRBAS.COM di default)
+        ld hl,ldr_img           ; reload the editor (ldr_fn = SAMPRBAS.COM by default)
         ld de,LDR
         ld bc,ldr_size
         ldir
         jp LDR
 
-div10:                          ; HL / 10 (senza segno) -> HL, A = resto
+div10:                          ; HL / 10 (unsigned) -> HL, A = remainder
         xor a
         ld b,16
 .l:     add hl,hl
@@ -466,7 +466,7 @@ div10:                          ; HL / 10 (senza segno) -> HL, A = resto
 .n:     djnz .l
         ret
 
-dec_str:                        ; HL = valore -> cifre ASCII a (DE), DE avanza
+dec_str:                        ; HL = value -> ASCII digits at (DE), DE advances
         ld c,0
 .d:     call div10
         add a,'0'
@@ -483,7 +483,7 @@ dec_str:                        ; HL = valore -> cifre ASCII a (DE), DE avanza
         ret
 
 ; ---------------------------------------------------------------- file
-getname:                        ; riga di comando -> fname (maiuscolo, ".SPB" se manca l'estensione)
+getname:                        ; command line -> fname (uppercase, ".SPB" if the extension is missing)
         ld hl,0081h
         ld a,(0080h)
         or a
@@ -496,7 +496,7 @@ getname:                        ; riga di comando -> fname (maiuscolo, ".SPB" se
         djnz .sk
 .none:  jp 0
 .go:    ld de,fname
-        ld c,0                  ; C = c'e' un punto
+        ld c,0                  ; C = there is a dot
         ld b,12
 .cp:    ld a,(hl)
         cp ' '
@@ -533,11 +533,11 @@ getname:                        ; riga di comando -> fname (maiuscolo, ".SPB" se
 s_bas:  db ".SPB"
 
 
-; ---------------------------------------------------------------- MSX-DOS 2: directory del progetto (SPBPROJ) e degli strumenti (SPBHOME)
+; ---------------------------------------------------------------- MSX-DOS 2: project directory (SPBPROJ) and tools directory (SPBHOME)
 d2_detect:
         xor a
         ld (d2flag),a
-        ld bc,6Fh               ; _DOSVER: solo il DOS 2 risponde con A=0 e B>=2
+        ld bc,6Fh               ; _DOSVER: only DOS 2 answers with A=0 and B>=2
         call BDOS
         or a
         ret nz
@@ -548,14 +548,14 @@ d2_detect:
         ld (d2flag),a
         ret
 
-cd_env:                         ; HL = nome della variabile d'ambiente: CHDIR nella directory che contiene (se c'e')
+cd_env:                         ; HL = environment variable name: CHDIR to the directory it contains (if any)
         ld a,(d2flag)
         or a
         ret z
         ld de,PATHBUF
         xor a
         ld (de),a
-        ld bc,3C6Bh             ; _GENV, buffer da 60 byte
+        ld bc,3C6Bh             ; _GENV, 60-byte buffer
         call BDOS
         ld a,(PATHBUF)
         or a
@@ -573,7 +573,7 @@ cd_proj:
 s_envhome: db "SPBHOME",0
 s_envproj: db "SPBPROJ",0
 
-open_tool:                      ; DE = FCB di un file degli strumenti (RT.BIN, QASM.OVL): con il DOS 2 si apre dalla directory di installazione
+open_tool:                      ; DE = FCB of a tools file (RT.BIN, QASM.OVL): with DOS 2 it is opened from the installation directory
         ld a,(d2flag)
         or a
         jr z,.o
@@ -590,8 +590,8 @@ open_tool:                      ; DE = FCB di un file degli strumenti (RT.BIN, Q
         jp BDOS
 
         IFNDEF BINMODE
-; ---------------------------------------------------------------- progetti a segmenti su piu' file
-seg_pat:                        ; Z se fname = 5 caratteri + 3 cifre (+ estensione)
+; ---------------------------------------------------------------- projects segmented across several files
+seg_pat:                        ; Z if fname = 5 characters + 3 digits (+ extension)
         ld hl,fname
         ld b,0
 .l:     ld a,(hl)
@@ -618,7 +618,7 @@ seg_pat:                        ; Z se fname = 5 caratteri + 3 cifre (+ estensio
 .no:    or 1
         ret
 
-seg_zero:                       ; fname+5..7: Z se sono "000"
+seg_zero:                       ; fname+5..7: Z if they are "000"
         ld hl,fname+5
         ld a,(hl)
         inc hl
@@ -628,7 +628,7 @@ seg_zero:                       ; fname+5..7: Z se sono "000"
         cp '0'
         ret
 
-mf_setname:                     ; A = numero -> 3 cifre in fname+5..7
+mf_setname:                     ; A = number -> 3 digits in fname+5..7
         ld hl,fname+5
         ld d,'0'
 .h:     sub 100
@@ -650,7 +650,7 @@ mf_setname:                     ; A = numero -> 3 cifre in fname+5..7
         ld (hl),a
         ret
 
-mf_have:                        ; B = numero: Z se esiste NOMEnnn.SPB o NOMEnnn.BIN (mfkind = 1 / 2); l'FCB di uscita si conserva; fname resta con quel numero
+mf_have:                        ; B = number: Z if NAMEnnn.SPB or NAMEnnn.BIN exists (mfkind = 1 / 2); the output FCB is preserved; fname keeps that number
         push bc
         ld hl,fcb
         ld de,FCBSV
@@ -698,7 +698,7 @@ mf_have:                        ; B = numero: Z se esiste NOMEnnn.SPB o NOMEnnn.
         or a
         ld a,0
         jr nz,.r
-        inc a                   ; A = 1: non esiste (NZ)
+        inc a                   ; A = 1: does not exist (NZ)
 .r:     or a
         pop bc
         ret
@@ -706,7 +706,7 @@ mf_have:                        ; B = numero: Z se esiste NOMEnnn.SPB o NOMEnnn.
 s_binx: db "BIN"
         ENDIF
 
-norm_seg:                       ; fname = XXXXXddd con ddd diverso da 000: se esiste XXXXX000 si usa quello
+norm_seg:                       ; fname = XXXXXddd with ddd other than 000: if XXXXX000 exists, that one is used
         call seg_pat
         ret nz
         call seg_zero
@@ -720,7 +720,7 @@ norm_seg:                       ; fname = XXXXXddd con ddd diverso da 000: se es
         jr nz,.no
         ld a,(mfkind)
         cp 1
-        jr nz,.no               ; il file principale e' sempre un sorgente .SPB
+        jr nz,.no               ; the main file is always a .SPB source
         ld a,1
         ld (mfred),a
         ret
@@ -731,7 +731,7 @@ norm_seg:                       ; fname = XXXXXddd con ddd diverso da 000: se es
         ret
 
         IFDEF ROMMODE
-mf_init:                        ; progetto multi-file se il nome e' XXXXX000 ed esiste XXXXX001
+mf_init:                        ; multi-file project if the name is XXXXX000 and XXXXX001 exists
         xor a
         ld (mfile),a
         ld (mfbin),a
@@ -751,7 +751,7 @@ mf_init:                        ; progetto multi-file se il nome e' XXXXX000 ed 
         ld (mfile),a
         ret
 
-mf_load:                        ; A = numero: legge NOMEnnn in SRC (l'FCB della ROM si conserva)
+mf_load:                        ; A = number: reads NAMEnnn into SRC (the ROM's FCB is preserved)
         push af
         ld hl,fcb
         ld de,FCBSV
@@ -764,12 +764,12 @@ mf_load:                        ; A = numero: legge NOMEnnn in SRC (l'FCB della 
         ld de,fcb
         ld bc,37
         ldir
-        ld de,OUT0              ; read_source ha lasciato il DMA sul sorgente: le scritture della ROM partono da OUT0
+        ld de,OUT0              ; read_source left the DMA on the source: the ROM writes start from OUT0
         ld c,F_DMA
         call BDOS
         ret
 
-mf_prescan:                     ; firme di SUB/FUNCTION di tutti i file (segmento = numero del file)
+mf_prescan:                     ; SUB/FUNCTION signatures of all files (segment = file number)
         ld a,(mfile)
         or a
         ret z
@@ -781,7 +781,7 @@ mf_prescan:                     ; firme di SUB/FUNCTION di tutti i file (segment
         jr nz,.done
         ld a,(mfkind)
         cp 2
-        jr z,.nx                ; segmento .BIN: niente firme da leggere
+        jr z,.nx                ; .BIN segment: no signatures to read
         push bc
         ld a,c
         ld (pseg),a
@@ -792,10 +792,10 @@ mf_prescan:                     ; firme di SUB/FUNCTION di tutti i file (segment
         jr .k
 .done:  xor a
         ld (pseg),a
-        call mf_load            ; di nuovo il file principale
+        call mf_load            ; the main file again
         ret
 
-mf_loadbin:                     ; A = numero: legge NOMEnnn.BIN come contenuto del segmento corrente (gia' compilato)
+mf_loadbin:                     ; A = number: reads NAMEnnn.BIN as the content of the current segment (already compiled)
         push af
         ld hl,fcb
         ld de,FCBSV
@@ -822,7 +822,7 @@ mf_loadbin:                     ; A = numero: legge NOMEnnn.BIN come contenuto d
         ld de,OUT0
         ld c,F_DMA
         call BDOS
-        call segsz              ; DE = dimensione del segmento
+        call segsz              ; DE = segment size
         ld h,d
         ld l,e
         ld de,fcb
@@ -845,7 +845,7 @@ mf_loadbin:                     ; A = numero: legge NOMEnnn.BIN come contenuto d
         ld (outp),hl
         ret
 
-mf_advance:                     ; fine del file: se esiste il successivo si passa al segmento seguente (NZ), altrimenti Z
+mf_advance:                     ; end of file: if the next one exists it moves to the following segment (NZ), otherwise Z
         ld a,(mfile)
         or a
         ret z
@@ -858,13 +858,13 @@ mf_advance:                     ; fine del file: se esiste il successivo si pass
         ret
 .go:    ld a,(target)
         cp 3
-        jp c,err_mode           ; solo ASCII8, ASCII16, KONAMI, SCC
+        jp c,err_mode           ; only ASCII8, ASCII16, KONAMI, SCC
         ld a,b
         ld (mfcur),a
         ld a,(curseg)
         or a
         jr nz,.sw
-        push bc                 ; lasciando il segmento 0 il flusso principale termina
+        push bc                 ; leaving segment 0 the main flow ends
         ld hl,RT_END
         ld a,0C3h
         call emit_jabs
@@ -898,7 +898,7 @@ mf_advance:                     ; fine del file: se esiste il successivo si pass
 
         ENDIF
 
-mk_fcb:                         ; (namep) -> fcb (8.3 maiuscolo, unita' opzionale "A:")
+mk_fcb:                         ; (namep) -> fcb (8.3 uppercase, optional drive "A:")
         ld hl,fcb
         ld de,fcb+1
         ld bc,36
@@ -993,7 +993,7 @@ read_source:
         add hl,de
         ld (hl),0
         ld hl,SRC
-.z:     ld a,(hl)               ; ^Z: il resto del file (residuo di un salvataggio in posto piu' corto) si ignora
+.z:     ld a,(hl)               ; ^Z: the rest of the file (leftover of a shorter in-place save) is ignored
         or a
         ret z
         cp 1Ah
@@ -1004,7 +1004,7 @@ read_source:
         ret
 
         IFDEF ROMMODE
-load_rt:                        ; RT.BIN -> OUT0 (immagine del runtime); outp = fine
+load_rt:                        ; RT.BIN -> OUT0 (runtime image); outp = end
         call rt_name_sel
         ld (namep),hl
         call mk_fcb
@@ -1033,7 +1033,7 @@ load_rt:                        ; RT.BIN -> OUT0 (immagine del runtime); outp = 
         ld (outp),hl
         ret
         ELSE
-load_rt:                        ; .COM: dimensione di RT.BIN (il file si copia per intero davanti al codice); il buffer parte vuoto
+load_rt:                        ; .COM: size of RT.BIN (the file is copied whole in front of the code); the buffer starts empty
         call rt_name_sel
         ld (namep),hl
         call mk_fcb
@@ -1045,7 +1045,7 @@ load_rt:                        ; .COM: dimensione di RT.BIN (il file si copia p
         ld (tline),hl
         ERR E_RT
 .o:     call fcb_rec1
-        ld de,PART              ; la dimensione e' una parola dell'intestazione (RT_SIZE): basta il primo blocco
+        ld de,PART              ; the size is a header word (RT_SIZE): the first block is enough
         ld c,F_DMA
         call BDOS
         ld de,fcb
@@ -1054,7 +1054,7 @@ load_rt:                        ; .COM: dimensione di RT.BIN (il file si copia p
         call BDOS
         ld hl,(PART+RT_SIZE-IMGBASE)
         ld (rtsz),hl
-        ld hl,PART+RT_STAMP-IMGBASE      ; timbro della costruzione: serve a riconoscere un NOME.COM gia' pronto
+        ld hl,PART+RT_STAMP-IMGBASE      ; build stamp: used to recognize an already-built NAME.COM
         ld de,RTSTAMP
         ld bc,RT_STAMPLEN
         ldir
@@ -1063,21 +1063,21 @@ load_rt:                        ; .COM: dimensione di RT.BIN (il file si copia p
         call BDOS
         ld hl,OUT0
         ld (outp),hl
-        ld hl,OUT0-IMGBASE      ; il codice parte subito dopo il runtime: virtuale = fisico - voff
+        ld hl,OUT0-IMGBASE      ; the code starts right after the runtime: virtual = physical - voff
         ld de,(rtsz)
         or a
         sbc hl,de
         ld (voff),hl
-        ld hl,HDRB              ; intestazione azzerata
+        ld hl,HDRB              ; header zeroed
         ld de,HDRB+1
         ld bc,HDRLEN-1
         ld (hl),0
         ldir
         ret
         ENDIF
-rt_name_sel:                    ; -> HL = nome del runtime: con OPTION DEBUG quello con il debugger (RTD.BIN / RTROMD.BIN)
+rt_name_sel:                    ; -> HL = runtime name: with OPTION DEBUG the one with the debugger (RTD.BIN / RTROMD.BIN)
         IFDEF BINMODE
-        ld hl,s_rtbin           ; BIN: un solo runtime, senza debugger
+        ld hl,s_rtbin           ; BIN: a single runtime, without debugger
         ret
         ENDIF
         call chk_dbg
@@ -1099,7 +1099,7 @@ s_rtdbin: db "RTD.BIN",0
         ENDIF
 
         IFNDEF ROMMODE
-write_output:                   ; NOME.COM <- RT.BIN + codice, con l'intestazione del runtime corretta
+write_output:                   ; NAME.COM <- RT.BIN + code, with the runtime header corrected
         ld hl,fname
         ld de,oname
 .c:     ld a,(hl)
@@ -1122,9 +1122,9 @@ write_output:                   ; NOME.COM <- RT.BIN + codice, con l'intestazion
         ld (namep),hl
         call mk_fcb
         IFDEF BINMODE
-        jr .new                 ; BIN: il file si riscrive sempre
+        jr .new                 ; BIN: the file is always rewritten
         ENDIF
-        ld de,fcb               ; NOME.COM esiste gia' con lo stesso runtime? allora si riscrive solo il codice
+        ld de,fcb               ; does NAME.COM already exist with the same runtime? then only the code is rewritten
         ld c,F_OPEN
         call BDOS
         or a
@@ -1153,7 +1153,7 @@ write_output:                   ; NOME.COM <- RT.BIN + codice, con l'intestazion
         ld de,FCBSV
         ld bc,37
         ldir
-        ld hl,(rtsz)            ; il codice va scritto dopo il runtime
+        ld hl,(rtsz)            ; the code must be written after the runtime
         ld (FCBSV+33),hl
         xor a
         ld (FCBSV+35),a
@@ -1179,14 +1179,14 @@ write_output:                   ; NOME.COM <- RT.BIN + codice, con l'intestazion
         ld (tline),hl
         ERR E_WRITE
 .m:     call fcb_rec1
-        ld hl,fcb               ; FCB del file di uscita -> FCBSV
+        ld hl,fcb               ; FCB of the output file -> FCBSV
         ld de,FCBSV
         ld bc,37
         ldir
         IFDEF BINMODE
-        call bin_hdr            ; intestazione BLOAD (7 byte) davanti all'immagine
+        call bin_hdr            ; BLOAD header (7 bytes) in front of the image
         ENDIF
-        call rt_name_sel        ; si apre RT.BIN nell'FCB principale
+        call rt_name_sel        ; RT.BIN is opened in the main FCB
         ld (namep),hl
         call mk_fcb
         ld de,fcb
@@ -1194,7 +1194,7 @@ write_output:                   ; NOME.COM <- RT.BIN + codice, con l'intestazion
         or a
         jr nz,.err
         call fcb_rec1
-        ld de,PART              ; buffer di copia da 4 KB (la tabella dei parametri non serve piu'): pochi blocchi grandi
+        ld de,PART              ; 4 KB copy buffer (the parameter table is no longer needed): few large blocks
         ld c,F_DMA
         call BDOS
 .cp:    ld de,fcb
@@ -1203,7 +1203,7 @@ write_output:                   ; NOME.COM <- RT.BIN + codice, con l'intestazion
         call BDOS
         ld a,h
         or l
-        jr z,.cd                ; niente piu' dati
+        jr z,.cd                ; no more data
         ld de,FCBSV
         ld c,F_BWR
         call BDOS
@@ -1211,7 +1211,7 @@ write_output:                   ; NOME.COM <- RT.BIN + codice, con l'intestazion
 .cd:    ld de,fcb
         ld c,F_CLOSE
         call BDOS
-        ld de,OUT0              ; il codice generato
+        ld de,OUT0              ; the generated code
         ld c,F_DMA
         call BDOS
         ld hl,(outp)
@@ -1225,7 +1225,7 @@ write_output:                   ; NOME.COM <- RT.BIN + codice, con l'intestazion
         call BDOS
         or a
         jr nz,.err
-.hd:    ld de,HDRB              ; intestazione: nome, dimensione dati, DATA, target
+.hd:    ld de,HDRB              ; header: name, data size, DATA, target
         ld c,F_DMA
         call BDOS
         IFDEF BINMODE
@@ -1256,7 +1256,7 @@ bin_werr:
         ld (tline),hl
         ERR E_WRITE
 
-bin_hdr:                        ; BLOAD: FEh, inizio, fine, esecuzione (7 byte) -> file di uscita (FCBSV)
+bin_hdr:                        ; BLOAD: FEh, start, end, execution (7 bytes) -> output file (FCBSV)
         ld hl,RTCHK
         ld (hl),0FEh
         inc hl
@@ -1272,7 +1272,7 @@ bin_hdr:                        ; BLOAD: FEh, inizio, fine, esecuzione (7 byte) 
         ld de,(rtsz)
         add hl,de
         ld de,IMGBASE-1
-        add hl,de               ; fine = inizio + runtime + codice - 1
+        add hl,de               ; end = start + runtime + code - 1
         ex de,hl
         pop hl
         ld (hl),e
@@ -1294,7 +1294,7 @@ bin_hdr:                        ; BLOAD: FEh, inizio, fine, esecuzione (7 byte) 
         jr nz,bin_werr
         ret
 
-bin_done:                       ; messaggio, attesa di un tasto e ritorno all'editor
+bin_done:                       ; message, wait for a key and return to the editor
         ld de,msg_binw
         ld c,9
         call BDOS
@@ -1354,7 +1354,7 @@ rom_werr:
         ld (tline),hl
         ERR E_WRITE
 
-rom_create:                     ; NOME.ROM: crea il file (una volta sola)
+rom_create:                     ; NAME.ROM: creates the file (only once)
         ld hl,fname
         ld de,oname
 .c:     ld a,(hl)
@@ -1395,7 +1395,7 @@ rom_create:                     ; NOME.ROM: crea il file (una volta sola)
         ld (romopen),a
         ret
 
-segsz:                          ; -> DE = dimensione di un segmento commutabile
+segsz:                          ; -> DE = size of a switchable segment
         ld de,8192
         ld a,(target)
         cp 4
@@ -1403,7 +1403,7 @@ segsz:                          ; -> DE = dimensione di un segmento commutabile
         ld de,16384
         ret
 
-rom_flush:                      ; DE = dimensione del segmento: scrive il buffer e riempie con zeri
+rom_flush:                      ; DE = segment size: writes the buffer and fills with zeros
         push de
         ld a,(romopen)
         or a
@@ -1421,7 +1421,7 @@ rom_flush:                      ; DE = dimensione del segmento: scrive il buffer
         pop de                  ; dimensione
         ex de,hl
         or a
-        sbc hl,de               ; riempimento
+        sbc hl,de               ; padding
         jp c,err_big
         ld a,h
         or l
@@ -1453,7 +1453,7 @@ rom_flush:                      ; DE = dimensione del segmento: scrive il buffer
         jr z,.z
         jp rom_werr
 
-rom_finish:                     ; ultimo segmento, FARTAB e dimensione dei dati nell'intestazione, chiusura
+rom_finish:                     ; last segment, FARTAB and data size in the header, close
         ld a,(curseg)
         or a
         jr nz,.seg
@@ -1467,8 +1467,8 @@ rom_finish:                     ; ultimo segmento, FARTAB e dimensione dei dati 
 .go:    call rom_flush
         ld a,(curseg)
         or a
-        jr z,.close             ; un solo segmento: l'intestazione e' gia' completa
-        ld hl,7F00h-4000h       ; FARTAB sta a 7F00h, cioe' a 3F00h nel file
+        jr z,.close             ; a single segment: the header is already complete
+        ld hl,7F00h-4000h       ; FARTAB is at 7F00h, i.e. at 3F00h in the file
         ld (fcb+33),hl
         xor a
         ld (fcb+35),a
@@ -1519,7 +1519,7 @@ rec_index:                      ; HL = record SUB/FUNCTION -> A = indice
 .d:     ld a,b
         ret
 
-rec_far:                        ; HL = record -> A = indice FARTAB se la routine sta in un altro segmento, altrimenti FFh
+rec_far:                        ; HL = record -> A = FARTAB index if the routine is in another segment, otherwise FFh
         call rec_index
         ld e,a
         ld d,0
@@ -1539,7 +1539,7 @@ rec_far:                        ; HL = record -> A = indice FARTAB se la routine
 .no:    ld a,0FFh
         ret
 
-rom_regfunc:                    ; nuova routine (indice nfunc-1): segmento della pre-scansione e voce FARTAB
+rom_regfunc:                    ; new routine (index nfunc-1): pre-scan segment and FARTAB entry
         push hl
         push de
         ld a,(nfunc)
@@ -1566,7 +1566,7 @@ rom_regfunc:                    ; nuova routine (indice nfunc-1): segmento della
         pop hl
         ret
 
-segbank:                        ; -> A = numero di banco del segmento corrente
+segbank:                        ; -> A = bank number of the current segment
         ld a,(curseg)
         ld b,a
         ld a,(target)
@@ -1576,7 +1576,7 @@ segbank:                        ; -> A = numero di banco del segmento corrente
         inc a
         ret
 
-rom_defsub:                     ; la routine (fcur) comincia qui: voce FARTAB (banco, indirizzo)
+rom_defsub:                     ; the routine (fcur) starts here: FARTAB entry (bank, address)
         ld a,(curseg)
         or a
         ret z
@@ -1614,10 +1614,10 @@ rom_defsub:                     ; la routine (fcur) comincia qui: voce FARTAB (b
 err_many:
         ERR E_MANY
 
-st_segment:                     ; SEGMENT n: da qui il codice va nel segmento n (n = segmento precedente + 1)
+st_segment:                     ; SEGMENT n: from here the code goes into segment n (n = previous segment + 1)
         ld a,(target)
         cp 3
-        jp c,err_syntax         ; solo ASCII8, ASCII16, KONAMI, SCC
+        jp c,err_syntax         ; only ASCII8, ASCII16, KONAMI, SCC
         ld a,(ttype)
         cp T_NUM
         jp nz,err_syntax
@@ -1631,20 +1631,20 @@ st_segment:                     ; SEGMENT n: da qui il codice va nel segmento n 
         jp nz,err_syntax
         ld a,(mfile)
         or a
-        jp nz,err_mode          ; con i file NOMEnnn il segmento lo decide il nome del file
+        jp nz,err_mode          ; with NAMEnnn files the segment is decided by the file name
         call seg_switch
         jp next_tok
 
-seg_switch:                     ; chiude il segmento corrente (controlli, scrittura) e apre il successivo
+seg_switch:                     ; closes the current segment (checks, write) and opens the next
         ld a,(fcur)
         ld hl,(fcur)
         ld a,h
         or l
-        jp nz,err_syntax        ; non dentro una SUB/FUNCTION
+        jp nz,err_syntax        ; not inside a SUB/FUNCTION
         ld a,(nblk)
         or a
         jp nz,err_syntax
-        ld a,(nlab)             ; salti in avanti non risolti non possono attraversare i segmenti
+        ld a,(nlab)             ; unresolved forward jumps cannot cross segments
         or a
         jr z,.nl
         ld b,a
@@ -1675,7 +1675,7 @@ seg_switch:                     ; chiude il segmento corrente (controlli, scritt
         ld hl,OUT0
         ld (outp),hl
         ld hl,0
-        ld (voff),hl            ; il segmento commutabile sta a 8000h: fisico = virtuale
+        ld (voff),hl            ; the switchable segment is at 8000h: physical = virtual
         ld a,(target)
         cp 4
         ld a,0BFh
@@ -1693,13 +1693,13 @@ st_segment:
         jp err_syntax
         ENDIF
 
-st_setbank:                     ; SETBANK n: il segmento n compare nella finestra dati (DATAWIN)
+st_setbank:                     ; SETBANK n: segment n appears in the data window (DATAWIN)
         call expr
         call want_int
         EM3 0CDh,low RT_SETBANK,high RT_SETBANK
         ret
 
-st_vcopy:                       ; VCOPY memoria, vram, quanti
+st_vcopy:                       ; VCOPY memory, vram, count
         call expr
         call want_int
         ld hl,GX1
@@ -1719,21 +1719,21 @@ st_vcopy:                       ; VCOPY memoria, vram, quanti
         EM3 0CDh,low RT_VCOPY,high RT_VCOPY
         ret
 
-bi_mapsegs:                     ; MAPPERSEGS: segmenti da 16 KB del mapper RAM (0 = nessuno)
+bi_mapsegs:                     ; MAPPERSEGS: 16 KB segments of the RAM mapper (0 = none)
         call next_tok
         EM3 0CDh,low RT_MAPSEGS,high RT_MAPSEGS
         xor a
         ld (etype),a
         ret
 
-bi_malloc:                      ; MALLOC: segmento libero del mapper
+bi_malloc:                      ; MALLOC: free mapper segment
         call next_tok
         EM3 0CDh,low RT_MALLOC,high RT_MALLOC
         xor a
         ld (etype),a
         ret
 
-st_mfree:                       ; MFREE segmento
+st_mfree:                       ; MFREE segment
         call expr
         call want_int
         ld hl,GX1
@@ -1741,7 +1741,7 @@ st_mfree:                       ; MFREE segmento
         EM3 0CDh,low RT_MFREE,high RT_MFREE
         ret
 
-bi_mget:                        ; MGET(segmento, offset)
+bi_mget:                        ; MGET(segment, offset)
         call next_tok
         call open_paren
         call expr
@@ -1758,7 +1758,7 @@ bi_mget:                        ; MGET(segmento, offset)
         ld (etype),a
         ret
 
-st_mput:                        ; MPUT segmento, offset, valore
+st_mput:                        ; MPUT segment, offset, value
         call expr
         call want_int
         ld hl,GX1
@@ -1778,10 +1778,10 @@ st_mput:                        ; MPUT segmento, offset, valore
         EM3 0CDh,low RT_MPUT,high RT_MPUT
         ret
 
-st_mread:                       ; MREAD segmento, offset, indirizzo, quanti  (mapper -> memoria)
+st_mread:                       ; MREAD segment, offset, address, count  (mapper -> memory)
         ld hl,RT_MREAD
         jr mblock
-st_mwrite:                      ; MWRITE segmento, offset, indirizzo, quanti (memoria -> mapper)
+st_mwrite:                      ; MWRITE segment, offset, address, count (memory -> mapper)
         ld hl,RT_MWRITE
 mblock: push hl
         call expr
@@ -1810,7 +1810,7 @@ mblock: push hl
         ld a,0CDh
         jp emit_jabs
 
-bi_varptr:                      ; VARPTR(variabile) o VARPTR(array(i)): indirizzo in memoria
+bi_varptr:                      ; VARPTR(variable) or VARPTR(array(i)): address in memory
         call next_tok
         call open_paren
         ld a,(ttype)
@@ -1826,12 +1826,12 @@ bi_varptr:                      ; VARPTR(variabile) o VARPTR(array(i)): indirizz
         cp 2
         jr nc,.loc
         push hl
-        ld a,21h                ; globale: ld hl,indirizzo
+        ld a,21h                ; global: ld hl,address
         call emit_a
         pop hl
         call emit_w
         jr .nx
-.loc:   push hl                 ; locale: push ix ; pop hl ; ld de,scostamento ; add hl,de
+.loc:   push hl                 ; local: push ix ; pop hl ; ld de,offset ; add hl,de
         EM3 0DDh,0E5h,0E1h
         ld a,11h
         call emit_a
@@ -1847,7 +1847,7 @@ bi_varptr:                      ; VARPTR(variabile) o VARPTR(array(i)): indirizz
         ld (etype),a
         ret
 
-arr_is_mapper:                  ; tbuf = array: NZ se sta nel mapper RAM
+arr_is_mapper:                  ; tbuf = array: NZ if it is in mapper RAM
         call find_arrparam
         jr nc,.no
         call find_rec
@@ -1860,7 +1860,7 @@ arr_is_mapper:                  ; tbuf = array: NZ se sta nel mapper RAM
 .no:    xor a
         ret
 
-mapper_desc:                    ; tbuf = array in mapper -> DE = indirizzo del descrittore
+mapper_desc:                    ; tbuf = array in mapper -> DE = descriptor address
         call find_rec
         ld de,12
         add hl,de
@@ -1869,7 +1869,7 @@ mapper_desc:                    ; tbuf = array in mapper -> DE = indirizzo del d
         ld d,(hl)
         ret
 
-mapper_read:                    ; x(i): ld de,descrittore ; call RT_MAGET (HL = indice -> valore)
+mapper_read:                    ; x(i): ld de,descriptor ; call RT_MAGET (HL = index -> value)
         call mapper_desc
         push de
         call next_tok
@@ -1915,7 +1915,7 @@ mapper_assign:                  ; x(i) = v: push indice ; v ; pop de ; ld bc,des
         EM3 0CDh,low RT_MAPUT,high RT_MAPUT
         ret
 
-st_bload:                       ; BLOAD nome$ [, S] [, scostamento]
+st_bload:                       ; BLOAD name$ [, S] [, offset]
         call expr
         call want_str
         EM1 0E5h
@@ -1947,7 +1947,7 @@ st_bload:                       ; BLOAD nome$ [, S] [, scostamento]
         EM3 0CDh,low RT_BLOAD,high RT_BLOAD
         ret
 
-st_bsave:                       ; BSAVE nome$, inizio, lunghezza [, S]
+st_bsave:                       ; BSAVE name$, start, length [, S]
         call expr
         call want_str
         EM1 0E5h
@@ -1994,7 +1994,7 @@ fio:    push hl
         call want_int
         ld hl,GX1
         call emit_st
-        call emit_i             ; record = 0 (il successivo)
+        call emit_i             ; record = 0 (the next one)
         db 6,21h,0,0,22h,low GY1,high GY1
         ld a,','
         call is_p
@@ -2018,7 +2018,7 @@ st_field:                       ; FIELD [#]n, larghezza AS variabile$ [, larghez
         ld hl,GX1
         call emit_st
         ld a,1
-        ld (mapf),a             ; primo campo: azzera la tabella
+        ld (mapf),a             ; first field: clears the table
 .l:     ld a,','
         call expect_p
         call expr
@@ -2038,9 +2038,9 @@ st_field:                       ; FIELD [#]n, larghezza AS variabile$ [, larghez
         jp nz,err_syntax
         call resolve_var
         cp 1
-        jp nz,err_type          ; solo variabili stringa globali
+        jp nz,err_type          ; global string variables only
         push hl
-        ld a,21h                ; ld hl,primo ; ld (GX2),hl
+        ld a,21h                ; ld hl,first ; ld (GX2),hl
         call emit_a
         ld a,(mapf)
         ld l,a
@@ -2063,10 +2063,10 @@ st_field:                       ; FIELD [#]n, larghezza AS variabile$ [, larghez
         jr z,.l
         ret
 
-st_lset:                        ; LSET v$ = espressione: come un assegnamento (PUT completa con spazi)
+st_lset:                        ; LSET v$ = expression: like an assignment (PUT pads with spaces)
         jp st_let
 
-st_rset:                        ; RSET v$ = espressione: allineata a destra nella larghezza del campo
+st_rset:                        ; RSET v$ = expression: right-aligned in the field width
         ld a,(ttype)
         cp T_ID
         jp nz,err_syntax
@@ -2093,7 +2093,7 @@ bi_lof:                         ; LOF(n)
         EM3 0CDh,low RT_FLOF,high RT_FLOF
         ret
 
-bi_mki:                         ; MKI$(n): intero in 2 byte
+bi_mki:                         ; MKI$(n): integer in 2 bytes
         ld hl,RT_MKI
         ld c,1
         jp bi1i
@@ -2102,7 +2102,7 @@ bi_cvi:                         ; CVI(s$)
         ld hl,RT_CVI
         jp bi1s
 
-bi_datawin:                     ; DATAWIN: indirizzo della finestra dati
+bi_datawin:                     ; DATAWIN: address of the data window
         call next_tok
         EM3 0CDh,low RT_DATAWIN,high RT_DATAWIN
         xor a
@@ -2110,7 +2110,7 @@ bi_datawin:                     ; DATAWIN: indirizzo della finestra dati
         ret
 
         IFDEF ROMMODE
-st_incbin:                      ; INCBIN "file": i byte del file entrano nel segmento corrente
+st_incbin:                      ; INCBIN "file": the file's bytes go into the current segment
         ld a,(ttype)
         cp T_STR
         jp nz,err_syntax
@@ -2128,7 +2128,7 @@ st_incbin:                      ; INCBIN "file": i byte del file entrano nel seg
         ld (de),a
         ld hl,nbuf
         ld (namep),hl
-        ld hl,fcb               ; l'FCB del file di uscita si salva
+        ld hl,fcb               ; the output file's FCB is saved
         ld de,FCBSV
         ld bc,37
         ldir
@@ -2169,7 +2169,7 @@ st_incbin:                      ; INCBIN "file": i byte del file entrano nel seg
         ld c,F_DMA
         call BDOS
         pop af
-        jp z,err_big            ; riempie tutto lo spazio: troppo grande
+        jp z,err_big            ; fills all the space: too large
         ld hl,(outp)
         ld de,(tmpv)
         add hl,de
@@ -2184,7 +2184,7 @@ st_incbin:
 s_com:  db ".COM",0
 
 ; ---------------------------------------------------------------- emissione
-emit_a:                         ; A -> output (clobbera solo A)
+emit_a:                         ; A -> output (clobbers only A)
         push hl
         ld hl,(outp)
         ld (hl),a
@@ -2208,7 +2208,7 @@ emit_w:                         ; HL -> output (little endian)
         pop af
         ret
 
-emit_i:                         ; byte inline: db n, b1..bn  (dopo la call)
+emit_i:                         ; inline bytes: db n, b1..bn  (after the call)
         ex (sp),hl
         push bc
         ld b,(hl)
@@ -2221,14 +2221,14 @@ emit_i:                         ; byte inline: db n, b1..bn  (dopo la call)
         ex (sp),hl
         ret
 
-get_pc:                         ; HL = indirizzo virtuale corrente (clobbera DE)
+get_pc:                         ; HL = current virtual address (clobbers DE)
         ld hl,(outp)
         ld de,(voff)
         or a
         sbc hl,de
         ret
 
-emit_jchain:                    ; A = opcode, HL = &testa: jp con operando = catena di fixup
+emit_jchain:                    ; A = opcode, HL = &head: jp with operand = fixup chain
         push hl
         call emit_a
         pop hl
@@ -2247,13 +2247,13 @@ emit_jchain:                    ; A = opcode, HL = &testa: jp con operando = cat
         ld (hl),d
         ret
 
-emit_jabs:                      ; A = opcode, HL = indirizzo
+emit_jabs:                      ; A = opcode, HL = address
         push hl
         call emit_a
         pop hl
         jp emit_w
 
-patch_chain:                    ; HL = &testa: tutti i salti della catena puntano al pc corrente
+patch_chain:                    ; HL = &head: all the jumps in the chain point to the current pc
         ld e,(hl)
         inc hl
         ld d,(hl)
@@ -2511,18 +2511,18 @@ next_tok:
         jr z,.sf
         cp '%'
         jr nz,.fin
-        inc hl                  ; A% = A: il suffisso intero si ignora
+        inc hl                  ; A% = A: the integer suffix is ignored
         jr .fin
 .sf:    inc hl
         ld a,1
         ld (tsuf),a
         ld a,'$'
-        ld (tbuf+11),a          ; A$ e A restano nomi distinti anche per nomi lunghi
+        ld (tbuf+11),a          ; A$ and A remain distinct names even for long names
 .fin:   ld (lp),hl
         ld a,(tsuf)
         or a
         jr nz,.var
-        ld hl,tbuf              ; REM = commento
+        ld hl,tbuf              ; REM = comment
         ld de,s_rem
         ld b,4
 .rc:    ld a,(de)
@@ -2595,7 +2595,7 @@ next_tok:
 puncts: db "()+-*/",5Ch,"=<>,;:?#"
 s_rem:  db "REM",0
 
-find_in:                        ; HL = tabella di stringhe 0-terminate (fine: byte 0), DE = nome -> A = indice, C se manca
+find_in:                        ; HL = table of 0-terminated strings (end: byte 0), DE = name -> A = index, C if missing
         ld (fi_s),de
         ld c,0
 .next:  ld a,(hl)
@@ -2631,8 +2631,8 @@ kwtab:  db "PRINT",0,"IF",0,"THEN",0,"ELSE",0,"ELSEIF",0,"END",0,"FOR",0,"TO",0
         db "OPEN",0,"CLOSE",0,"KILL",0,"WRITE",0,"SEGMENT",0,"INCBIN",0
         db "SETBANK",0,"VCOPY",0,"MPUT",0,"MREAD",0,"MWRITE",0,"MFREE",0,"BLOAD",0,"BSAVE",0,"FIELD",0,"LSET",0,"RSET",0,0
 
-; ---------------------------------------------------------------- helper del parser
-is_p:                           ; A = carattere: Z se il token e' quella punteggiatura
+; ---------------------------------------------------------------- parser helpers
+is_p:                           ; A = character: Z if the token is that punctuation
         ld b,a
         ld a,(ttype)
         cp T_P
@@ -2640,7 +2640,7 @@ is_p:                           ; A = carattere: Z se il token e' quella puntegg
         ld a,(tval)
         cp b
         ret
-is_kw:                          ; A = indice: Z se il token e' quella parola chiave
+is_kw:                          ; A = index: Z if the token is that keyword
         ld b,a
         ld a,(ttype)
         cp T_KW
@@ -2661,7 +2661,7 @@ err_syntax:
 err_unsup:
         ERR E_UNSUP
 
-at_send:                        ; Z se il token chiude l'istruzione (fine riga, ':' o ELSE)
+at_send:                        ; Z if the token ends the statement (end of line, ':' or ELSE)
         ld a,(ttype)
         cp T_EOL
         ret z
@@ -2679,7 +2679,7 @@ at_send:                        ; Z se il token chiude l'istruzione (fine riga, 
         ret
 
 ; ---------------------------------------------------------------- tabelle
-name_eq:                        ; HL = record: Z se i primi 12 byte coincidono con tbuf
+name_eq:                        ; HL = record: Z if the first 12 bytes match tbuf
         push hl
         push bc
         ld de,tbuf
@@ -2694,7 +2694,7 @@ name_eq:                        ; HL = record: Z se i primi 12 byte coincidono c
         pop hl
         ret
 
-find_label:                     ; tbuf -> HL = record (lo crea)
+find_label:                     ; tbuf -> HL = record (creates it)
         ld a,(nlab)
         ld b,a
         ld hl,LABT
@@ -2733,7 +2733,7 @@ find_label:                     ; tbuf -> HL = record (lo crea)
         pop hl
         ret
 
-define_label:                   ; tbuf = nome: definisce l'etichetta al pc corrente
+define_label:                   ; tbuf = name: defines the label at the current pc
         call find_label
         push hl
         ld de,14
@@ -2744,7 +2744,7 @@ define_label:                   ; tbuf = nome: definisce l'etichetta al pc corre
         ERR E_DUP
 .ok:    ld (hl),1
         push hl
-        ld de,5                 ; +19: segmento dell'etichetta
+        ld de,5                 ; +19: label segment
         add hl,de
         ld a,(curseg)
         ld (hl),a
@@ -2765,7 +2765,7 @@ define_label:                   ; tbuf = nome: definisce l'etichetta al pc corre
         add hl,de
         jp patch_chain
 
-label_jump:                     ; A = opcode (C3 jp / CD call), tbuf = nome
+label_jump:                     ; A = opcode (C3 jp / CD call), tbuf = name
         push af
         call find_label
         ld de,14
@@ -2773,7 +2773,7 @@ label_jump:                     ; A = opcode (C3 jp / CD call), tbuf = nome
         ld a,(hl)
         or a
         jr nz,.def
-        inc hl                  ; non definita: catena di fixup nella testa (rec+15)
+        inc hl                  ; undefined: fixup chain in the head (rec+15)
         pop af
         jp emit_jchain
 .def:   push hl
@@ -2782,7 +2782,7 @@ label_jump:                     ; A = opcode (C3 jp / CD call), tbuf = nome
         ld a,(curseg)
         cp (hl)
         pop hl
-        jp nz,err_label         ; etichetta in un altro segmento
+        jp nz,err_label         ; label in another segment
         dec hl
         dec hl
         ld e,(hl)
@@ -2792,7 +2792,7 @@ label_jump:                     ; A = opcode (C3 jp / CD call), tbuf = nome
         pop af
         jp emit_jabs
 
-num_to_name:                    ; tval = numero di riga -> tbuf = cifre decimali
+num_to_name:                    ; tval = line number -> tbuf = decimal digits
         ld hl,tbuf
         ld b,16
         xor a
@@ -2803,7 +2803,7 @@ num_to_name:                    ; tval = numero di riga -> tbuf = cifre decimali
         ld de,tbuf
         jp dec_str
 
-find_rec:                       ; tbuf -> HL = record, NC se trovato; C se manca (HL = posto libero)
+find_rec:                       ; tbuf -> HL = record, NC if found; C if missing (HL = free slot)
         ld a,(tsuf)
         ld (vtyp),a
         ld a,(nvar)
@@ -2821,7 +2821,7 @@ find_rec:                       ; tbuf -> HL = record, NC se trovato; C se manca
 .f:     or a
         ret
 
-alloc_data:                     ; BC = byte -> HL = indirizzo (area dati del programma)
+alloc_data:                     ; BC = bytes -> HL = address (program data area)
         ld hl,(dptr)
         push hl
         add hl,bc
@@ -2838,7 +2838,7 @@ alloc_data:                     ; BC = byte -> HL = indirizzo (area dati del pro
 err_mem:
         ERR E_MEM
 
-new_rec:                        ; HL = posto, BC = byte, DE = numero elementi (0 = scalare) -> HL = indirizzo dati
+new_rec:                        ; HL = place, BC = bytes, DE = number of elements (0 = scalar) -> HL = data address
         ld (tmps),de
         ld a,(nvar)
         cp MAXVAR
@@ -2869,7 +2869,7 @@ new_rec:                        ; HL = posto, BC = byte, DE = numero elementi (0
         ex de,hl
         ret
 
-kind_type:                      ; A = tipo di riferimento (emit_ldv) -> A = 0 intero, 1 stringa
+kind_type:                      ; A = reference type (emit_ldv) -> A = 0 integer, 1 string
         cp 1
         jr z,.s
         cp 3
@@ -2881,7 +2881,7 @@ kind_type:                      ; A = tipo di riferimento (emit_ldv) -> A = 0 in
 .s:     ld a,1
         ret
 
-resolve_var:                    ; tbuf -> A = tipo di riferimento, HL = indirizzo o scostamento da IX
+resolve_var:                    ; tbuf -> A = reference type, HL = address or offset from IX
         ld a,(tsuf)
         ld (vtyp),a
         ld hl,(fcur)
@@ -2916,7 +2916,7 @@ resolve_var:                    ; tbuf -> A = tipo di riferimento, HL = indirizz
         cp 3
         jr z,.m2
         cp 4
-        jp nz,err_type          ; parametro array usato come scalare
+        jp nz,err_type          ; array parameter used as a scalar
         ld a,4                  ; parametro stringa
         ret
 .m2:    ld a,2
@@ -2941,15 +2941,15 @@ resolve_var:                    ; tbuf -> A = tipo di riferimento, HL = indirizz
         ld d,0
         ld hl,0
         or a
-        sbc hl,de               ; scostamento = -2*(n+1)
+        sbc hl,de               ; offset = -2*(n+1)
         ex de,hl
-        xor a                   ; tipo locale: intero
+        xor a                   ; local type: integer
         push af
         jr .add
 .ns:    ld a,(nstr)
         inc a
         ld (nstr),a
-        ld h,a                  ; scostamento = -(64 + 256*n)
+        ld h,a                  ; offset = -(64 + 256*n)
         ld l,0
         ld de,64
         add hl,de
@@ -2972,7 +2972,7 @@ resolve_var:                    ; tbuf -> A = tipo di riferimento, HL = indirizz
         ld a,3
         ret
 
-loct_add:                       ; tbuf = nome, A = tipo (0 int, 1 str, 2 shared, 3 par.int, 4 par.str), DE = scostamento
+loct_add:                       ; tbuf = name, A = type (0 int, 1 str, 2 shared, 3 int par., 4 str par.), DE = offset
         push af
         push de
         ld a,(nloc)
@@ -3005,7 +3005,7 @@ loct_add:                       ; tbuf = nome, A = tipo (0 int, 1 str, 2 shared,
         ld (de),a
         ret
 
-emit_ldv:                       ; A = tipo di riferimento, HL = indirizzo/scostamento: HL (programma) = valore o puntatore
+emit_ldv:                       ; A = reference type, HL = address/offset: HL (program) = value or pointer
         or a
         jr nz,.k1
         ld a,2Ah                ; globale intero: ld hl,(nn)
@@ -3021,7 +3021,7 @@ emit_ldv:                       ; A = tipo di riferimento, HL = indirizzo/scosta
         jr z,.ix
         dec a
         jr z,.lstr
-.ix:    ld c,l                  ; intero locale o parametro (anche stringa): ld l,(ix+d) ; ld h,(ix+d+1)
+.ix:    ld c,l                  ; local integer or parameter (also string): ld l,(ix+d) ; ld h,(ix+d+1)
         ld a,0DDh
         call emit_a
         ld a,6Eh
@@ -3035,7 +3035,7 @@ emit_ldv:                       ; A = tipo di riferimento, HL = indirizzo/scosta
         ld a,c
         inc a
         jp emit_a
-.lstr:  push hl                 ; buffer di stringa locale: push ix ; pop hl ; ld de,d ; add hl,de
+.lstr:  push hl                 ; local string buffer: push ix ; pop hl ; ld de,d ; add hl,de
         EM3 0DDh,0E5h,0E1h
         ld a,11h
         call emit_a
@@ -3044,7 +3044,7 @@ emit_ldv:                       ; A = tipo di riferimento, HL = indirizzo/scosta
         EM1 19h
         ret
 
-emit_stv:                       ; A = tipo di riferimento, HL = indirizzo/scostamento: memorizza il valore in HL (programma)
+emit_stv:                       ; A = reference type, HL = address/offset: stores the value in HL (program)
         or a
         jr nz,.n1
         ld a,22h                ; globale intero: ld (nn),hl
@@ -3078,7 +3078,7 @@ emit_stv:                       ; A = tipo di riferimento, HL = indirizzo/scosta
         inc a
         jp emit_a
 .n3:    dec a
-        jp nz,err_type          ; parametro stringa: non assegnabile
+        jp nz,err_type          ; string parameter: not assignable
         push hl                 ; stringa locale: push hl ; (ix+d) -> HL ; ex de,hl ; pop hl ; call rt_scopy
         EM1 0E5h
         EM3 0DDh,0E5h,0E1h
@@ -3091,7 +3091,7 @@ emit_stv:                       ; A = tipo di riferimento, HL = indirizzo/scosta
         EM3 0CDh,low RT_SCOPY,high RT_SCOPY
         ret
 
-find_var:                       ; variabile scalare (tbuf) -> HL = indirizzo; vtyp = tipo
+find_var:                       ; scalar variable (tbuf) -> HL = address; vtyp = type
         call find_rec
         jr c,.new
         ld de,12
@@ -3105,7 +3105,7 @@ find_var:                       ; variabile scalare (tbuf) -> HL = indirizzo; vt
         ld b,(hl)
         ld a,b
         or c
-        jp nz,err_type          ; e' un array usato senza indice
+        jp nz,err_type          ; it is an array used without an index
         ex de,hl
         ret
 .new:   ld a,(vtyp)
@@ -3116,10 +3116,10 @@ find_var:                       ; variabile scalare (tbuf) -> HL = indirizzo; vt
 .s:     ld de,0
         jp new_rec
 
-arr_elem:                       ; tbuf = array, token = nome: emette il calcolo dell'indirizzo dell'elemento in HL
+arr_elem:                       ; tbuf = array, token = name: emits the element address calculation in HL
         call find_arrparam
         jr c,.glob
-        ld a,(tsuf)             ; parametro array: numero elementi a (ix+d), base a (ix+d+2)
+        ld a,(tsuf)             ; array parameter: number of elements at (ix+d), base at (ix+d+2)
         push hl
         push af
         call next_tok
@@ -3170,7 +3170,7 @@ arr_elem:                       ; tbuf = array, token = nome: emette il calcolo 
         EM1 19h
         ret
 .glob:  call find_rec
-        jp c,err_type           ; array non dichiarato
+        jp c,err_type           ; undeclared array
         ld de,12
         add hl,de
         ld e,(hl)
@@ -3181,15 +3181,15 @@ arr_elem:                       ; tbuf = array, token = nome: emette il calcolo 
         inc hl
         ld b,(hl)
         bit 7,b
-        jp nz,err_type          ; array nel mapper: solo x(i) in lettura/assegnamento
+        jp nz,err_type          ; array in the mapper: only x(i) for reading/assignment
         ld a,b
         or c
         jp z,err_type
         push de                 ; base
-        push bc                 ; numero elementi
+        push bc                 ; number of elements
         ld a,(vtyp)
         push af
-        call next_tok           ; nome
+        call next_tok           ; name
         ld a,'('
         call expect_p
         call expr
@@ -3197,11 +3197,11 @@ arr_elem:                       ; tbuf = array, token = nome: emette il calcolo 
         ld a,')'
         call expect_p
         pop af
-        ld (etype),a            ; tipo dell'elemento
+        ld (etype),a            ; element type
         pop bc
         pop de
         push de                 ; base
-        ld a,11h                ; ld de,numero
+        ld a,11h                ; ld de,number
         call emit_a
         ld h,b
         ld l,c
@@ -3220,7 +3220,7 @@ arr_elem:                       ; tbuf = array, token = nome: emette il calcolo 
         EM1 19h                 ; add hl,de
         ret
 
-push_blk:                       ; A = tipo -> HL = record (campi azzerati)
+push_blk:                       ; A = type -> HL = record (fields zeroed)
         ld c,a
         ld a,(nblk)
         cp MAXBLK
@@ -3257,7 +3257,7 @@ blk_addr:                       ; A = indice -> HL = record
         add hl,de
         ret
 
-find_blk:                       ; C = tipo -> HL = record del blocco piu' interno di quel tipo
+find_blk:                       ; C = type -> HL = innermost block record of that type
         ld a,(nblk)
 .l:     or a
         jr z,.bad
@@ -3273,7 +3273,7 @@ find_blk:                       ; C = tipo -> HL = record del blocco piu' intern
         ret
 .bad:   ERR E_MISM
 
-need_blk:                       ; A = tipo richiesto -> HL = record in cima, altrimenti errore
+need_blk:                       ; A = required type -> HL = record on top, otherwise error
         ld c,a
         ld a,(nblk)
         or a
@@ -3284,7 +3284,7 @@ need_blk:                       ; A = tipo richiesto -> HL = record in cima, alt
         ret z
 .bad:   ERR E_MISM
 
-; ---------------------------------------------------------------- compilazione
+; ---------------------------------------------------------------- compilation
 compile:
         ld hl,SRC
         ld (lp),hl
@@ -3347,9 +3347,9 @@ compile:
         ld (fcur),hl
         ld (fexit),hl
         ld (fskiph),hl
-        call load_rt            ; il runtime (RT.BIN) e' l'inizio dell'output
+        call load_rt            ; the runtime (RT.BIN) is the start of the output
         IFDEF BINMODE
-        ld hl,(rtsz)            ; BIN: il codice non deve arrivare alla RAM del runtime
+        ld hl,(rtsz)            ; BIN: the code must not reach the runtime's RAM
         ld de,IMGBASE
         add hl,de
         ex de,hl
@@ -3367,7 +3367,7 @@ compile:
         IFDEF ROMMODE
         call mf_init
         ENDIF
-        call prescan            ; firme di SUB/FUNCTION (riferimenti in avanti)
+        call prescan            ; SUB/FUNCTION signatures (forward references)
         IFDEF ROMMODE
         call mf_prescan
         ENDIF
@@ -3378,12 +3378,12 @@ compile:
         ld (tline),hl
         xor a
         ld (iseof),a
-        ld hl,fname             ; nome del sorgente nell'immagine (per il ritorno all'editor)
+        ld hl,fname             ; source name in the image (for the return to the editor)
         ld de,HDRNAME
         ld bc,16
         ldir
         call next_tok
-        ld a,K_OPTION           ; OPTION NUMBERED | LABELS | MIXED come prima istruzione
+        ld a,K_OPTION           ; OPTION NUMBERED | LABELS | MIXED as the first statement
         call is_kw
         jr nz,.nopt
         call save_lex
@@ -3417,7 +3417,7 @@ compile:
         ld a,(target)
         or a
         jr nz,.tok
-        ld a,2                  ; senza OPTION TARGET: ROM32
+        ld a,2                  ; without OPTION TARGET: ROM32
         ld (target),a
         ld (HDRTGT),a
 .tok:
@@ -3426,9 +3426,9 @@ compile:
         cp 1
         jr nz,.plain
         IFDEF ROMMODE
-        jp err_syntax           ; OPTION NUMBERED non c'e' nel compilatore per cartucce
+        jp err_syntax           ; OPTION NUMBERED is not in the cartridge compiler
         ELSE
-        call sort_lines         ; NUMBERED: le righe si compilano in ordine di numero
+        call sort_lines         ; NUMBERED: lines are compiled in line-number order
         ld a,1
         ld (onel),a
         ld hl,ENT
@@ -3441,13 +3441,13 @@ compile:
         ld hl,(entp)
         ld e,(hl)
         inc hl
-        ld d,(hl)               ; numero (non serve)
+        ld d,(hl)               ; number (not needed)
         inc hl
         ld e,(hl)
         inc hl
         ld d,(hl)
         inc hl
-        ld (lp),de              ; puntatore alla riga
+        ld (lp),de              ; pointer to the line
         ld e,(hl)
         inc hl
         ld d,(hl)
@@ -3473,7 +3473,7 @@ compile:
         ld hl,(lineno)
         ld (tline),hl
         ERR E_OPEN
-.nf:    ld a,(nfunc)            ; funzioni dichiarate ma mai definite
+.nf:    ld a,(nfunc)            ; functions declared but never defined
         or a
         jr z,.nf2
         ld b,a
@@ -3495,7 +3495,7 @@ compile:
         ld hl,(lineno)
         ld (tline),hl
         ERR E_OPEN
-.nb:    ld a,(nlab)             ; etichette senza definizione
+.nb:    ld a,(nlab)             ; labels without a definition
         or a
         jr z,.fin
         ld b,a
@@ -3519,7 +3519,7 @@ compile:
 .nx:    ld de,LABREC
         add hl,de
         djnz .ul
-.fin:   ld hl,(dptr)             ; dimensione dei dati nell'immagine del runtime
+.fin:   ld hl,(dptr)             ; size of the data in the runtime image
         ld de,-DATA_BASE
         add hl,de
         IFDEF ROMMODE
@@ -3532,14 +3532,14 @@ compile:
         IFDEF ROMMODE
         ld a,(mfbin)
         or a
-        jr nz,.nofin            ; ultimo segmento .BIN: non si scrive nulla dopo i suoi byte
+        jr nz,.nofin            ; last .BIN segment: nothing is written after its bytes
         ENDIF
         ld hl,RT_END
         ld a,0C3h
         call emit_jabs
 .nofin:
         IFNDEF ROMMODE
-        ld a,(dbgf)             ; OPTION DEBUG: tabella delle variabili dopo il codice: n, poi i record di VART
+        ld a,(dbgf)             ; OPTION DEBUG: variable table after the code: n, then the VART records
         or a
         ret z
         call get_pc
@@ -3569,7 +3569,7 @@ compile:
         ld a,b
         or c
         jr nz,.dt
-.nv:    ld hl,(dbglast)         ; poi il puntatore all'ultimo record delle variabili locali
+.nv:    ld hl,(dbglast)         ; then the pointer to the last local-variable record
         call emit_w
         ENDIF
         ret
@@ -3580,7 +3580,7 @@ s_target: db "TARGET",0
 tgtnames: db "ROM16",0,1,"ROM32",0,2,"ASCII8",0,3,"ASCII16",0,4,"KONAMI",0,5,"SCC",0,6
         db "ROM_16",0,1,"ROM_32",0,2,"ROM_ASCII8",0,3,"ROM_ASCII16",0,4,"ROM_KONAMI",0,5,"ROM_SCC",0,6,"ROM_KONAMISCC",0,6,0
 
-parse_target:                   ; token = nome del tipo di cartuccia
+parse_target:                   ; token = cartridge type name
         ld a,(ttype)
         cp T_ID
         jp nz,err_syntax
@@ -3610,7 +3610,7 @@ s_rom:  db ".ROM",0
 msg_romw: db 13,10,"ROM written: $"
 msg_romk: db 13,10,"Press any key...$"
 
-rom_done:                       ; messaggio, attesa di un tasto e ritorno all'editor
+rom_done:                       ; message, wait for a key and return to the editor
         ld a,(mfile)
         or a
         jr z,.nm0
@@ -3655,7 +3655,7 @@ rom_done:                       ; messaggio, attesa di un tasto e ritorno all'ed
         inc hl
         inc de
         jr .n
-.e:     ld a,' '                ; " +": l'editor sa che si torna dal compilatore (directory del progetto)
+.e:     ld a,' '                ; " +": the editor knows we are returning from the compiler (project directory)
         ld (de),a
         inc de
         ld a,'+'
@@ -3679,7 +3679,7 @@ rom_done:                       ; messaggio, attesa di un tasto e ritorno all'ed
         ENDIF
 
         IFNDEF ROMMODE
-chk_rom:                        ; il sorgente ha "OPTION TARGET <cartuccia>": si passa al compilatore per cartucce
+chk_rom:                        ; the source has "OPTION TARGET <cartridge>": switch to the cartridge compiler
         ld hl,SRC
 .l:     ld a,(hl)
         or a
@@ -3699,17 +3699,17 @@ chk_rom:                        ; il sorgente ha "OPTION TARGET <cartuccia>": si
         ld a,(hl)
         or 20h
         cp 'c'
-        jr z,.f                 ; TARGET COM: compilazione normale
+        jr z,.f                 ; TARGET COM: normal compilation
         cp 'd'
         jr z,.f                 ; TARGET DOS: idem
         pop hl
         ld de,s_qbcr
         cp 'b'
         jr nz,.ch
-        ld de,s_qbcb            ; TARGET BIN: compilatore per MSX-BASIC
+        ld de,s_qbcb            ; TARGET BIN: compiler for MSX-BASIC
 .ch:    push de
         call cd_home
-        ld hl,ldr_img           ; carica QBCR.COM / QBCB.COM con la stessa riga di comando
+        ld hl,ldr_img           ; loads QBCR.COM / QBCB.COM with the same command line
         ld de,LDR
         ld bc,ldr_size
         ldir
@@ -3722,7 +3722,7 @@ chk_rom:                        ; il sorgente ha "OPTION TARGET <cartuccia>": si
 .n:     inc hl
         jr .l
         ENDIF
-match_ci:                       ; HL = testo, DE = modello minuscolo 0-terminato: Z se coincide (HL avanza)
+match_ci:                       ; HL = text, DE = 0-terminated lowercase pattern: Z if it matches (HL advances)
 .m:     ld a,(de)
         or a
         ret z
@@ -3746,7 +3746,7 @@ s_optionl: db "option",0
 s_debugl: db "debug",0
         IFNDEF ROMMODE
 s_asml: db "asm",0
-chk_opta:                       ; Z se il sorgente non ha "OPTION ASM" (tutto il file e' assembly)
+chk_opta:                       ; Z if the source has no "OPTION ASM" (the whole file is assembly)
         ld hl,SRC
 .l:     ld a,(hl)
         or a
@@ -3769,7 +3769,7 @@ chk_opta:                       ; Z se il sorgente non ha "OPTION ASM" (tutto il
 .n:     inc hl
         jr .l
         ENDIF
-chk_dbg:                        ; Z se il sorgente non ha "OPTION DEBUG"
+chk_dbg:                        ; Z if the source has no "OPTION DEBUG"
         ld hl,SRC
 .l:     ld a,(hl)
         or a
@@ -3797,7 +3797,7 @@ s_qbcr: db "QBCR    COM"
 s_qbcb: db "QBCB    COM"
         ENDIF
 
-str_eq:                         ; HL = tbuf, DE = stringa 0-terminata: Z se uguali
+str_eq:                         ; HL = tbuf, DE = 0-terminated string: Z if equal
 .l:     ld a,(de)
         cp (hl)
         ret nz
@@ -3815,7 +3815,7 @@ line_loop:
         jr nz,.st
         ld a,(onel)
         or a
-        ret nz                  ; modalita' a riga singola: fine riga = ritorno
+        ret nz                  ; single-line mode: end of line = return
         ld a,(iseof)
         or a
         ret nz
@@ -3826,7 +3826,7 @@ line_loop:
         ld a,(mode)
         cp 2
         jp z,err_mode
-        call num_to_name        ; numero di riga = etichetta
+        call num_to_name        ; line number = label
         call define_label
         call next_tok
         jr .line
@@ -3840,7 +3840,7 @@ line_loop:
         ld a,(mode)
         cp 1
         jp z,err_mode
-        call define_label       ; etichetta "nome:" (tbuf ancora quello dell'identificatore)
+        call define_label       ; label "name:" (tbuf is still the identifier's)
         call next_tok
         jr .line
 .notlab:
@@ -3853,7 +3853,7 @@ line_loop:
         jr nz,.hk
         ld a,(tval)
         cp '#'
-        jr z,.go                ; dentro i blocchi di assembler in linea non si inseriscono ganci
+        jr z,.go                ; no hooks are inserted inside inline assembler blocks
 .hk:    call emit_dbg
 .go:    call statement
         ld a,(ttype)
@@ -3869,12 +3869,12 @@ err_mode:
         ERR E_MODE
 
         IFNDEF ROMMODE
-; NUMBERED: indice (numero, puntatore, riga) delle righe, ordinato per numero
+; NUMBERED: index (number, pointer, line) of the lines, sorted by number
 sort_lines:
         ld hl,ENT
         ld (entend),hl
         ld hl,SRC
-        ld de,1                 ; DE = numero di riga del sorgente
+        ld de,1                 ; DE = source line number
 .ln:    ld a,(hl)
         cp ' '
         jr z,.sp
@@ -3885,20 +3885,20 @@ sort_lines:
 .sp:    inc hl
         jr .ln
 .go:    or a
-        ret z                   ; fine sorgente
+        ret z                   ; end of source
         cp 1Ah
         ret z
         cp 0Ah
         jr z,.eol
         cp 27h
-        jr z,.skip              ; commento
+        jr z,.skip              ; comment
         cp '0'
         jr c,.nonum
         cp '9'+1
         jr nc,.nonum
         push de
         push hl
-        ld bc,0                 ; BC = numero
+        ld bc,0                 ; BC = number
 .nl:    ld a,(hl)
         sub '0'
         cp 10
@@ -3918,7 +3918,7 @@ sort_lines:
         pop hl
         inc hl
         jr .nl
-.nd:    pop hl                  ; HL = inizio riga
+.nd:    pop hl                  ; HL = start of line
         pop de
         push hl
         push de
@@ -3928,7 +3928,7 @@ sort_lines:
         pop de
         pop hl
         jr .skip
-.nonum: ld (tline),de           ; riga senza numero: ammessa solo OPTION
+.nonum: ld (tline),de           ; line without a number: only OPTION is allowed
         push hl
         ld de,s_optionw
         ld b,6
@@ -3957,7 +3957,7 @@ sort_lines:
         jr .ln
 s_optionw: db "OPTION"
 
-ins_ent:                        ; BC = numero, HL = puntatore riga, DE = riga sorgente
+ins_ent:                        ; BC = number, HL = line pointer, DE = source line
         ld (en_num),bc
         ld (en_ptr),hl
         ld (en_ln),de
@@ -3979,29 +3979,29 @@ ins_ent:                        ; BC = numero, HL = puntatore riga, DE = riga so
         push hl
         ld e,(hl)
         inc hl
-        ld d,(hl)               ; DE = numero precedente
+        ld d,(hl)               ; DE = previous number
         ld hl,(en_num)
         or a
         sbc hl,de               ; nuovo - precedente
         pop hl
         jr z,.dup
-        jr c,.up                ; nuovo < precedente: continua a risalire
+        jr c,.up                ; new < previous: keep climbing
         ld de,6
-        add hl,de               ; dopo il precedente
+        add hl,de               ; after the previous one
         jr .ins
 .dup:   ERR E_DUP
 .ins:   ld (en_pos),hl
         ld de,(entend)
         ex de,hl
         or a
-        sbc hl,de               ; HL = byte da spostare
+        sbc hl,de               ; HL = byte to move
         ld a,h
         or l
         jr z,.wr
         ld b,h
         ld c,l
         ld hl,(entend)
-        dec hl                  ; ultimo byte sorgente
+        dec hl                  ; last source byte
         ld de,(entend)
         push hl
         ld hl,5
@@ -4040,7 +4040,7 @@ statement:
         ld (tmpf),a
         jp emit_reset
 
-emit_reset:                     ; libera le stringhe temporanee (clobbera DE nel programma)
+emit_reset:                     ; frees the temporary strings (clobbers DE in the program)
         ld hl,(fcur)
         ld a,h
         or l
@@ -4048,7 +4048,7 @@ emit_reset:                     ; libera le stringhe temporanee (clobbera DE nel
         call emit_i
         db 8,0EDh,5Bh,low HEAP0,high HEAP0,0EDh,53h,low HEAPP,high HEAPP
         ret
-.f:     call emit_i             ; dentro una funzione: heapp = valore salvato all'ingresso (ix-2)
+.f:     call emit_i             ; inside a function: heapp = value saved on entry (ix-2)
         db 8,0DDh,5Eh,0FEh,0DDh,56h,0FFh,0EDh,53h
         ld hl,HEAPP
         jp emit_w
@@ -4140,7 +4140,7 @@ e_and:  call e_not
         call emit_logic
         jr .l
 
-emit_logic:                     ; C = op con D, B = op con E
+emit_logic:                     ; C = op with D, B = op with E
         EM2 0D1h,7Ch            ; pop de ; ld a,h
         ld a,c
         call emit_a
@@ -4177,17 +4177,17 @@ e_cmp:  call e_add
         ld e,(hl)
         inc hl
         ld d,(hl)
-        push de                 ; routine per interi
+        push de                 ; integer routine
         ld a,(etype)
-        push af                 ; tipo dell'operando sinistro
+        push af                 ; type of the left operand
         call next_tok
         EM1 0E5h
         call e_add
-        pop bc                  ; B = tipo sinistro
+        pop bc                  ; B = left type
         ld a,(etype)
         cp b
         jp nz,err_type
-        ld c,a                  ; tipo comune (emit_i clobbera A)
+        ld c,a                  ; common type (emit_i clobbers A)
         EM1 0D1h
         ld a,c
         or a
@@ -4220,7 +4220,7 @@ e_add:  call e_mod
         ret nz
         ld c,1
 .go:    ld a,(etype)
-        ld b,a                  ; tipo sinistro
+        ld b,a                  ; left type
         push bc
         call next_tok
         EM1 0E5h
@@ -4242,7 +4242,7 @@ e_add:  call e_mod
         jr .l
 .str:   ld a,c
         or a
-        jp nz,err_type          ; '-' sulle stringhe
+        jp nz,err_type          ; '-' on strings
         EM1 0D1h
         EM3 0CDh,low RT_SCAT,high RT_SCAT
         ld a,1
@@ -4287,7 +4287,7 @@ e_mul:  call e_unary
         EM1 0E5h
         call e_unary
         call want_int
-        EM2 0D1h,0EBh           ; '/' = divisione intera (niente float)
+        EM2 0D1h,0EBh           ; '/' = integer division (no float)
         EM3 0CDh,low RT_DIV,high RT_DIV
         jr .l
 .mul:   call want_int
@@ -4338,7 +4338,7 @@ primary:
         ld de,nbuf
         call find_in
         jr c,.var
-        add a,a                 ; funzione predefinita
+        add a,a                 ; predefined function
         ld e,a
         ld d,0
         ld hl,bijump
@@ -4350,21 +4350,21 @@ primary:
         jp (hl)
 .var:   call find_func
         jr c,.nofn
-        ld a,(hl)               ; (primo byte nome) - non usato; il tipo e' a +12
+        ld a,(hl)               ; (first byte of name) - unused; the type is at +12
         push hl
         ld de,12
         add hl,de
         ld a,(hl)
         pop hl
         cp 2
-        jp nz,err_syntax        ; una SUB non e' un'espressione
+        jp nz,err_syntax        ; a SUB is not an expression
         ld de,(fcur)
         or a
         push hl
-        sbc hl,de               ; funzione corrente?
+        sbc hl,de               ; current function?
         pop hl
         jr nz,.docall
-        call save_lex           ; dentro la propria FUNCTION: senza '(' e' la variabile risultato
+        call save_lex           ; inside its own FUNCTION: without '(' it is the result variable
         call next_tok
         ld a,'('
         call is_p
@@ -4375,7 +4375,7 @@ primary:
         call find_func
 .docall:
         push hl
-        call next_tok           ; nome
+        call next_tok           ; name
         pop hl
         call emit_args
         push hl
@@ -4383,7 +4383,7 @@ primary:
         pop hl
         call emit_cleanup
         ld a,1
-        ld (tmpf),a             ; (il risultato stringa e' sullo heap)
+        ld (tmpf),a             ; (the string result is on the heap)
         ld de,15
         add hl,de
         ld a,(hl)
@@ -4416,7 +4416,7 @@ primary:
         inc hl
         ld d,(hl)
         ex de,hl
-        ld a,21h                ; ld hl,valore
+        ld a,21h                ; ld hl,value
         push hl
         call emit_a
         pop hl
@@ -4436,10 +4436,10 @@ primary:
 .arr:   call restore_lex
         call arr_is_mapper
         jp nz,mapper_read
-        call arr_elem           ; HL = indirizzo dell'elemento
+        call arr_elem           ; HL = element address
         ld a,(etype)
         or a
-        ret nz                  ; stringa: HL e' gia' il puntatore
+        ret nz                  ; string: HL is already the pointer
         EM4 5Eh,23h,56h,0EBh    ; ld e,(hl) ; inc hl ; ld d,(hl) ; ex de,hl
         ret
 .ni:    cp T_P
@@ -4452,7 +4452,7 @@ primary:
         ld a,')'
         jp expect_p
 
-make_nbuf:                      ; tbuf -> nbuf (testo normale, "CHR$" ecc.)
+make_nbuf:                      ; tbuf -> nbuf (plain text, "CHR$" etc.)
         ld hl,tbuf
         ld de,nbuf
         ld b,11
@@ -4472,7 +4472,7 @@ make_nbuf:                      ; tbuf -> nbuf (testo normale, "CHR$" ecc.)
         ld (de),a
         ret
 
-; --- funzioni predefinite (il token corrente e' il nome)
+; --- built-in functions (the current token is the name)
 bitab:  db "LEN",0,"ASC",0,"VAL",0,"ABS",0,"SGN",0,"RND",0,"PEEK",0,"CHR$",0,"STR$",0
         db "LEFT$",0,"RIGHT$",0,"MID$",0,"INKEY$",0,"TIMER",0,"VPEEK",0,"INP",0,"UBOUND",0,"POINT",0,"COLLISION",0,"BASE",0,"VDP",0,"STICK",0,"STRIG",0,"VREAD$",0,"EOF",0,"DATAWIN",0,"MAPPERSEGS",0,"MGET",0,"VARPTR",0
         db "MALLOC",0,"LOF",0
@@ -4493,7 +4493,7 @@ bi_len: ld hl,RT_LEN
 bi_asc: ld hl,RT_ASC
         jr bi1s
 bi_val: ld hl,RT_VAL
-bi1s:   push hl                 ; un argomento stringa -> intero
+bi1s:   push hl                 ; a string argument -> integer
         call next_tok
         call open_paren
         call expr
@@ -4514,7 +4514,7 @@ bi_str: ld hl,RT_STR
         jr bi1i
 bi_rnd: ld hl,RT_RND
         ld c,0
-bi1i:   push bc                 ; un argomento intero; C = tipo del risultato
+bi1i:   push bc                 ; an integer argument; C = result type
         push hl
         call next_tok
         call open_paren
@@ -4619,7 +4619,7 @@ bi_mid: call next_tok
         EM1 0E5h
         call expr
         call want_int
-        EM2 0D1h,0C1h           ; pop de (inizio) ; pop bc (stringa)
+        EM2 0D1h,0C1h           ; pop de (start) ; pop bc (string)
         jr .go
 .two:   call emit_i
         db 5,0EBh,0C1h,21h,0FFh,0   ; ex de,hl ; pop bc ; ld hl,255
@@ -4630,8 +4630,8 @@ bi_mid: call next_tok
         ld (tmpf),a
         ret
 
-; ---------------------------------------------------------------- istruzioni
-emit_dbg:                       ; OPTION DEBUG: push hl ; ld hl,<riga> ; call RT_DBG ; pop hl
+; ---------------------------------------------------------------- statements
+emit_dbg:                       ; OPTION DEBUG: push hl ; ld hl,<line> ; call RT_DBG ; pop hl
         EM1 0E5h
         ld a,21h
         call emit_a
@@ -4641,13 +4641,13 @@ emit_dbg:                       ; OPTION DEBUG: push hl ; ld hl,<riga> ; call RT
         EM1 0E1h
         ret
 
-emit_brk:                       ; OPTION BREAK: controllo del tasto di interruzione prima di un salto all'indietro
+emit_brk:                       ; OPTION BREAK: break-key check before a backward jump
         IFNDEF ROMMODE
         IFNDEF BINMODE
         ld a,(brkf)
         or a
         ret z
-        ld a,(dbgf)             ; con OPTION DEBUG il debugger controlla gia' ogni istruzione
+        ld a,(dbgf)             ; with OPTION DEBUG the debugger already checks every statement
         or a
         ret nz
         jp emit_dbg
@@ -4659,7 +4659,7 @@ s_debug: db "DEBUG",0
 s_break: db "BREAK",0
         ENDIF
 
-st_asmb:                        ; "# [*] elementi": byte preparati da QASM.OVL (assembler in linea)
+st_asmb:                        ; "# [*] items": bytes prepared by QASM.OVL (inline assembler)
         ld a,'*'
         call is_p
         jr nz,.l
@@ -4676,7 +4676,7 @@ st_asmb:                        ; "# [*] elementi": byte preparati da QASM.OVL (
         ld a,'+'
         call is_p
         jp nz,err_syntax
-        call next_tok           ; +k: inizio del blocco + k
+        call next_tok           ; +k: start of block + k
         ld a,(ttype)
         cp T_NUM
         jp nz,err_syntax
@@ -4691,7 +4691,7 @@ st_asmb:                        ; "# [*] elementi": byte preparati da QASM.OVL (
         ld a,':'
         call is_p
         jr nz,.byte
-        call next_tok           ; n:NOME -> n + indirizzo dell'etichetta BASIC
+        call next_tok           ; n:NAME -> n + address of the BASIC label
         ld a,(ttype)
         cp T_ID
         jp nz,err_syntax
@@ -4702,7 +4702,7 @@ st_asmb:                        ; "# [*] elementi": byte preparati da QASM.OVL (
 .byte:  pop af
         call emit_a
         jr .sep
-.var:   call resolve_var        ; indirizzo di una variabile globale intera o stringa
+.var:   call resolve_var        ; address of a global integer or string variable
         cp 2
         jp nc,err_type
         push hl
@@ -4730,7 +4730,7 @@ st_asmb:                        ; "# [*] elementi": byte preparati da QASM.OVL (
         call expect_p
         jp st_asmb.l
 
-chk_asm:                        ; il sorgente ha "__ASM" o "OPTION ASM": QASM.OVL (a 8000h) riscrive i blocchi
+chk_asm:                        ; the source has "__ASM" or "OPTION ASM": QASM.OVL (at 8000h) rewrites the blocks
         IFNDEF ROMMODE
         call chk_opta
         jr nz,.go
@@ -4782,7 +4782,7 @@ st_option:
         IFDEF ROMMODE
         ld a,(mfcur)
         or a
-        jp nz,err_mode          ; le OPTION stanno solo nel file NOME000
+        jp nz,err_mode          ; the OPTIONs are only in the file NAME000
         ENDIF
         ld a,(ttype)
         cp T_ID
@@ -4797,7 +4797,7 @@ st_option:
         ld de,s_break
         call str_eq
         jr nz,st_skip
-        ld a,80h                ; OPTION BREAK: bit 7 del byte di tipo del runtime + controlli sui salti all'indietro
+        ld a,80h                ; OPTION BREAK: bit 7 of the runtime type byte + checks on backward jumps
         ld (HDRTGT),a
         ld a,1
         ld (brkf),a
@@ -4807,7 +4807,7 @@ st_option:
 .dbg:   ld a,1
         ld (dbgf),a
         IFNDEF ROMMODE
-        ld a,21h                ; ld hl,tabella ; ld (DBGT),hl  (l'indirizzo si scrive a fine compilazione)
+        ld a,21h                ; ld hl,table ; ld (DBGT),hl  (the address is written at the end of compilation)
         call emit_a
         ld hl,(outp)
         ld (dbgpa),hl
@@ -4816,7 +4816,7 @@ st_option:
         ld hl,DBGT
         call emit_st
         ENDIF
-st_skip:                        ; DECLARE e OPTION: resto della riga ignorato
+st_skip:                        ; DECLARE and OPTION: rest of the line ignored
 .l:     ld a,(ttype)
         or a
         ret z
@@ -4826,7 +4826,7 @@ st_skip:                        ; DECLARE e OPTION: resto della riga ignorato
 st_let: ld a,(ttype)
         cp T_ID
         jp nz,err_syntax
-st_idstmt:                      ; identificatore all'inizio dell'istruzione: SUB senza CALL oppure assegnamento
+st_idstmt:                      ; identifier at the start of the statement: SUB without CALL or assignment
         call make_nbuf
         ld hl,nbuf
         ld de,s_spritedol
@@ -4844,7 +4844,7 @@ st_idstmt:                      ; identificatore all'inizio dell'istruzione: SUB
         ld a,(hl)
         pop hl
         cp 1
-        jr nz,st_assign         ; FUNCTION: assegnamento al risultato
+        jr nz,st_assign         ; FUNCTION: assignment to the result
         push hl
         call next_tok
         pop hl
@@ -4864,7 +4864,7 @@ st_assign:
         call expect_p
         call expr
         pop af
-        pop hl                  ; A = tipo di riferimento, HL = indirizzo/scostamento
+        pop hl                  ; A = reference type, HL = address/offset
         push af
         push hl
         call kind_type
@@ -4878,7 +4878,7 @@ st_assign:
 .arr:   call restore_lex
         call arr_is_mapper
         jp nz,mapper_assign
-        call arr_elem           ; HL = indirizzo dell'elemento
+        call arr_elem           ; HL = element address
         ld a,(etype)
         push af
         EM1 0E5h
@@ -4890,7 +4890,7 @@ st_assign:
         ld a,(etype)
         cp b
         jp nz,err_type
-        EM1 0D1h                ; pop de = indirizzo
+        EM1 0D1h                ; pop de = address
         ld a,(etype)
         or a
         jr nz,.astr
@@ -4941,16 +4941,16 @@ st_print0:
         EM3 0CDh,low RT_PNL,high RT_PNL
         ret
 
-emit_strlit:                    ; token stringa -> ld hl,<len> ; jp oltre ; db len,testo
+emit_strlit:                    ; string token -> ld hl,<len> ; jp past ; db len,text
         ld a,(tlen)
         ld b,a
         ld hl,(tval)
-emit_lit:                       ; HL = testo, B = lunghezza
+emit_lit:                       ; HL = text, B = length
         push hl
         push bc
         call get_pc
         ld de,6
-        add hl,de               ; indirizzo del byte lunghezza = pc + 6
+        add hl,de               ; address of the length byte = pc + 6
         ld a,21h
         call emit_a
         call emit_w
@@ -4961,7 +4961,7 @@ emit_lit:                       ; HL = testo, B = lunghezza
         call get_pc
         ld de,4
         add hl,de
-        add hl,bc               ; fine dei dati = pc + 4 + len (pc dopo il ld hl)
+        add hl,bc               ; end of the data = pc + 4 + len (pc after the ld hl)
         ld a,0C3h
         call emit_jabs
         pop bc
@@ -4982,7 +4982,7 @@ st_goto:
         jr jump_target
 st_gosub:
         ld a,0CDh
-jump_target:                    ; A = opcode; token = numero di riga o etichetta
+jump_target:                    ; A = opcode; token = line number or label
         ld b,a
         ld a,(ttype)
         cp T_NUM
@@ -5029,7 +5029,7 @@ st_locate:
         ret
 
 ; --- IF
-cond_expr:                      ; espressione intera di condizione; rilascia i temporanei; HL (programma) != 0 se vera
+cond_expr:                      ; integer condition expression; releases temporaries; HL (program) != 0 if true
         call expr
         call want_int
         ld a,(tmpf)
@@ -5041,7 +5041,7 @@ cond_expr:                      ; espressione intera di condizione; rilascia i t
 .nt:    EM2 7Ch,0B5h            ; ld a,h ; or l
         ret
 
-cond_jz:                        ; condizione -> salta se falsa alla catena (HL)
+cond_jz:                        ; condition -> jump if false to the chain (HL)
         push hl
         call cond_expr
         pop hl
@@ -5058,8 +5058,8 @@ st_if:  ld a,B_IF
         call next_tok
         ld a,(ttype)
         or a
-        ret z                   ; forma a blocchi: il blocco resta aperto
-        call one_line           ; forma su riga singola
+        ret z                   ; block form: the block stays open
+        call one_line           ; single-line form
         ld a,K_ELSE
         call is_kw
         jr nz,.noelse
@@ -5068,7 +5068,7 @@ st_if:  ld a,B_IF
         call need_blk
         inc hl
         inc hl
-        inc hl                  ; campo b = catena della fine
+        inc hl                  ; field b = chain of the end
         ld a,0C3h
         call emit_jchain
         ld a,B_IF
@@ -5092,7 +5092,7 @@ st_if:  ld a,B_IF
         dec (hl)
         ret
 
-one_line:                       ; dopo THEN/ELSE: salto a riga/etichetta oppure istruzioni
+one_line:                       ; after THEN/ELSE: jump to line/label or statements
         ld a,(ttype)
         cp T_NUM
         jr z,.goto
@@ -5183,12 +5183,12 @@ st_end: ld a,K_IF
         call need_blk
         push hl
         inc hl
-        call patch_chain        ; CASE senza corrispondenze -> qui
+        call patch_chain        ; CASE with no matches -> here
         pop hl
         inc hl
         inc hl
         inc hl
-        call patch_chain        ; fine dei CASE
+        call patch_chain        ; end of the CASEs
         ld a,B_SEL
         call need_blk
         ld de,9
@@ -5196,9 +5196,9 @@ st_end: ld a,K_IF
         ld a,(hl)
         or a
         jr nz,.sstr
-        EM1 0D1h                ; pop de (scarta il valore del SELECT)
+        EM1 0D1h                ; pop de (discard the SELECT value)
         jr .sdone
-.sstr:  call emit_i             ; libera la copia da 256 byte: ld hl,256 ; add hl,sp ; ld sp,hl
+.sstr:  call emit_i             ; frees the 256-byte copy: ld hl,256 ; add hl,sp ; ld sp,hl
         db 5,21h,0,1,39h,0F9h
 .sdone:
         ld hl,nblk
@@ -5236,7 +5236,7 @@ st_for: ld a,(ttype)
         call want_int
         ld a,(tmpk)
         ld hl,(tmpv)
-        call emit_stv           ; var = valore iniziale
+        call emit_stv           ; var = initial value
         ld a,K_TO
         call expect_kw
         call expr
@@ -5273,7 +5273,7 @@ st_for: ld a,(ttype)
         ld a,(tmpk)
         ld de,9
         add hl,de
-        ld (hl),a               ; +9 = tipo di riferimento
+        ld (hl),a               ; +9 = reference type
         ld de,-8
         add hl,de               ; +1
         ld de,(tmpv)
@@ -5292,7 +5292,7 @@ st_for: ld a,(ttype)
         pop hl
         ld (hl),e
         inc hl
-        ld (hl),d               ; c = inizio del ciclo
+        ld (hl),d               ; c = start of the loop
         EM2 0D1h,0D5h           ; pop de ; push de
         ld a,(tmpk)
         ld hl,(tmpv)
@@ -5342,7 +5342,7 @@ st_next:
         ld (tmps),bc            ; passo
         ld e,(hl)
         inc hl
-        ld d,(hl)               ; DE = inizio del ciclo
+        ld d,(hl)               ; DE = start of the loop
         push de
         ld a,(tmpk)
         ld hl,(tmpv)
@@ -5358,13 +5358,13 @@ st_next:
         BRKCHK
         pop hl
         ld a,0C3h
-        call emit_jabs          ; jp inizio
+        call emit_jabs          ; jp start
         ld a,B_FOR
         call need_blk
         ld de,7
         add hl,de
         call patch_chain        ; uscita
-        EM1 0D1h                ; pop de (scarta il limite)
+        EM1 0D1h                ; pop de (discard the limit)
         ld hl,nblk
         dec (hl)
         ret
@@ -5380,7 +5380,7 @@ st_while:
         inc hl
         ld (hl),e
         inc hl
-        ld (hl),d               ; a = inizio
+        ld (hl),d               ; a = start
         inc hl                  ; b = catena d'uscita
         call cond_jz
         ret
@@ -5444,7 +5444,7 @@ st_dim:
         ld hl,(fcur)
         ld a,h
         or l
-        jp nz,err_syntax        ; DIM solo a livello principale
+        jp nz,err_syntax        ; DIM only at main level
 .l:     ld a,(ttype)
         cp T_ID
         jp nz,err_syntax
@@ -5452,8 +5452,8 @@ st_dim:
         jp nc,.dup
         ld a,(vtyp)
         push af
-        push hl                 ; posto del nuovo record
-        ld hl,tbuf              ; il nome dell'array va salvato: leggere una CONST sovrascrive tbuf
+        push hl                 ; room for the new record
+        ld hl,tbuf              ; the array name must be saved: reading a CONST overwrites tbuf
         ld de,nbuf
         ld bc,16
         ldir
@@ -5461,7 +5461,7 @@ st_dim:
         ld a,'('
         call expect_p
         call num_or_const
-        inc de                  ; elementi = massimo indice + 1
+        inc de                  ; elements = max index + 1
         push de
         call next_tok
         ld a,')'
@@ -5475,7 +5475,7 @@ st_dim:
         ld de,s_mapper
         call str_eq
         jr nz,.nmp
-        ld a,1                  ; DIM x(n) MAPPER: l'array sta nei segmenti del mapper RAM
+        ld a,1                  ; DIM x(n) MAPPER: the array lives in the mapper RAM segments
         ld (mapf),a
         call next_tok
 .nmp:   pop de
@@ -5488,8 +5488,8 @@ st_dim:
         jr z,.int
         ld a,(mapf)
         or a
-        jp nz,err_type          ; solo array di interi
-        ld a,d                  ; stringhe: massimo 255 elementi da 256 byte
+        jp nz,err_type          ; integer arrays only
+        ld a,d                  ; strings: at most 255 elements of 256 bytes
         or a
         jp nz,err_mem
         ld b,e
@@ -5498,8 +5498,8 @@ st_dim:
 .int:   add hl,hl
         ld b,h
         ld c,l
-.go:    push de                 ; numero di elementi
-        ld hl,nbuf              ; ripristina il nome
+.go:    push de                 ; number of elements
+        ld hl,nbuf              ; restore the name
         ld de,tbuf
         push bc
         ld bc,16
@@ -5516,12 +5516,12 @@ st_dim:
         ret nz
         call next_tok
         jp .l
-.map:   ld (mapcnt),de          ; descrittore (6 byte) nei dati; il record ricorda il numero di elementi con il bit 15 acceso
+.map:   ld (mapcnt),de          ; descriptor (6 bytes) in the data; the record remembers the number of elements with bit 15 set
         set 7,d
         ld bc,6
         call new_rec
         push hl
-        ld a,21h                ; ld hl,descrittore ; ld de,numero ; call RT_MDIM
+        ld a,21h                ; ld hl,descriptor ; ld de,number ; call RT_MDIM
         call emit_a
         pop hl
         call emit_w
@@ -5535,8 +5535,8 @@ st_dim:
         jr .cm
 .dup:   ERR E_DUP
 
-; --- tabella delle funzioni
-find_func:                      ; tbuf -> HL = record, NC se trovato; C se manca
+; --- function table
+find_func:                      ; tbuf -> HL = record, NC if found; C if missing
         ld a,(nfunc)
         or a
         jr z,.nf
@@ -5552,7 +5552,7 @@ find_func:                      ; tbuf -> HL = record, NC se trovato; C se manca
 .f:     or a
         ret
 
-prescan:                        ; registra le firme di SUB/FUNCTION di tutto il sorgente
+prescan:                        ; records the SUB/FUNCTION signatures of the whole source
         ld hl,SRC
         ld (lp),hl
         ld hl,1
@@ -5589,7 +5589,7 @@ prescan:                        ; registra le firme di SUB/FUNCTION di tutto il 
         cp K_WINDOW
         jr nz,.nw
         ld a,1
-        ld (usewin),a           ; il programma usa WINDOW
+        ld (usewin),a           ; the program uses WINDOW
         jr .adv
 .nw:    IFDEF ROMMODE
         cp K_SEGMENT
@@ -5604,7 +5604,7 @@ prescan:                        ; registra le firme di SUB/FUNCTION di tutto il 
 .adv:   call next_tok
         jr .skip
 
-reg_func:                       ; token = SUB/FUNCTION: crea il record con nome e parametri
+reg_func:                       ; token = SUB/FUNCTION: creates the record with name and parameters
         ld a,(tval)
         sub K_SUB
         inc a                   ; 1 = SUB, 2 = FUNCTION
@@ -5640,22 +5640,22 @@ reg_func:                       ; token = SUB/FUNCTION: crea il record con nome 
         ex de,hl
         ld hl,tbuf
         ld bc,12
-        ldir                    ; nome
+        ldir                    ; name
         pop af
-        ld (de),a               ; +12 tipo
+        ld (de),a               ; +12 type
         inc de
         xor a
-        ld (de),a               ; +13 numero di parametri
+        ld (de),a               ; +13 number of parameters
         inc de
         ld a,(npart)
-        ld (de),a               ; +14 primo parametro
+        ld (de),a               ; +14 first parameter
         inc de
         ld a,(tsuf)
-        ld (de),a               ; +15 tipo del risultato
+        ld (de),a               ; +15 result type
         inc de
         xor a
         ld b,8
-.z:     ld (de),a               ; +16 definita, +17 +18 indirizzo, +19 +20 catena, +21 maschera, +22 +23
+.z:     ld (de),a               ; +16 defined, +17 +18 address, +19 +20 chain, +21 mask, +22 +23
         inc de
         djnz .z
         call next_tok
@@ -5673,7 +5673,7 @@ reg_func:                       ; token = SUB/FUNCTION: crea il record con nome 
         cp MAXPAR
         jr c,.pok
         ERR E_MANY
-.pok:   call save_lex           ; parametro array: nome seguito da "()"
+.pok:   call save_lex           ; array parameter: name followed by "()"
         call next_tok
         ld a,'('
         call is_p
@@ -5690,9 +5690,9 @@ reg_func:                       ; token = SUB/FUNCTION: crea il record con nome 
         jr c,.p8
         ERR E_MANY
 .p8:    inc a
-        ld (hl),a               ; numero di parametri
+        ld (hl),a               ; number of parameters
         dec a
-        ld c,a                  ; indice del parametro
+        ld c,a                  ; parameter index
         ld a,(npart)
         ld l,a
         ld h,0
@@ -5709,28 +5709,28 @@ reg_func:                       ; token = SUB/FUNCTION: crea il record con nome 
         ldir
         pop bc
         ld a,(tsuf)
-        ld (de),a               ; tipo del parametro
+        ld (de),a               ; parameter type
         inc de
         ld a,(tmpk)
-        ld (de),a               ; +13 = 1 se array
+        ld (de),a               ; +13 = 1 if array
         ld a,(npart)
         inc a
         ld (npart),a
         ld a,(tsuf)
         or a
         jr z,.nms
-        ld e,21                 ; maschera dei tipi stringa
+        ld e,21                 ; mask of the string types
         push bc
         call rf_bit
         pop bc
 .nms:   ld a,(tmpk)
         or a
         jr z,.nma
-        ld e,22                 ; maschera dei parametri array
+        ld e,22                 ; mask of the array parameters
         push bc
         call rf_bit
         pop bc
-.nma:   ld hl,(rf_rec)          ; parole sullo stack: 1 (scalare) o 2 (array: base e numero elementi)
+.nma:   ld hl,(rf_rec)          ; words on the stack: 1 (scalar) or 2 (array: base and number of elements)
         ld de,23
         add hl,de
         ld a,(tmpk)
@@ -5759,7 +5759,7 @@ reg_func:                       ; token = SUB/FUNCTION: crea il record con nome 
 err_dup2:
         ERR E_DUP
 
-rf_bit:                         ; C = indice, E = scostamento nel record: imposta il bit
+rf_bit:                         ; C = index, E = offset in the record: sets the bit
         ld b,c
         ld a,1
         inc b
@@ -5776,7 +5776,7 @@ rf_bit:                         ; C = indice, E = scostamento nel record: impost
         ld (hl),a
         ret
 
-ca_bit:                         ; DE = scostamento di una maschera nel record -> A = bit dell'argomento corrente
+ca_bit:                         ; DE = offset of a mask in the record -> A = bit of the current argument
         ld hl,(ca_rec)
         add hl,de
         ld b,(hl)
@@ -5791,7 +5791,7 @@ ca_bit:                         ; DE = scostamento di una maschera nel record ->
 .d:     and 1
         ret
 
-emit_args:                      ; HL = record; legge gli argomenti (anche fra parentesi) ed emette i push; ritorna HL = record
+emit_args:                      ; HL = record; reads the arguments (also in parentheses) and emits the pushes; returns HL = record
         ld de,(ca_rec)
         push de
         ld a,(ca_i)
@@ -5823,7 +5823,7 @@ emit_args:                      ; HL = record; legge gli argomenti (anche fra pa
         call ca_bit
         or a
         jr z,.sc
-        call emit_arrarg        ; parametro array: nome (con o senza "()")
+        call emit_arrarg        ; array parameter: name (with or without "()")
         jr .nx
 .sc:    call expr
         ld de,21
@@ -5836,7 +5836,7 @@ emit_args:                      ; HL = record; legge gli argomenti (anche fra pa
         ld a,(etype)
         or a
         jr z,.pp
-        ld hl,(ca_rec)          ; stringa verso un altro segmento: copia nello heap (i letterali stanno nel segmento di chi chiama)
+        ld hl,(ca_rec)          ; string to another segment: copy to the heap (literals live in the caller's segment)
         call rec_far
         cp 0FFh
         jr z,.pp
@@ -5863,7 +5863,7 @@ emit_args:                      ; HL = record; legge gli argomenti (anche fra pa
         ld (ca_rec),de
         ret
 
-emit_arrarg:                    ; argomento array: emette push base ; push numero elementi
+emit_arrarg:                    ; array argument: emits push base ; push number of elements
         ld a,(ttype)
         cp T_ID
         jp nz,err_syntax
@@ -5872,11 +5872,11 @@ emit_arrarg:                    ; argomento array: emette push base ; push numer
         ld b,a
         ld a,(tsuf)
         cp b
-        jp nz,err_type          ; tipo degli elementi diverso da quello del parametro
-emit_arrref:                    ; token = nome: emette push base ; push numero elementi (array globale o parametro)
+        jp nz,err_type          ; element type differs from the parameter type
+emit_arrref:                    ; token = name: emits push base ; push number of elements (global array or parameter)
         call find_arrparam
         jr c,.glob
-        ld c,l                  ; array parametro di questa funzione: copia la coppia dal frame
+        ld c,l                  ; array parameter of this function: copies the pair from the frame
         ld a,0DDh
         call emit_a
         ld a,6Eh
@@ -5905,7 +5905,7 @@ emit_arrref:                    ; token = nome: emette push base ; push numero e
         ld a,c
         inc a
         call emit_a
-        EM1 0E5h                ; push numero elementi
+        EM1 0E5h                ; push number of elements
         jr .end
 .glob:  call find_rec
         jp c,err_type
@@ -5922,11 +5922,11 @@ emit_arrref:                    ; token = nome: emette push base ; push numero e
         jp nz,err_type
         ld a,b
         or c
-        jp z,err_type           ; non e' un array
+        jp z,err_type           ; not an array
         ld a,b
         and c
         inc a
-        jp z,err_type           ; e' una CONST
+        jp z,err_type           ; it is a CONST
         push bc
         ex de,hl
         ld a,21h                ; ld hl,base ; push hl
@@ -5936,13 +5936,13 @@ emit_arrref:                    ; token = nome: emette push base ; push numero e
         call emit_w
         EM1 0E5h
         pop hl
-        ld a,21h                ; ld hl,numero ; push hl
+        ld a,21h                ; ld hl,number ; push hl
         push hl
         call emit_a
         pop hl
         call emit_w
         EM1 0E5h
-.end:   call next_tok           ; nome
+.end:   call next_tok           ; name
         ld a,'('
         call is_p
         ret nz
@@ -5950,7 +5950,7 @@ emit_arrref:                    ; token = nome: emette push base ; push numero e
         ld a,')'
         jp expect_p
 
-find_arrparam:                  ; tbuf = nome: NC se e' un parametro array della funzione corrente (A = tipo, HL = scostamento)
+find_arrparam:                  ; tbuf = name: NC if it is an array parameter of the current function (A = type, HL = offset)
         ld hl,(fcur)
         ld a,h
         or l
@@ -5984,14 +5984,14 @@ find_arrparam:                  ; tbuf = nome: NC se e' un parametro array della
         or a
         ret
 
-emit_callrec:                   ; HL = record: call della routine (o catena di fixup se non ancora definita)
+emit_callrec:                   ; HL = record: call of the routine (or fixup chain if not yet defined)
         IFDEF ROMMODE
         push hl
         call rec_far
         pop hl
         cp 0FFh
         jr z,.direct
-        push af                 ; routine in un altro segmento: ld a,indice ; call RT_FARCALL
+        push af                 ; routine in another segment: ld a,index ; call RT_FARCALL
         ld a,3Eh
         call emit_a
         pop af
@@ -6014,11 +6014,11 @@ emit_callrec:                   ; HL = record: call della routine (o catena di f
         ld a,0CDh
         jp emit_jabs
 .fwd:   ld de,3
-        add hl,de               ; +19 = testa della catena
+        add hl,de               ; +19 = head of the chain
         ld a,0CDh
         jp emit_jchain
 
-emit_cleanup:                   ; HL = record: toglie gli argomenti dallo stack (preserva HL del programma)
+emit_cleanup:                   ; HL = record: removes the arguments from the stack (preserves the program's HL)
         push hl
         ld de,23
         add hl,de
@@ -6028,13 +6028,13 @@ emit_cleanup:                   ; HL = record: toglie gli argomenti dallo stack 
         ret z
         push hl
         add a,a
-        ld c,a                  ; byte da rilasciare
+        ld c,a                  ; bytes to release
         ld de,12
         add hl,de
         ld a,(hl)
         cp 2
         jr nz,.sub
-        EM1 0EBh                ; ex de,hl (conserva il risultato)
+        EM1 0EBh                ; ex de,hl (keeps the result)
 .sub:   ld a,21h
         call emit_a
         ld l,c
@@ -6056,7 +6056,7 @@ st_call:
         ld a,(ttype)
         cp T_ID
         jp nz,err_syntax
-        ld hl,tbuf              ; CALL FAR nome: FAR e' facoltativo (la chiamata fra segmenti e' automatica)
+        ld hl,tbuf              ; CALL FAR name: FAR is optional (the cross-segment call is automatic)
         ld de,s_far
         call str_eq
         jr nz,.nf
@@ -6088,16 +6088,16 @@ err_label:
 
 st_sub: ld c,1
         call begin_func
-        jp st_skip              ; parametri gia' registrati dal prescan
+        jp st_skip              ; parameters already recorded by the prescan
 st_function:
         ld c,2
         call begin_func
         jp st_skip
-begin_func:                     ; token = nome; C = 1 SUB / 2 FUNCTION
+begin_func:                     ; token = name; C = 1 SUB / 2 FUNCTION
         ld hl,(fcur)
         ld a,h
         or l
-        jp nz,err_syntax        ; non annidabili
+        jp nz,err_syntax        ; cannot be nested
         ld a,(ttype)
         cp T_ID
         jp nz,err_syntax
@@ -6120,7 +6120,7 @@ begin_func:                     ; token = nome; C = 1 SUB / 2 FUNCTION
         ld hl,(lineno)
         inc hl
         ld (dbgfs),hl
-        ld hl,fskiph            ; il flusso normale scavalca il corpo
+        ld hl,fskiph            ; normal flow skips over the body
         ld a,0C3h
         call emit_jchain
         ld hl,(fcur)            ; definisce l'ingresso
@@ -6136,7 +6136,7 @@ begin_func:                     ; token = nome; C = 1 SUB / 2 FUNCTION
         ld (hl),e
         inc hl
         ld (hl),d
-        inc hl                  ; +19 catena delle chiamate precedenti
+        inc hl                  ; +19 chain of the previous calls
         call patch_chain
         pop hl
         IFDEF ROMMODE
@@ -6147,22 +6147,22 @@ begin_func:                     ; token = nome; C = 1 SUB / 2 FUNCTION
         ld a,21h
         call emit_a
         ld hl,(outp)
-        ld (framep),hl          ; operando da correggere a fine funzione
+        ld (framep),hl          ; operand to be patched at the end of the function
         ld hl,0
         call emit_w
         EM2 39h,0F9h
-        call emit_i             ; salva heapp: ld hl,(heapp) ; ld (ix-2),l ; ld (ix-1),h
+        call emit_i             ; saves heapp: ld hl,(heapp) ; ld (ix-2),l ; ld (ix-1),h
         db 9,2Ah,low HEAPP,high HEAPP,0DDh,75h,0FEh,0DDh,74h,0FFh
-        ; parametri come variabili: tipo 3 (intero) / 4 (stringa) / 5, 6 (array di interi / stringhe)
+        ; parameters as variables: type 3 (integer) / 4 (string) / 5, 6 (integer / string arrays)
         ld hl,(fcur)
         ld de,13
         add hl,de
         ld a,(hl)
         or a
         jr z,.np
-        ld c,a                  ; C = indice (si scende dall'ultimo: il primo argomento e' il piu' profondo)
+        ld c,a                  ; C = index (counts down from the last: the first argument is the deepest)
         ld hl,4
-        ld (tmps),hl            ; scostamento corrente
+        ld (tmps),hl            ; current offset
 .pl:    dec c
         push bc
         ld hl,(fcur)
@@ -6179,13 +6179,13 @@ begin_func:                     ; token = nome; C = 1 SUB / 2 FUNCTION
         ld de,PART
         add hl,de
         push hl
-        ld de,tbuf              ; nome del parametro -> tbuf
+        ld de,tbuf              ; parameter name -> tbuf
         ld bc,12
         ldir
         pop hl
         ld de,12
         add hl,de
-        ld b,(hl)               ; tipo (0 int / 1 str)
+        ld b,(hl)               ; type (0 int / 1 str)
         inc hl
         ld a,(hl)               ; 1 = array
         or a
@@ -6208,7 +6208,7 @@ begin_func:                     ; token = nome; C = 1 SUB / 2 FUNCTION
         ld a,c
         or a
         jr nz,.pl
-.np:    ld hl,(fcur)            ; variabile risultato delle FUNCTION
+.np:    ld hl,(fcur)            ; result variable of the FUNCTIONs
         ld de,12
         add hl,de
         ld a,(hl)
@@ -6217,24 +6217,24 @@ begin_func:                     ; token = nome; C = 1 SUB / 2 FUNCTION
         ld hl,(fcur)
         ld de,tbuf
         ld bc,12
-        ldir                    ; il nome della funzione e' il nome del risultato
+        ldir                    ; the function name is the result name
         ld a,(tbuf+11)
         cp '$'
         ld a,0
         jr nz,.r
         inc a
 .r:     ld (tsuf),a
-        call resolve_var        ; crea la variabile locale risultato
+        call resolve_var        ; creates the local result variable
         ld (tmpk),a
         ld (tmpv),hl
         cp 3
         jr z,.rs
-        ld a,(tmpk)             ; intero: ld hl,0 ; salva
+        ld a,(tmpk)             ; integer: ld hl,0 ; save
         EM3 21h,0,0
         ld a,(tmpk)
         ld hl,(tmpv)
         jp emit_stv
-.rs:    ld a,(tmpk)             ; stringa: parte vuota
+.rs:    ld a,(tmpk)             ; string: starts empty
         ld hl,(tmpv)
         call emit_ldv
         EM2 36h,0               ; ld (hl),0
@@ -6263,7 +6263,7 @@ end_func:                       ; C = 1 SUB / 2 FUNCTION
         ld a,(hl)
         cp 2
         jr nz,.ret
-        ld hl,(fcur)            ; risultato: richiama la variabile locale
+        ld hl,(fcur)            ; result: recalls the local variable
         ld de,tbuf
         ld bc,12
         ldir
@@ -6283,12 +6283,12 @@ end_func:                       ; C = 1 SUB / 2 FUNCTION
         ld a,(tmpk)             ; intero
         ld hl,(tmpv)
         call emit_ldv
-        call emit_i             ; ripristina heapp (usa DE)
+        call emit_i             ; restores heapp (uses DE)
         db 8,0DDh,5Eh,0FEh,0DDh,56h,0FFh,0EDh,53h
         ld hl,HEAPP
         call emit_w
         jr .ret
-.str:   call emit_i             ; heapp ripristinato, poi copia del risultato sullo heap
+.str:   call emit_i             ; heapp restored, then copy of the result onto the heap
         db 8,0DDh,5Eh,0FEh,0DDh,56h,0FFh,0EDh,53h
         ld hl,HEAPP
         call emit_w
@@ -6298,7 +6298,7 @@ end_func:                       ; C = 1 SUB / 2 FUNCTION
         EM3 0CDh,low RT_SDUP,high RT_SDUP
 .ret:   call emit_i             ; ld sp,ix ; pop ix ; ret
         db 5,0DDh,0F9h,0DDh,0E1h,0C9h
-        ld a,(nstr)             ; dimensione del frame: 64 + 256 * stringhe locali (operando = -frame)
+        ld a,(nstr)             ; frame size: 64 + 256 * local strings (operand = -frame)
         ld h,a
         ld l,64
         ex de,hl
@@ -6311,7 +6311,7 @@ end_func:                       ; C = 1 SUB / 2 FUNCTION
         inc hl
         ld (hl),d
         IFNDEF ROMMODE
-        ld a,(dbgf)             ; OPTION DEBUG: [prec w][riga iniziale w][riga finale w][n][n record da 16 byte di LOCT]
+        ld a,(dbgf)             ; OPTION DEBUG: [prev w][start line w][end line w][n][n 16-byte LOCT records]
         or a
         jr z,.nodbg
         call get_pc
@@ -6355,7 +6355,7 @@ end_func:                       ; C = 1 SUB / 2 FUNCTION
 err_open2:
         ERR E_OPEN
 
-st_shared:                      ; SHARED a, b$: i nomi restano globali dentro la SUB/FUNCTION
+st_shared:                      ; SHARED a, b$: the names stay global inside the SUB/FUNCTION
 .l:     ld a,(ttype)
         cp T_ID
         jp nz,err_syntax
@@ -6423,14 +6423,14 @@ st_do:  ld a,B_DO
         inc hl
         ld (hl),e
         inc hl
-        ld (hl),d               ; a = inizio
+        ld (hl),d               ; a = start
         ld a,K_WHILE
         call is_kw
         jr z,.w
         ld a,K_UNTIL
         call is_kw
         ret nz
-        call next_tok           ; DO UNTIL cond: esce se vera
+        call next_tok           ; DO UNTIL cond: exits if true
         call cond_expr
         ld a,B_DO
         call need_blk
@@ -6438,7 +6438,7 @@ st_do:  ld a,B_DO
         add hl,de
         ld a,0C2h               ; jp nz,uscita
         jp emit_jchain
-.w:     call next_tok           ; DO WHILE cond: esce se falsa
+.w:     call next_tok           ; DO WHILE cond: exits if false
         ld a,B_DO
         call need_blk
         ld de,3
@@ -6451,11 +6451,11 @@ st_loop:
         push hl
         ld a,K_WHILE
         call is_kw
-        ld c,0C2h               ; LOOP WHILE: torna all'inizio se vera
+        ld c,0C2h               ; LOOP WHILE: back to the start if true
         jr z,.c
         ld a,K_UNTIL
         call is_kw
-        ld c,0CAh               ; LOOP UNTIL: torna all'inizio se falsa
+        ld c,0CAh               ; LOOP UNTIL: back to the start if false
         jr z,.c
         pop hl
         jr .plain
@@ -6504,7 +6504,7 @@ st_select:
         ld (tmpk),a             ; 0 = selettore intero, 1 = stringa
         or a
         jr z,.tmp
-        call emit_i             ; stringa: copia di 256 byte sullo stack (resta valida per tutto il blocco)
+        call emit_i             ; string: 256-byte copy on the stack (stays valid for the whole block)
         db 7,0EBh,21h,0,0FFh,39h,0F9h,0EBh
         EM3 0CDh,low RT_SCOPY,high RT_SCOPY
 .tmp:   ld a,(tmpf)
@@ -6516,16 +6516,16 @@ st_select:
 .nt:    ld a,(tmpk)
         or a
         jr nz,.blk
-        EM1 0E5h                ; intero: push hl (il valore resta sullo stack per tutto il blocco)
+        EM1 0E5h                ; integer: push hl (the value stays on the stack for the whole block)
 .blk:   ld a,B_SEL
         call push_blk
         ld de,9
         add hl,de
         ld a,(tmpk)
-        ld (hl),a               ; +9 = tipo del selettore
+        ld (hl),a               ; +9 = selector type
         ret
 
-want_sel:                       ; il valore del CASE deve avere il tipo del selettore
+want_sel:                       ; the CASE value must have the selector's type
         ld a,B_SEL
         call need_blk
         ld de,9
@@ -6536,7 +6536,7 @@ want_sel:                       ; il valore del CASE deve avere il tipo del sele
         ret z
         jp err_type
 
-emit_seltest:                   ; confronta selettore (sullo stack) con HL (valore del CASE): flag come rt_cmp/rt_scmp
+emit_seltest:                   ; compares selector (on the stack) with HL (CASE value): flags as rt_cmp/rt_scmp
         ld a,B_SEL
         call need_blk
         ld de,9
@@ -6547,7 +6547,7 @@ emit_seltest:                   ; confronta selettore (sullo stack) con HL (valo
         EM2 0D1h,0D5h           ; pop de ; push de
         EM3 0CDh,low RT_CMP,high RT_CMP
         ret
-.s:     call emit_i             ; DE = copia del selettore (SP), HL = valore del CASE
+.s:     call emit_i             ; DE = copy of the selector (SP), HL = CASE value
         db 6,0EBh,21h,0,0,39h,0EBh
         EM3 0CDh,low RT_SCMP,high RT_SCMP
         ret
@@ -6563,7 +6563,7 @@ st_case:
         ld a,d
         or e
         jr z,.first
-        pop hl                  ; CASE precedente: il suo corpo salta alla fine
+        pop hl                  ; previous CASE: its body jumps to the end
         push hl
         inc hl
         inc hl
@@ -6614,7 +6614,7 @@ st_case:
         ld a,B_SEL
         call need_blk
         ld de,5
-        add hl,de               ; c = catena del corpo
+        add hl,de               ; c = body chain
         ld a,0C2h               ; jp nz,corpo
         call emit_jchain
         jr .more
@@ -6634,7 +6634,7 @@ st_case:
 .range: call next_tok
         call emit_seltest
         ld hl,chfail
-        ld a,0DAh               ; jp c,fallito (valore < inizio)
+        ld a,0DAh               ; jp c,failed (value < start)
         call emit_jchain
         call expr
         call want_sel
@@ -6661,13 +6661,13 @@ st_case:
         push hl
         inc hl
         ld a,0C3h
-        call emit_jchain        ; nessuna corrispondenza: al prossimo CASE
+        call emit_jchain        ; no match: go to next CASE
         pop hl
         ld de,5
         add hl,de
-        jp patch_chain          ; il corpo comincia qui
+        jp patch_chain          ; the body starts here
 
-num_or_const:                    ; numero o CONST -> DE = valore (il token non e' consumato)
+num_or_const:                    ; number or CONST -> DE = value (the token is not consumed)
         ld a,(ttype)
         cp T_NUM
         jr nz,.id
@@ -6693,7 +6693,7 @@ num_or_const:                    ; numero o CONST -> DE = valore (il token non e
         ld d,(hl)
         ret
 
-; --- CONST nome = [-]numero {, ...}: record con conteggio FFFFh e valore al posto dell'indirizzo
+; --- CONST name = [-]number {, ...}: record with count FFFFh and the value in place of the address
 st_const:
 .l:     ld a,(ttype)
         cp T_ID
@@ -6703,7 +6703,7 @@ st_const:
         jp nz,err_type
         call find_rec
         jp nc,err_dup2
-        ld (tmpv),hl            ; posto del record
+        ld (tmpv),hl            ; room for the record
         call next_tok
         ld a,'='
         call expect_p
@@ -6726,7 +6726,7 @@ st_const:
         or a
         sbc hl,de
         ex de,hl
-.val:   ld (chfail),de          ; valore
+.val:   ld (chfail),de          ; value
         ld hl,(tmpv)
         ld bc,0
         ld de,0FFFFh
@@ -6810,7 +6810,7 @@ st_color:
         ld a,','
         call is_p
         jr nz,.go
-        call next_tok           ; terzo valore: colore del bordo (H = bordo + 1)
+        call next_tok           ; third value: border color (H = border + 1)
         EM1 0E5h
         call expr
         call want_int
@@ -6823,7 +6823,7 @@ st_color:
         EM3 0CDh,low RT_COLOR,high RT_COLOR
         ret
 
-st_colpal:                      ; COLOR = (n, r, g, b)  oppure  COLOR = RESTORE
+st_colpal:                      ; COLOR = (n, r, g, b)  or  COLOR = RESTORE
         call next_tok
         ld a,'('
         call is_p
@@ -6855,7 +6855,7 @@ st_colspr:                      ; COLOR SPRITE(n) = colore
         EM3 0CDh,low RT_SPRCOL,high RT_SPRCOL
         ret
 
-st_colsprs:                     ; COLOR SPRITE$(n) = colori per riga
+st_colsprs:                     ; COLOR SPRITE$(n) = colors per line
         call colspr_head
         call expr
         call want_str
@@ -6868,7 +6868,7 @@ st_vbank:
         EM3 0CDh,low RT_VBANK,high RT_VBANK
         ret
 
-st_vfill:                       ; VFILL indirizzo, quanti, valore
+st_vfill:                       ; VFILL address, count, value
         call expr
         call want_int
         ld hl,GX1
@@ -6888,7 +6888,7 @@ st_vfill:                       ; VFILL indirizzo, quanti, valore
         EM3 0CDh,low RT_VFILL,high RT_VFILL
         ret
 
-st_vwrite:                      ; VWRITE indirizzo, stringa
+st_vwrite:                      ; VWRITE address, string
         call expr
         call want_int
         ld hl,GX1
@@ -6900,7 +6900,7 @@ st_vwrite:                      ; VWRITE indirizzo, stringa
         EM3 0CDh,low RT_VWRITE,high RT_VWRITE
         ret
 
-st_vdpset:                      ; VDP(n) = valore
+st_vdpset:                      ; VDP(n) = value
         call next_tok
         call open_paren
         call expr
@@ -6933,7 +6933,7 @@ bi_one: push hl
         ld (etype),a
         ret
 
-bi_vread:                       ; VREAD$(indirizzo, quanti)
+bi_vread:                       ; VREAD$(address, count)
         call next_tok
         call open_paren
         call expr
@@ -6950,7 +6950,7 @@ bi_vread:                       ; VREAD$(indirizzo, quanti)
         ld (etype),a
         ret
 
-bi_ubound:                      ; UBOUND(array): massimo indice (anche per un parametro array)
+bi_ubound:                      ; UBOUND(array): maximum index (also for an array parameter)
         call next_tok
         call open_paren
         ld a,(ttype)
@@ -6981,7 +6981,7 @@ bi_ubound:                      ; UBOUND(array): massimo indice (anche per un pa
         ld e,(hl)
         inc hl
         ld d,(hl)
-        res 7,d                 ; (array nel mapper: bit 15 = flag)
+        res 7,d                 ; (array in the mapper: bit 15 = flag)
         ld a,d
         or e
         jp z,err_type
@@ -7010,14 +7010,14 @@ bi_inp: call bi_arg_int
         ret
 
 ; --- grafica
-emit_st:                        ; HL = indirizzo: emette ld (nn),hl
+emit_st:                        ; HL = address: emits ld (nn),hl
         ld a,22h
         push hl
         call emit_a
         pop hl
         jp emit_w
 
-emit_xy:                        ; "(x, y)" con conversione WINDOW (se il sorgente la usa): in (DE) e (BC)
+emit_xy:                        ; "(x, y)" with WINDOW conversion (if the source uses it): into (DE) and (BC)
         push de
         push bc
         call emit_xy_raw
@@ -7051,7 +7051,7 @@ emit_map:                       ; HL = &variabile, DE = routine: emette ld hl,(v
         ld hl,(tmpv)
         jp emit_w
 
-emit_xy_raw:                    ; "(x, y)" senza conversione: valuta e memorizza in (DE) e (BC)
+emit_xy_raw:                    ; "(x, y)" without conversion: evaluates and stores into (DE) and (BC)
         push bc
         push de
         ld a,'('
@@ -7125,7 +7125,7 @@ parse_op:                       ; operatore logico -> ld a,n ; ld (GOP),a  (PSET
         inc de
         or a
         jr nz,.sk
-        inc de                  ; salta il codice
+        inc de                  ; skips the code
         jr .nx
 .hit:   pop hl
         inc de
@@ -7143,17 +7143,17 @@ parse_op:                       ; operatore logico -> ld a,n ; ld (GOP),a  (PSET
 
 opnames: db "TPSET",0,8,"TPRESET",0,12,"TAND",0,9,"TOR",0,10,"TXOR",0,11,0
 
-st_data:                        ; DATA elementi: blocco nel codice (jp oltre, elementi, 2, collegamento)
+st_data:                        ; DATA items: block in the code (jp past, items, 2, link)
         ld a,(curseg)
         or a
-        jp nz,err_syntax        ; DATA solo nel segmento fisso
+        jp nz,err_syntax        ; DATA only in the fixed segment
         call get_pc
-        push hl                 ; indirizzo del blocco
+        push hl                 ; block address
         ld a,0C3h
         call emit_a
         ld hl,0
         call emit_w
-        ld hl,(dlast)           ; collega il blocco precedente (o l'inizio dei dati per il primo)
+        ld hl,(dlast)           ; links the previous block (or the start of the data for the first)
         ld a,h
         or l
         jr nz,.lk
@@ -7235,7 +7235,7 @@ st_data:                        ; DATA elementi: blocco nel codice (jp oltre, el
         ld (dlast),hl
         ld hl,0
         call emit_w
-        call get_pc             ; patch del jp: oltre il blocco
+        call get_pc             ; patch of the jp: past the block
         pop de
         inc de
         ex de,hl
@@ -7315,7 +7315,7 @@ st_beep:
         EM3 0CDh,low RT_BEEP,high RT_BEEP
         ret
 
-st_sound:                       ; SOUND registro, valore
+st_sound:                       ; SOUND register, value
         call expr
         call want_int
         ld hl,GX1
@@ -7357,7 +7357,7 @@ st_play:                        ; PLAY voce1$[, voce2$[, voce3$]]
 .go:    EM3 0CDh,low RT_PLAY,high RT_PLAY
         ret
 
-st_print:                       ; PRINT [#n,] elementi
+st_print:                       ; PRINT [#n,] items
         ld a,'#'
         call is_p
         jp nz,st_print0
@@ -7378,7 +7378,7 @@ emit_outreset:                  ; ld hl,0 ; call RT_OUTSEL
         db 6,21h,0,0,0CDh,low RT_OUTSEL,high RT_OUTSEL
         ret
 
-st_write:                       ; WRITE [#n,] elementi
+st_write:                       ; WRITE [#n,] items
         ld a,'#'
         call is_p
         jr nz,.nf
@@ -7405,16 +7405,16 @@ st_write:                       ; WRITE [#n,] elementi
         jp emit_outreset
 s_comma: db ","
 
-st_open:                        ; OPEN nome$ FOR INPUT|OUTPUT|APPEND AS [#]n
+st_open:                        ; OPEN name$ FOR INPUT|OUTPUT|APPEND AS [#]n
         call expr
         call want_str
         EM1 0E5h
-        call emit_i             ; lunghezza del record = 128
+        call emit_i             ; record length = 128
         db 6,21h,80h,0,22h,low GX2,high GX2
         ld a,K_FOR
         call is_kw
         jr z,.for
-        ld c,4                  ; senza FOR: accesso casuale
+        ld c,4                  ; without FOR: random access
         jp .m2
 .for:   call next_tok
         ld c,1
@@ -7465,7 +7465,7 @@ st_open:                        ; OPEN nome$ FOR INPUT|OUTPUT|APPEND AS [#]n
         call want_int
         ld hl,GX1
         call emit_st
-        ld a,(ttype)            ; LEN = lunghezza del record
+        ld a,(ttype)            ; LEN = record length
         cp T_ID
         jr nz,.nl
         ld hl,tbuf
@@ -7726,7 +7726,7 @@ pset_common:
         ld a,0CDh
         jp emit_jabs
 
-st_circle:                      ; CIRCLE (x,y), r[, colore[, inizio[, fine[, aspetto]]]]  (gradi, aspetto in %)
+st_circle:                      ; CIRCLE (x,y), r[, color[, start[, end[, aspect]]]]  (degrees, aspect in %)
         ld de,GX1
         ld bc,GY1
         call emit_xy
@@ -7743,7 +7743,7 @@ st_circle:                      ; CIRCLE (x,y), r[, colore[, inizio[, fine[, asp
         ld de,RT_WR
         call emit_map
 .nw:    call emit_defcol
-        call emit_i             ; inizio = 0, fine = 360, aspetto = 100, GFLG = 0
+        call emit_i             ; start = 0, end = 360, aspect = 100, GFLG = 0
         db 22,21h,0,0,22h,low GY2,high GY2,21h,68h,1,22h,low CEND,high CEND,21h,64h,0,22h,low CASP,high CASP,0AFh,32h,low GFLG,high GFLG
         ld a,','
         call is_p
@@ -7764,7 +7764,7 @@ st_circle:                      ; CIRCLE (x,y), r[, colore[, inizio[, fine[, asp
         call next_tok
         ld a,','
         call is_p
-        jr z,.end               ; inizio omesso
+        jr z,.end               ; start omitted
         call expr
         call want_int
         ld hl,GY2
@@ -7775,7 +7775,7 @@ st_circle:                      ; CIRCLE (x,y), r[, colore[, inizio[, fine[, asp
 .end:   call next_tok
         ld a,','
         call is_p
-        jr z,.asp               ; fine omessa
+        jr z,.asp               ; end omitted
         call expr
         call want_int
         ld hl,CEND
@@ -7802,7 +7802,7 @@ st_line:                        ; LINE [(x1,y1)]-(x2,y2)[, colore[, B|BF]]  |  L
         ld bc,GY1
         call emit_xy
         jr .dash
-.cur:   call emit_i             ; senza primo punto: dall'ultimo punto grafico
+.cur:   call emit_i             ; without a first point: from the last graphic point
         db 12,2Ah,low LASTX,high LASTX,22h,low GX1,high GX1,2Ah,low LASTY,high LASTY,22h,low GY1,high GY1
 .dash:  ld a,'-'
         call expect_p
@@ -7870,7 +7870,7 @@ st_paint:                       ; PAINT (x,y)[, colore[, bordo]]
         ld bc,GY1
         call emit_xy
         call emit_defcol
-        call emit_i             ; bordo = -1 (come il colore)
+        call emit_i             ; border = -1 (like the color)
         db 6,21h,0FFh,0FFh,22h,low GX2,high GX2
         call emit_optcol
         ld a,','
@@ -7890,7 +7890,7 @@ s_far:  db "FAR",0
 s_mapper: db "MAPPER",0
 s_sw:   db "S",0
 
-arr_ref_stmt:                   ; array di interi (con o senza "()") -> ARRB, ARRC
+arr_ref_stmt:                   ; integer array (with or without "()") -> ARRB, ARRC
         ld a,(ttype)
         cp T_ID
         jp nz,err_syntax
@@ -7927,7 +7927,7 @@ st_gput:                        ; PUT (x,y), array[, PSET|PRESET|AND|OR|XOR]
         ld a,','
         call expect_p
         call arr_ref_stmt
-        call emit_i             ; azione predefinita XOR
+        call emit_i             ; default action XOR
         db 5,3Eh,4,32h,low GFLG,high GFLG
         ld a,','
         call is_p
@@ -7964,7 +7964,7 @@ st_gput:                        ; PUT (x,y), array[, PSET|PRESET|AND|OR|XOR]
 .go:    EM3 0CDh,low RT_GPUT,high RT_GPUT
         ret
 
-st_view:                        ; VIEW (x1,y1)-(x2,y2)  oppure  VIEW (finestra = schermo intero)
+st_view:                        ; VIEW (x1,y1)-(x2,y2)  or  VIEW (window = full screen)
         call at_send
         jr nz,.args
         EM3 0CDh,low RT_VIEWR,high RT_VIEWR
@@ -7980,12 +7980,12 @@ st_view:                        ; VIEW (x1,y1)-(x2,y2)  oppure  VIEW (finestra =
         EM3 0CDh,low RT_VIEW,high RT_VIEW
         ret
 
-st_window:                      ; WINDOW [SCREEN] (x1,y1)-(x2,y2)  oppure  WINDOW (coordinate = pixel)
+st_window:                      ; WINDOW [SCREEN] (x1,y1)-(x2,y2)  or  WINDOW (coordinates = pixels)
         call at_send
         jr nz,.args
         EM3 0CDh,low RT_WINRES,high RT_WINRES
         ret
-.args:  ld c,0                  ; 1 con SCREEN: asse y verso il basso
+.args:  ld c,0                  ; 1 with SCREEN: y axis downward
         ld a,K_SCREEN
         call is_kw
         jr nz,.n1
@@ -8018,7 +8018,7 @@ st_draw:                        ; DRAW "comandi"
         EM3 0CDh,low RT_DRAW,high RT_DRAW
         ret
 
-bi_coll:                        ; COLLISION: -1 se due sprite si sono toccati
+bi_coll:                        ; COLLISION: -1 if two sprites have touched
         call next_tok
         ld a,'('
         call is_p
@@ -8046,7 +8046,7 @@ st_sprdef:                      ; SPRITE$(n) = pattern
         EM3 0CDh,low RT_SPRDEF,high RT_SPRDEF
         ret
 
-st_put:                         ; PUT SPRITE piano, (x,y)[, colore[, pattern]]  oppure  PUT (x,y), array[, azione]  |  PUT #n [, record]
+st_put:                         ; PUT SPRITE plane, (x,y)[, color[, pattern]]  or  PUT (x,y), array[, action]  |  PUT #n [, record]
         ld a,'#'
         call is_p
         jp z,st_fput
@@ -8061,7 +8061,7 @@ st_put:                         ; PUT SPRITE piano, (x,y)[, colore[, pattern]]  
         ld a,','
         call is_p
         jr z,.pt
-        call emit_i             ; PUT SPRITE piano: lo sprite si nasconde (0,214), fuori da 192 e 212 righe
+        call emit_i             ; PUT SPRITE plane: the sprite is hidden at (0,214), outside 192 and 212 lines
         db 6,21h,0,0,22h,low GX2,high GX2
         call emit_i
         db 6,21h,214,0,22h,low GY2,high GY2
@@ -8071,7 +8071,7 @@ st_put:                         ; PUT SPRITE piano, (x,y)[, colore[, pattern]]  
         ld bc,GY2
         call emit_xy_raw
 .def:   call emit_defcol
-        call emit_i             ; pattern = -1 (come il numero del piano)
+        call emit_i             ; pattern = -1 (like the plane number)
         db 6,21h,0FFh,0FFh,22h,low GY1,high GY1
         ld a,','
         call is_p
@@ -8125,7 +8125,7 @@ st_palette:                     ; PALETTE [n, rosso, verde, blu]
         EM3 0CDh,low RT_PALETTE,high RT_PALETTE
         ret
 
-bi_point:                       ; POINT(x, y) -> colore (-1 fuori dallo schermo)
+bi_point:                       ; POINT(x, y) -> color (-1 outside the screen)
         call next_tok
         call open_paren
         call expr

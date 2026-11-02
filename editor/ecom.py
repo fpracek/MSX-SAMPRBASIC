@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
-"""Test del .COM dell'editor su MSX-DOS 1 (NMS-8250, cartella host come disco A:).
+"""Test of the editor's .COM on MSX-DOS 1 (NMS-8250, host folder as drive A:).
 
-Verifica apertura da riga di comando, modifica, Ctrl+S, Ctrl+W (salva con nome),
-conferma sulle modifiche non salvate, Ctrl+O, round-trip CR/LF di un file da 500 righe,
-file troppo grande, Ctrl+Q con ritorno al prompt del DOS.
-I byte dei file salvati si leggono direttamente dalla cartella host.
+Checks opening from the command line, editing, Ctrl+S, Ctrl+W (save as),
+confirmation on unsaved changes, Ctrl+O, CR/LF round-trip of a 500-line file,
+file too large, Ctrl+Q returning to the DOS prompt.
+The bytes of the saved files are read directly from the host folder.
 """
 import os
 import re
@@ -56,7 +56,7 @@ def prepare_disk():
 
 
 def chord(sc, *keys, gap=0.5):
-    """keys = [(riga, maschera), ...] premuti insieme"""
+    """keys = [(row, mask), ...] pressed together"""
     sc.do(' '.join(f'keymatrixdown {r} {m};' for r, m in keys) +
           ' after time 0.15 {' + ' '.join(f'keymatrixup {r} {m};' for r, m in keys) + '}', gap)
 
@@ -78,7 +78,7 @@ def main():
     prepare_disk()
     syms = assemble_com()
     sc = Scenario(syms)
-    sc.t = 20.0                              # boot del DOS e prompt A>
+    sc.t = 20.0                              # DOS boot and A> prompt
     sc.text('ED HELLO.SPB\\r', 8.0)
     sc.dump('c1_open')
     sc.text('X', 0.5)
@@ -96,30 +96,30 @@ def main():
     sc.text('H', 0.5)
     sc.tap(7, 0x80, 1, 5.0)
     sc.dump('c7_reopened')
-    sc.do('keymatrixdown 6 1', 0.15)             # selezione e taglia/incolla anche sotto DOS
+    sc.do('keymatrixdown 6 1', 0.15)             # selection and cut/paste under DOS as well
     sc.tap(8, 0x40, 1, 0.4)
     sc.do('keymatrixup 6 1', 0.2)
-    chord(sc, CTRL, (5, 0x20), gap=0.8)         # Ctrl+X: taglia la prima riga
+    chord(sc, CTRL, (5, 0x20), gap=0.8)         # Ctrl+X: cut the first line
     sc.tap(8, 0x40, 2, 0.4)
-    chord(sc, CTRL, (5, 0x08), gap=0.8)         # Ctrl+V: la incolla in fondo
+    chord(sc, CTRL, (5, 0x08), gap=0.8)         # Ctrl+V: paste it at the end
     chord(sc, *CTRL_S, gap=5.0)
     sc.dump('c7b_cutpaste')
-    chord(sc, *CTRL_Z, gap=1.0)                  # annulla l'incolla
-    chord(sc, *CTRL_Z, gap=1.0)                  # annulla il taglio
+    chord(sc, *CTRL_Z, gap=1.0)                  # undo the paste
+    chord(sc, *CTRL_Z, gap=1.0)                  # undo the cut
     sc.dump('c7b2_undone')
     chord(sc, *CTRL_Y, gap=1.0)
     chord(sc, *CTRL_Y, gap=1.0)
-    chord(sc, *CTRL_S, gap=5.0)                  # risalva: HELLO.SPB deve restare identico
+    chord(sc, *CTRL_S, gap=5.0)                  # save again: HELLO.SPB must remain identical
     sc.dump('c7b3_redone')
-    sc.tap(7, 0x04, 1, 0.5)                      # ESC: menu File
-    sc.text('n', 1.0)                            # File > New (tasto rapido N)
+    sc.tap(7, 0x04, 1, 0.5)                      # ESC: File menu
+    sc.text('n', 1.0)                            # File > New (hotkey N)
     sc.dump('c7c_new')
-    sc.tap(7, 0x04, 1, 0.5)                      # ESC, poi O: File > Open... dal menu
+    sc.tap(7, 0x04, 1, 0.5)                      # ESC, then O: File > Open... from the menu
     sc.text('o', 1.0)
     sc.text('M', 0.5)
     sc.tap(7, 0x80, 1, 15.0)
     sc.dump('c8_med')
-    chord(sc, *CTRL_Z, gap=1.0)                  # dopo l'apertura la cronologia e' vuota
+    chord(sc, *CTRL_Z, gap=1.0)                  # after opening, the history is empty
     sc.dump('c8b_noundo')
     chord(sc, *CTRL_W, gap=0.8)
     sc.text('COPY\\r', 25.0)
@@ -130,7 +130,7 @@ def main():
     sc.dump('c10_big')
     chord(sc, *CTRL_Q, gap=1.0)
     sc.t += 1.0
-    sc.do('set ::nopatch 1', 0.1)        # l'editor e' uscito: la sua RAM non vale piu'
+    sc.do('set ::nopatch 1', 0.1)        # the editor has exited: its RAM is no longer valid
     sc.dump('c11_exit')
 
     tcl = os.path.join(BUILD, 'ecom.tcl')
@@ -157,7 +157,7 @@ def main():
     check(rows[1][:10] == 'XHello MSX', 'testo modificato visibile')
     hello = open(os.path.join(DISK, 'HELLO.SPB'), 'rb').read()
     exp = b'XHello MSX\r\n    indented line\r\nthird line\r\n'
-    # (il contenuto salvato da Ctrl+S e' verificato da NEW.SPB, salvato subito dopo; HELLO.SPB viene poi riscritto)
+    # (the content saved by Ctrl+S is verified via NEW.SPB, saved right after; HELLO.SPB is then rewritten)
 
     print('--- c3/c4 salva con nome')
     rows, vs, bl = load('c3_prompt')
@@ -178,7 +178,7 @@ def main():
     rows, vs, bl = load('c7b_cutpaste')
     exp2 = b'    indented line\r\nthird line\r\nXHello MSX\r\n'
     got2 = open(os.path.join(DISK, 'HELLO.SPB'), 'rb').read()
-    check(got2.split(b'')[0] == exp2, f'taglia+incolla+salva: HELLO.SPB = {got2!r}')   # (salvataggio in posto: ^Z e residuo ammessi)
+    check(got2.split(b'')[0] == exp2, f'taglia+incolla+salva: HELLO.SPB = {got2!r}')   # (in-place save: ^Z and leftover allowed)
     check('Saved' in title(rows), 'messaggio: ' + title(rows)[:40].strip())
 
     rows, vs, bl = load('c7b2_undone')

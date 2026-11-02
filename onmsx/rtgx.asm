@@ -1,19 +1,19 @@
 ; =====================================================================
-; GET/PUT di aree, DRAW e COLLISION (SCREEN 5-8)
-; GET (x1,y1)-(x2,y2), array   -> array: [larghezza][altezza] poi un byte per pixel (2 pixel per elemento)
-; PUT (x,y), array[, azione]   -> azione 0 PSET, 1 PRESET, 2 AND, 3 OR, 4 XOR (predefinita)
+; GET/PUT of areas, DRAW and COLLISION (SCREEN 5-8)
+; GET (x1,y1)-(x2,y2), array   -> array: [width][height] then one byte per pixel (2 pixels per element)
+; PUT (x,y), array[, action]   -> action 0 PSET, 1 PRESET, 2 AND, 3 OR, 4 XOR (default)
 ; =====================================================================
 STATFL  equ 0F3E7h
 H_TIMI  equ 0FD9Fh
 
-ensure_rowbuf:                  ; riga di pixel in cima allo heap
+ensure_rowbuf:                  ; pixel line at the top of the heap
         ld hl,(heapend)
         ld de,-256
         add hl,de
         ld (ROWPTR),hl
         ret
 
-rowaddr:                        ; HL = y -> HL = indirizzo VRAM della riga, B = byte per riga (0 = 256)
+rowaddr:                        ; HL = y -> HL = VRAM address of the line, B = bytes per line (0 = 256)
         call gstride
         or a
         ld a,l
@@ -28,7 +28,7 @@ rowaddr:                        ; HL = y -> HL = indirizzo VRAM della riga, B = 
         add hl,de
         ret
 
-rowwrite:                       ; HL = y: scrive ROWBUF nella riga y
+rowwrite:                       ; HL = y: writes ROWBUF to line y
         call rowaddr
         push bc
         ld a,40h
@@ -39,14 +39,14 @@ rowwrite:                       ; HL = y: scrive ROWBUF nella riga y
         otir
         ret
 
-rb_setpix:                      ; HL = x, A = valore: imposta il pixel nella riga in ROWBUF
+rb_setpix:                      ; HL = x, A = value: sets the pixel in the line in ROWBUF
         ld b,a
         ld a,(GBPP)
         cp 8
         jr z,.m8
         cp 2
         jr z,.m2
-        ld a,l                  ; 4 bit per pixel
+        ld a,l                  ; 4 bits per pixel
         and 1
         ld c,a
         srl h
@@ -86,7 +86,7 @@ rb_setpix:                      ; HL = x, A = valore: imposta il pixel nella rig
         ld a,3
         sub c
         add a,a
-        ld d,a                  ; D = posizione del pixel (bit)
+        ld d,a                  ; D = pixel position (bit)
         ld e,3                  ; E = maschera
         ld a,b
         and 3
@@ -110,7 +110,7 @@ rb_setpix:                      ; HL = x, A = valore: imposta il pixel nella rig
         ld (hl),b
         ret
 
-grect:                          ; GX1,GY1,GX2,GY2 -> S1..S4 ordinati, S5 = larghezza, S6 = altezza; errore se fuori schermo
+grect:                          ; GX1,GY1,GX2,GY2 -> S1..S4 sorted, S5 = width, S6 = height; error if off-screen
         ld hl,(GX1)
         ld (S1),hl
         ld hl,(GY1)
@@ -147,7 +147,7 @@ grect:                          ; GX1,GY1,GX2,GY2 -> S1..S4 ordinati, S5 = largh
         ld (S6),hl
         ret
 
-elems:                          ; larghezza S5, altezza S6 -> HL = elementi dell'array (2 + (w*h+1)/2)
+elems:                          ; width S5, height S6 -> HL = array elements (2 + (w*h+1)/2)
         ld hl,(S5)
         ld de,(S6)
         call rt_mul
@@ -178,7 +178,7 @@ rt_gget:                        ; GET: GX1,GY1,GX2,GY2 e array (ARRB, ARRC)
         inc hl
         ld (hl),d
         inc hl
-        ld (S7),hl              ; puntatore ai pixel
+        ld (S7),hl              ; pointer to the pixels
         ld a,(SCRMODE)
         cp 2
         jp z,gget2
@@ -214,7 +214,7 @@ rt_gget:                        ; GET: GX1,GY1,GX2,GY2 e array (ARRB, ARRC)
         ld (S8),hl
         jr .row
 
-rt_gput:                        ; PUT: (GX1,GY1) = angolo in alto a sinistra, array (ARRB, ARRC), azione in GFLG
+rt_gput:                        ; PUT: (GX1,GY1) = top-left corner, array (ARRB, ARRC), action in GFLG
         call chk_gfx_nm
         ld hl,(ARRB)
         ld e,(hl)
@@ -227,7 +227,7 @@ rt_gput:                        ; PUT: (GX1,GY1) = angolo in alto a sinistra, ar
         ld d,(hl)
         inc hl
         ld (S6),de              ; altezza
-        ld (S7),hl              ; puntatore ai pixel
+        ld (S7),hl              ; pointer to the pixels
         ld hl,(S5)
         ld a,h
         or l
@@ -241,7 +241,7 @@ rt_gput:                        ; PUT: (GX1,GY1) = angolo in alto a sinistra, ar
         ld hl,(ARRC)
         or a
         sbc hl,de
-        jp c,rt_eifc            ; l'array non contiene un'immagine completa
+        jp c,rt_eifc            ; the array does not hold a complete image
         ld hl,(GX1)             ; angolo opposto = (x + w - 1, y + h - 1)
         ld de,(S5)
         add hl,de
@@ -277,7 +277,7 @@ rt_gput:                        ; PUT: (GX1,GY1) = angolo in alto a sinistra, ar
         ld hl,(PX)
         push hl
         push bc
-        call rb_pix             ; A = pixel di destinazione
+        call rb_pix             ; A = destination pixel
         pop bc
         ld c,a
         ld a,(GFLG)
@@ -287,7 +287,7 @@ rt_gput:                        ; PUT: (GX1,GY1) = angolo in alto a sinistra, ar
         ld a,(GFLG)
         cp 1
         jr nz,.n1
-        ld a,b                  ; 1 PRESET: complemento
+        ld a,b                  ; 1 PRESET: complement
         cpl
         jr .res
 .n1:    cp 2
@@ -329,7 +329,7 @@ rt_gput:                        ; PUT: (GX1,GY1) = angolo in alto a sinistra, ar
         jp .row
 
 ; ---------------------------------------------------------------- DRAW
-dget:                           ; -> A = prossimo carattere significativo (maiuscolo), Z se finito
+dget:                           ; -> A = next significant character (uppercase), Z if finished
 .l:     ld a,(DLEN)
         or a
         ret z
@@ -351,7 +351,7 @@ dget:                           ; -> A = prossimo carattere significativo (maius
 .u:     or a
         ret
 
-dpeek:                          ; -> A = prossimo carattere senza consumarlo (0 se finito)
+dpeek:                          ; -> A = next character without consuming it (0 if finished)
         ld a,(DLEN)
         or a
         ret z
@@ -359,7 +359,7 @@ dpeek:                          ; -> A = prossimo carattere senza consumarlo (0 
         ld a,(hl)
         ret
 
-dget_raw:                       ; consuma un carattere
+dget_raw:                       ; consumes a character
         ld hl,(DPOS)
         inc hl
         ld (DPOS),hl
@@ -367,7 +367,7 @@ dget_raw:                       ; consuma un carattere
         dec (hl)
         ret
 
-dnum:                           ; numero decimale con segno facoltativo -> HL = valore (1 se manca), A = 1 se c'era il segno
+dnum:                           ; decimal number with optional sign -> HL = value (1 if missing), A = 1 if there was a sign
         xor a
         ld (S4),a               ; segno presente
         ld (S3),a               ; negativo
@@ -410,7 +410,7 @@ dnum:                           ; numero decimale con segno facoltativo -> HL = 
 .end:   ld a,c
         or a
         jr nz,.has
-        ld hl,1                 ; nessuna cifra: valore 1
+        ld hl,1                 ; no digits: value 1
 .has:   ld a,(S3)
         or a
         jr z,.pos
@@ -418,7 +418,7 @@ dnum:                           ; numero decimale con segno facoltativo -> HL = 
 .pos:   ld a,(S4)
         ret
 
-dmove:                          ; (S1,S2) = nuova posizione: disegna o sposta (prefissi B e N)
+dmove:                          ; (S1,S2) = new position: draws or moves (prefixes B and N)
         ld hl,(LASTX)
         ld (S5),hl
         ld hl,(LASTY)
@@ -426,7 +426,7 @@ dmove:                          ; (S1,S2) = nuova posizione: disegna o sposta (p
         ld a,(DB)
         or a
         jr nz,.blank
-        ld hl,(LASTX)           ; linea dall'ultimo punto alla nuova posizione
+        ld hl,(LASTX)           ; line from the last point to the new position
         ld (GX1),hl
         ld hl,(LASTY)
         ld (GY1),hl
@@ -458,7 +458,7 @@ dmove:                          ; (S1,S2) = nuova posizione: disegna o sposta (p
         ld (DN),a
         ret
 
-rt_draw:                        ; HL = stringa di comandi (U D L R E F G H M B N C S)
+rt_draw:                        ; HL = command string (U D L R E F G H M B N C S)
         push hl
         call chk_gfx
         pop hl
@@ -502,7 +502,7 @@ rt_draw:                        ; HL = stringa di comandi (U D L R E F G H M B N
         jr .next
 .ns:    cp 'M'
         jr nz,.nm
-        call dnum               ; M x,y: assoluto, relativo se x ha il segno
+        call dnum               ; M x,y: absolute, relative if x has a sign
         push af
         push hl
         call dpeek
@@ -528,7 +528,7 @@ rt_draw:                        ; HL = stringa di comandi (U D L R E F G H M B N
         ld (S2),de
         call dmove
         jp .next
-.nm:    ld c,a                  ; U D L R E F G H: direzione -> (dx, dy)
+.nm:    ld c,a                  ; U D L R E F G H: direction -> (dx, dy)
         ld hl,dirs
 .f:     ld a,(hl)
         or a
@@ -583,16 +583,16 @@ rt_draw:                        ; HL = stringa di comandi (U D L R E F G H M B N
 dirs:   db 'U',0,-1,'D',0,1,'L',-1,0,'R',1,0,'E',1,-1,'F',1,1,'G',-1,1,'H',-1,-1,0
 
 ; ---------------------------------------------------------------- COLLISION
-; Il BIOS gestisce la collisione degli sprite come evento "ON SPRITE": con la voce della tabella degli eventi
-; (TRPTBL) attivata (bit 0), alla collisione il BIOS alza il bit 2 (evento pendente).
-TRPSPR  equ 0FC6Dh              ; TRPTBL (FC4Ch) + 11 * 3: voce degli sprite
+; The BIOS handles sprite collision as an "ON SPRITE" event: with the event table entry
+; (TRPTBL) enabled (bit 0), on collision the BIOS raises bit 2 (pending event).
+TRPSPR  equ 0FC6Dh              ; TRPTBL (FC4Ch) + 11 * 3: sprite entry
 
-rt_trpon:                       ; attiva l'evento di collisione degli sprite
+rt_trpon:                       ; enables the sprite collision event
         ld a,1
         ld (TRPSPR),a
         ret
 
-rt_coll:                        ; COLLISION -> -1 se due sprite si sono toccati dall'ultima lettura
+rt_coll:                        ; COLLISION -> -1 if two sprites touched since the last read
         ld hl,0
         ld a,(TRPSPR)
         bit 2,a
@@ -602,7 +602,7 @@ rt_coll:                        ; COLLISION -> -1 se due sprite si sono toccati 
         dec hl
         ret
 
-; ---------------------------------------------------------------- GET/PUT in SCREEN 2 (punto per punto)
+; ---------------------------------------------------------------- GET/PUT in SCREEN 2 (point by point)
 gget2:
         ld hl,(S2)
         ld (S8),hl
@@ -646,7 +646,7 @@ gput2:
         ld hl,(PX)
         ld de,(S8)
         push bc
-        call getpix2            ; A = pixel di destinazione
+        call getpix2            ; A = destination pixel
         pop bc
         ld c,a
         ld a,(GFLG)

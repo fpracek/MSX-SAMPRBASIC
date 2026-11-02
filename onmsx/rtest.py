@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Test delle cartucce ROM: compila i sorgenti di rtests/ con QBC->QBCR su openMSX/MSX-DOS 1, poi avvia le ROM
-prodotte (-cart) in un'altra istanza e confronta il testo a schermo con i .exp. uso: python rtest.py [nome ...]"""
+"""ROM cartridge tests: compiles the sources in rtests/ with QBC->QBCR on openMSX/MSX-DOS 1, then starts the
+resulting ROMs (-cart) in another instance and compares the on-screen text with the .exp files. usage: python rtest.py [name ...]"""
 import os, re, shutil, subprocess, sys
 import qtest
 
@@ -29,7 +29,7 @@ def main():
     qtest.build_all()
     names = sys.argv[1:] or sorted(f[:-4] for f in os.listdir(RTESTS) if f.endswith('.bas'))
     cases = [(n, open(os.path.join(RTESTS, n + '.bas')).read()) for n in names]
-    for i in range(0, len(cases), 6):                  # a gruppi: le ROM riempirebbero il disco virtuale (720 KB) e le ultime non si scriverebbero
+    for i in range(0, len(cases), 6):                  # in groups: the ROMs would fill the virtual disk (720 KB) and the last ones could not be written
         qtest.run_cases(cases[i:i + 6], wait_run=float(os.environ.get('QWAIT', '40')))
         for n, _ in cases[i:i + 6]:
             rom = os.path.join(DISK, n.lower() + '.rom')
@@ -51,7 +51,7 @@ def main():
         p = os.path.join(BUILD, n + '_rom.txt')
         rows = [l.rstrip() for l in open(p)] if os.path.exists(p) else []
         exp = [l.rstrip() for l in open(os.path.join(RTESTS, n + '.exp')).read().rstrip('\n').split('\n')]
-        # il dump parte dalla riga 0 dello schermo di testo
+        # the dump starts from row 0 of the text screen
         got = [r for r in rows]
         ok = got[:len(exp)] == exp
         check(ok, f'{tg}: schermo uguale a quello atteso')

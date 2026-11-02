@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Test del compilatore su MSX (QBC.COM) in openMSX/MSX-DOS 1: compila i sorgenti, li esegue
-sul DOS emulato e confronta lo schermo con i .exp. uso: python qtest.py [nome ...]"""
+"""Test of the compiler on MSX (QBC.COM) in openMSX/MSX-DOS 1: compiles the sources, runs them
+on the emulated DOS and compares the screen with the .exp files. usage: python qtest.py [name ...]"""
 import os, re, shutil, subprocess, sys
 
 HERE = os.path.dirname(os.path.abspath(__file__))
@@ -65,7 +65,7 @@ proc dump {name} {
 
 
 def run_cases(cases, wait_run=float(os.environ.get('QWAIT', '42'))):
-    """cases = [(basfile_contenuto, nome)]; ritorna {nome: [righe]}"""
+    """cases = [(basfile_content, name)]; returns {name: [lines]}"""
     if os.path.isdir(DISK):
         shutil.rmtree(DISK)
     os.makedirs(DISK)
@@ -78,13 +78,13 @@ def run_cases(cases, wait_run=float(os.environ.get('QWAIT', '42'))):
     shutil.copy(os.path.join(BUILD, 'rtd.bin'), os.path.join(DISK, 'RTD.BIN'))
     shutil.copy(os.path.join(BUILD, 'qasm.ovl'), os.path.join(DISK, 'QASM.OVL'))
     shutil.copy(os.path.join(BUILD, 'rtromd.bin'), os.path.join(DISK, 'RTROMD.BIN'))
-    tf = os.path.join(HERE, 'testfiles')              # file di dati per i test (INCBIN)
+    tf = os.path.join(HERE, 'testfiles')              # data files for the tests (INCBIN)
     if os.path.isdir(tf):
         for f in os.listdir(tf):
             shutil.copy(os.path.join(tf, f), DISK)
     shutil.copy(os.path.join(BUILD, 'qbcr.com'), os.path.join(DISK, 'QBCR.COM'))
     lines = [TCL, 'set OUTDIR "%s"' % BUILD.replace(chr(92), '/')]
-    if os.environ.get('GEXT'):                                              # MSX1: il DOS 1 chiede la data (non c'e' l'orologio)
+    if os.environ.get('GEXT'):                                              # MSX1: DOS 1 asks for the date (there is no clock)
         lines.append('after time 22 {type "1-1-86" ; type "\r"}')
     t = 32.0 if os.environ.get('GEXT') else 20.0
     for name, src in cases:
@@ -94,12 +94,12 @@ def run_cases(cases, wait_run=float(os.environ.get('QWAIT', '42'))):
             if k < wait_run:
                 lines.append('after time %.1f {dump %s_m%d}' % (t + k, name, k))
         kf = os.path.join(QTESTS, name + '.keys')
-        if os.path.exists(kf):                       # tasti per INPUT: battuti quando il programma e' partito
+        if os.path.exists(kf):                       # keys for INPUT: typed once the program has started
             lines.append('after time %.1f {type "%s"}' % (t + 28.0, open(kf).read().replace(chr(10), chr(92) + 'r')))
         t += wait_run
         lines.append('after time %.1f {dump %s}' % (t, name))
         t += 1.0
-        # il programma attende un tasto e poi torna al SAMPRBAS.COM di prova (che resta fermo): riavvio del DOS
+        # the program waits for a key and then returns to the test SAMPRBAS.COM (which stays idle): DOS restart
         lines.append('after time %.1f {keymatrixdown 7 128; after time 0.15 {keymatrixup 7 128}}' % t)
         t += 3.0
         lines.append('after time %.1f {dump %s_after}' % (t, name))
@@ -112,7 +112,7 @@ def run_cases(cases, wait_run=float(os.environ.get('QWAIT', '42'))):
     for f in os.listdir(BUILD):
         if f.endswith('.txt'):
             os.remove(os.path.join(BUILD, f))
-    ext = ['-ext', os.environ['GEXT']] if os.environ.get('GEXT') else []        # es. MSX1: GMACHINE=Sony_HB-75P GEXT=AVT_DPF-550
+    ext = ['-ext', os.environ['GEXT']] if os.environ.get('GEXT') else []        # e.g. MSX1: GMACHINE=Sony_HB-75P GEXT=AVT_DPF-550
     subprocess.run([OPENMSX, '-machine', os.environ.get('GMACHINE', 'Philips_NMS_8250')] + ext + ['-diska', DISK, '-script', tcl], timeout=3600)
     out = {}
     for name, _ in cases:
@@ -141,7 +141,7 @@ def main():
     if sel:
         cases = [c for c in cases if c[0] in sel]
     res = {}
-    for i in range(0, len(cases), 40):                  # a gruppi: i .COM riempirebbero il disco virtuale (720 KB) e gli ultimi test fallirebbero
+    for i in range(0, len(cases), 40):                  # in groups: the .COM files would fill the virtual disk (720 KB) and the last tests would fail
         res.update(run_cases(cases[i:i + 40]))
     for name, _ in cases:
         print('---', name)

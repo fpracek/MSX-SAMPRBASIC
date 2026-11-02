@@ -1,0 +1,477 @@
+[
+{
+"f": "editor/browser.inc",
+"l": 3,
+"t": "[5] temporary, [6..] current path (ASCIIZ, 74 bytes), then the 14-byte entries: flag (1 = folder) + 8.3 ASCIIZ name."
+},
+{
+"f": "editor/browser.inc",
+"l": 169,
+"t": "A = entries per page (22 rows x columns)"
+},
+{
+"f": "editor/browser.inc",
+"l": 222,
+"t": "folders first, then files; alphabetical order (bubble sort on the 14-byte entries)"
+},
+{
+"f": "editor/browser.inc",
+"l": 375,
+"t": "HL = directory entry (8+3 name in FCB form) -> \"NOME.SPB\" in msgbuf"
+},
+{
+"f": "editor/editor.asm",
+"l": 41,
+"t": "blink table (10 bytes per row)"
+},
+{
+"f": "editor/editor.asm",
+"l": 66,
+"t": "10 bytes: row color flags (one bit per column)"
+},
+{
+"f": "editor/editor.asm",
+"l": 76,
+"t": "b  NOME.COM is the compilation of the current text (\" +\" marker from the program)"
+},
+{
+"f": "editor/editor.asm",
+"l": 152,
+"t": "w  last byte of the buffer (sentinel 0)"
+},
+{
+"f": "editor/editor.asm",
+"l": 364,
+"t": "MSX version (byte 002Dh): 80 columns on MSX2, 40 on MSX1; layout parameters"
+},
+{
+"f": "editor/editor.asm",
+"l": 817,
+"t": "writes 0 to the first byte of the gap (if the gap is not empty)"
+},
+{
+"f": "editor/editor.asm",
+"l": 913,
+"t": "source (last byte)"
+},
+{
+"f": "editor/editor.asm",
+"l": 1310,
+"t": "record the insertion (1 byte in tmpb)"
+},
+{
+"f": "editor/editor.asm",
+"l": 1565,
+"t": "F5 (the function key string is a single byte 15h)"
+},
+{
+"f": "editor/editor.asm",
+"l": 1945,
+"t": "menutab: per menu box width, number of entries, pointer to the entries."
+},
+{
+"f": "editor/editor.asm",
+"l": 3160,
+"t": "no room for one more byte"
+},
+{
+"f": "editor/editor.asm",
+"l": 3200,
+"t": "contiguous: the byte replaces the old trailer"
+},
+{
+"f": "editor/editor.asm",
+"l": 3307,
+"t": "HL = first byte to keep"
+},
+{
+"f": "editor/editor.asm",
+"l": 3597,
+"t": "HL points to a 0 byte: gap (skip, NZ) or end of text (Z)"
+},
+{
+"f": "editor/fileio.asm",
+"l": 37,
+"t": "DOS 2: A:\\DIR\\NOME -> enter DIR"
+},
+{
+"f": "editor/fileio.asm",
+"l": 347,
+"t": "A = byte to append to the text; C if the buffer is full"
+},
+{
+"f": "editor/fileio.asm",
+"l": 503,
+"t": "A = byte to write (buffer from IOSZ)"
+},
+{
+"f": "editor/fileio.asm",
+"l": 726,
+"t": "[5] temporary, [6..] current path (ASCIIZ, 74 bytes), then the 14-byte entries: flag (1 = folder) + 8.3 ASCIIZ name."
+},
+{
+"f": "editor/fileio.asm",
+"l": 892,
+"t": "A = entries per page (22 rows x columns)"
+},
+{
+"f": "editor/fileio.asm",
+"l": 945,
+"t": "folders first, then files; alphabetical order (bubble sort on the 14-byte entries)"
+},
+{
+"f": "editor/fileio.asm",
+"l": 1535,
+"t": "non-empty command line: the program knows it was launched from the editor and returns to it"
+},
+{
+"f": "editor/fileio.asm",
+"l": 1647,
+"t": "HELP.IDX: 17-byte records = name (12, uppercase, zero-padded), position in HELP.TXT (3 bytes), length (2 bytes);"
+},
+{
+"f": "editor/fileio.asm",
+"l": 1648,
+"t": "a record with first byte 0 ends the index. The topic is read with a random access and shown in pages."
+},
+{
+"f": "onmsx/dbgq.inc",
+"l": 185,
+"t": "text \"NAME[$][(n)]\" -> 12-byte pattern (qbuf+24) and index (D_QX)"
+},
+{
+"f": "onmsx/dbgq.inc",
+"l": 401,
+"t": "integers: 2 bytes per element"
+},
+{
+"f": "onmsx/dbgq.inc",
+"l": 403,
+"t": "strings: 256 bytes per element"
+},
+{
+"f": "onmsx/ldr.asm",
+"l": 33,
+"t": "1-byte record"
+},
+{
+"f": "onmsx/qasm.asm",
+"l": 7,
+"t": "n          byte"
+},
+{
+"f": "onmsx/qasm.asm",
+"l": 8,
+"t": "n:NAME     byte (JP/CALL opcode) + address of the BASIC label NAME"
+},
+{
+"f": "onmsx/qasm.asm",
+"l": 441,
+"t": "A = byte"
+},
+{
+"f": "onmsx/qasm.asm",
+"l": 558,
+"t": "immediate byte (-128..255)"
+},
+{
+"f": "onmsx/qbc.asm",
+"l": 58,
+"t": "high byte: beyond BF00h the program is too large"
+},
+{
+"f": "onmsx/qbc.asm",
+"l": 131,
+"t": "w  next free byte in the program's data area"
+},
+{
+"f": "onmsx/qbc.asm",
+"l": 137,
+"t": "b  high byte beyond which the output is too large"
+},
+{
+"f": "onmsx/qbc.asm",
+"l": 558,
+"t": "_GENV, 60-byte buffer"
+},
+{
+"f": "onmsx/qbc.asm",
+"l": 2598,
+"t": "HL = table of 0-terminated strings (end: byte 0), DE = name -> A = index, C if missing"
+},
+{
+"f": "onmsx/qbc.asm",
+"l": 3997,
+"t": "HL = byte to move"
+},
+{
+"f": "onmsx/qbc.asm",
+"l": 4004,
+"t": "last source byte"
+},
+{
+"f": "onmsx/qbc.asm",
+"l": 4353,
+"t": "(first byte of name) - unused; the type is at +12"
+},
+{
+"f": "onmsx/qbc.asm",
+"l": 4800,
+"t": "OPTION BREAK: bit 7 of the runtime type byte + checks on backward jumps"
+},
+{
+"f": "onmsx/qbc.asm",
+"l": 4953,
+"t": "address of the length byte = pc + 6"
+},
+{
+"f": "onmsx/qbc.asm",
+"l": 5201,
+"t": "frees the 256-byte copy: ld hl,256 ; add hl,sp ; ld sp,hl"
+},
+{
+"f": "onmsx/qbc.asm",
+"l": 6314,
+"t": "OPTION DEBUG: [prev w][start line w][end line w][n][n 16-byte LOCT records]"
+},
+{
+"f": "onmsx/qbc.asm",
+"l": 6507,
+"t": "string: 256-byte copy on the stack (stays valid for the whole block)"
+},
+{
+"f": "onmsx/qbc.asm",
+"l": 6858,
+"t": "COLOR SPRITE$(n) = colors per line"
+},
+{
+"f": "onmsx/rtabi.inc",
+"l": 125,
+"t": "byte 0 (empty string)"
+},
+{
+"f": "onmsx/rtabi.inc",
+"l": 129,
+"t": "byte: cartridge type (1 ROM16, 2 ROM32, 3 ASCII8, 4 ASCII16, 5 KONAMI, 6 SCC)"
+},
+{
+"f": "onmsx/rtabi.inc",
+"l": 146,
+"t": "byte: 0 line, 1 box, 2 filled box"
+},
+{
+"f": "onmsx/rtabi.inc",
+"l": 147,
+"t": "byte: current SCREEN mode"
+},
+{
+"f": "onmsx/rtabi.inc",
+"l": 154,
+"t": "bits per pixel, pixels per byte, color mask"
+},
+{
+"f": "onmsx/rtabi.inc",
+"l": 157,
+"t": "colors replicated in a VRAM byte"
+},
+{
+"f": "onmsx/rtcirc.asm",
+"l": 4,
+"t": "Polygon with one segment per degree, drawn with rt_gline (clipped)."
+},
+{
+"f": "onmsx/rtcom.asm",
+"l": 196,
+"t": "the editor/compiler launch the program with a non-empty command line"
+},
+{
+"f": "onmsx/rtfile.asm",
+"l": 2,
+"t": "Sequential text files (MSX-DOS 1/2, FCB + 128-byte random records): OPEN, CLOSE, PRINT#, WRITE#,"
+},
+{
+"f": "onmsx/rtfile.asm",
+"l": 691,
+"t": "HL = name: IX = FCB (inbuf), record number 0, 1-byte records"
+},
+{
+"f": "onmsx/rtfile.asm",
+"l": 954,
+"t": "-> FCB: byte position of GY1 (0 = next record); HL = record length"
+},
+{
+"f": "onmsx/rtfile.asm",
+"l": 1164,
+"t": "A = remainder, D = next byte, C = divisor (< 129) -> A = new remainder, E = quotient"
+},
+{
+"f": "onmsx/rtgfx.asm",
+"l": 111,
+"t": "SCREEN 10-12: one byte per pixel like SCREEN 8"
+},
+{
+"f": "onmsx/rtgfx.asm",
+"l": 772,
+"t": "---------------------------------------------------------------- SCREEN 2 (MSX1 graphics: 8x1 patterns with color per group)"
+},
+{
+"f": "onmsx/rtgfx.asm",
+"l": 779,
+"t": "y >> 3 (high byte)"
+},
+{
+"f": "onmsx/rtgfx.asm",
+"l": 812,
+"t": "B = color byte (foreground | background)"
+},
+{
+"f": "onmsx/rtgfx.asm",
+"l": 913,
+"t": "SCREEN 3: HL = x, DE = y -> HL = generator byte, C bit 2 = 0 if high nibble (left pixel)"
+},
+{
+"f": "onmsx/rtgtext.asm",
+"l": 44,
+"t": "bits per pixel, pixels per byte, color mask, based on SCRMODE"
+},
+{
+"f": "onmsx/rtgtext.asm",
+"l": 59,
+"t": "SCREEN 2: lines read as one byte per pixel (color)"
+},
+{
+"f": "onmsx/rtgtext.asm",
+"l": 92,
+"t": "-> A = bytes per pixel line: 128, or 0 = 256"
+},
+{
+"f": "onmsx/rtgtext.asm",
+"l": 153,
+"t": "A = color -> A = color replicated across a VRAM byte"
+},
+{
+"f": "onmsx/rtgtext.asm",
+"l": 162,
+"t": "2 bits per pixel"
+},
+{
+"f": "onmsx/rtgtext.asm",
+"l": 202,
+"t": "address = TCY*8*stride + TCX*bytes-per-cell"
+},
+{
+"f": "onmsx/rtgtext.asm",
+"l": 219,
+"t": "bytes per cell 4 (log2 = 2)"
+},
+{
+"f": "onmsx/rtgtext.asm",
+"l": 301,
+"t": "E = pixels per VRAM byte"
+},
+{
+"f": "onmsx/rtgtext.asm",
+"l": 303,
+"t": "L = VRAM byte mask"
+},
+{
+"f": "onmsx/rtgtext.asm",
+"l": 304,
+"t": "H = pixels still to put in the byte"
+},
+{
+"f": "onmsx/rtgtext.asm",
+"l": 307,
+"t": "mask <<= bits per pixel"
+},
+{
+"f": "onmsx/rtgtext.asm",
+"l": 320,
+"t": "byte = (fg & m) | (bg & ~m)"
+},
+{
+"f": "onmsx/rtgtext.asm",
+"l": 538,
+"t": "4 bits per pixel"
+},
+{
+"f": "onmsx/rtgx.asm",
+"l": 3,
+"t": "GET (x1,y1)-(x2,y2), array   -> array: [width][height] then one byte per pixel (2 pixels per element)"
+},
+{
+"f": "onmsx/rtgx.asm",
+"l": 16,
+"t": "HL = y -> HL = VRAM address of the line, B = bytes per line (0 = 256)"
+},
+{
+"f": "onmsx/rtgx.asm",
+"l": 49,
+"t": "4 bits per pixel"
+},
+{
+"f": "onmsx/rtmap.asm",
+"l": 11,
+"t": "test byte (offset 1000h of the segment)"
+},
+{
+"f": "onmsx/rtmap.asm",
+"l": 126,
+"t": "MGET(GX1 = segment, HL = offset) -> HL = byte"
+},
+{
+"f": "onmsx/rtmap.asm",
+"l": 491,
+"t": "MKI$(HL) -> 2-byte string (little endian)"
+},
+{
+"f": "onmsx/rtspr.asm",
+"l": 2,
+"t": "Sprites (SCREEN 5-8: V9938 sprite mode 2: 32 sprites, color per line, 8x8 or 16x16)"
+},
+{
+"f": "onmsx/rtvram.asm",
+"l": 37,
+"t": "HL = address -> HL = byte"
+},
+{
+"f": "onmsx/rtvram.asm",
+"l": 46,
+"t": "VFILL GX1 = address, GY1 = byte count, GX2 = value"
+},
+{
+"f": "onmsx/rtvram.asm",
+"l": 78,
+"t": "VREAD$(GX1 = address, HL = byte count 0-255) -> temporary string"
+},
+{
+"f": "onmsx/rtvram.asm",
+"l": 112,
+"t": "screens 0-3: BIOS variables (TXTNAM etc.), 5 words per screen"
+},
+{
+"f": "onmsx/rtvram.asm",
+"l": 265,
+"t": "sprite mode 1: the color is the 4th byte of the attribute (EC is preserved)"
+},
+{
+"f": "onmsx/rtvram.asm",
+"l": 312,
+"t": "COLOR SPRITE$(n) = string: GX1 = plane, HL = string (up to 16 colors, one per line)"
+},
+{
+"f": "onmsx/rtvram.asm",
+"l": 410,
+"t": "screens 5-6: 32 KB per page"
+},
+{
+"f": "onmsx/rtvram.asm",
+"l": 418,
+"t": "screens 7-8: 64 KB per page"
+},
+{
+"f": "onmsx/rtvram.asm",
+"l": 604,
+"t": "VCOPY GX1 = memory address, GY1 = VRAM address, GX2 = byte count"
+}
+]

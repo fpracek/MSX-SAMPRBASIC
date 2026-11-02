@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Salvataggio in posto (.COM, MS-DOS 1): un file piu' lungo si sovrascrive senza cancellarlo; se il testo nuovo e' piu' corto
-si scrive ^Z dopo il testo e il resto del file si ignora (l'editor lo ignora al caricamento)."""
+"""In-place save (.COM, MS-DOS 1): a longer file is overwritten without deleting it; if the new text is shorter
+^Z is written after the text and the rest of the file is ignored (the editor ignores it on load)."""
 import os
 import sys
 
@@ -20,10 +20,10 @@ def main():
     sc.t = 20.0
     sc.text('ED HELLO.SPB' + BS + 'r', 8.0)
     sc.text('ABCDEFGHIJ', 1.0)
-    chord(sc, *CTRL_S, gap=5.0)                       # piu' lungo: si estende in posto
+    chord(sc, *CTRL_S, gap=5.0)                       # longer: extended in place
     sc.dump('v0_longer')
     sc.tap(7, 0x20, 10, 0.4)                          # Backspace x10
-    chord(sc, *CTRL_S, gap=5.0)                       # piu' corto: ^Z + residuo
+    chord(sc, *CTRL_S, gap=5.0)                       # shorter: ^Z + leftover
     sc.dump('v1_shorter')
     chord(sc, *CTRL_O, gap=0.8)
     sc.text('H', 0.5)

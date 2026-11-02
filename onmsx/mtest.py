@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Cartucce a segmenti su piu' file (NOME000, NOME001, ...): compilazione e collegamento in una ROM, rinvio al file 000,
-errori nel file giusto, OPTION fuori dal file 000. uso: python mtest.py"""
+"""Segmented cartridges spread over several files (NAME000, NAME001, ...): compilation and linking into one ROM, redirect to file 000,
+errors reported in the right file, OPTION outside file 000. usage: python mtest.py"""
 import os
 import shutil
 import subprocess

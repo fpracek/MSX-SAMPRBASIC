@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Genera kwtab.inc (parole chiave BASIC per l'evidenziazione) dalle tabelle del compilatore ../onmsx/qbc.asm."""
+"""Generates kwtab.inc (BASIC keywords for highlighting) from the tables of the compiler ../onmsx/qbc.asm."""
 import os
 import re
 
@@ -10,7 +10,7 @@ for name in ('kwtab:', 'bitab:'):
     i = src.index(name)
     j = src.index('\n\n', i) if '\n\n' in src[i:i + 3000] else i + 1500
     block = src[i:j]
-    # solo le righe della tabella (db "...",0,...)
+    # only the table rows (db "...",0,...)
     for line in block.split('\n'):
         if name in line or line.strip().startswith('db'):
             for w in re.findall(r'"([A-Z$]+)"', line):

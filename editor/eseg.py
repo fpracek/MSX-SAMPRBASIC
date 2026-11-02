@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""File > Segment... (F8): salva il file corrente e apre NOMEnnn nella stessa directory (build .COM, MSX-DOS 1 su NMS-8250)."""
+"""File > Segment... (F8): saves the current file and opens NAMEnnn in the same directory (.COM build, MSX-DOS 1 on NMS-8250)."""
 import os
 import subprocess
 import sys
@@ -27,7 +27,7 @@ def main():
     sc.t = 20.0
     bs = chr(92)
     sc.text('ED FAUST000' + bs + 'r', 8.0)
-    sc.text('X', 0.5)                                   # modifica: Segment deve salvare prima di cambiare
+    sc.text('X', 0.5)                                   # edit: Segment must save before switching
     sc.tap(*ESC, 1, 0.6)
     sc.text('g', 1.5)
     sc.text('1' + bs + 'r', 5.0)

@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Tasti F1-F4 per i menu (build ROM, NMS-8250): F1 File, F2 Edit, F3 Find, F4 Help; con un menu aperto passano al menu scelto; Esc chiude."""
+"""Keys F1-F4 for the menus (ROM build, NMS-8250): F1 File, F2 Edit, F3 Find, F4 Help; with a menu open they switch to the chosen menu; Esc closes."""
 import sys
 import etest
 from etest import Scenario, check, load
@@ -14,8 +14,8 @@ def main():
         sc.tap(F[k][0], F[k][1], 1, 0.6)
         sc.dump('f%d' % k)
         sc.tap(7, 0x04, 1, 0.6)                 # Esc
-    sc.tap(*F[2], 1, 0.6)                       # F2 apre Edit
-    sc.tap(*F[3], 1, 0.6)                       # con il menu aperto F3 passa a Find
+    sc.tap(*F[2], 1, 0.6)                       # F2 opens Edit
+    sc.tap(*F[3], 1, 0.6)                       # with the menu open F3 switches to Find
     sc.dump('f2_3')
     sc.tap(7, 0x04, 1, 0.6)
     sc.dump('f_closed')

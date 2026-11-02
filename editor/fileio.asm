@@ -1,8 +1,8 @@
 ; =====================================================================
-; Caricamento / salvataggio file (solo build .COM) - API a FCB, valida su
-; MSX-DOS 1 e Nextor/MSX-DOS 2 (compatibilita').  Fine riga su disco = CR LF,
-; in memoria = LF.  Funzioni BDOS: 0Fh open, 10h close, 13h delete, 16h make,
-; 1Ah set DMA, 26h/27h blocchi casuali (dimensione record = 1 -> byte esatti).
+; File load / save (.COM build only) - FCB API, valid on
+; MSX-DOS 1 and Nextor/MSX-DOS 2 (compatibility).  End of line on disk = CR LF,
+; in memory = LF.  BDOS functions: 0Fh open, 10h close, 13h delete, 16h make,
+; 1Ah set DMA, 26h/27h random blocks (record size = 1 -> exact bytes).
 ; =====================================================================
 BDOS    equ 0005h
 F_OPEN  equ 0Fh
@@ -13,7 +13,7 @@ F_DMA   equ 1Ah
 F_BWR   equ 26h
 F_BRD   equ 27h
 
-getcmd:                         ; riga di comando (0080h: lunghezza + testo) -> fname
+getcmd:                         ; command line (0080h: length + text) -> fname
         call d2_detect
         ld hl,0
         ld (errline),hl
@@ -34,7 +34,7 @@ getcmd:                         ; riga di comando (0080h: lunghezza + testo) -> 
         inc hl
         djnz .sk
         jr .none
-.go:    call d2_path            ; DOS 2: A:\DIR\NOME -> entra in DIR
+.go:    call d2_path            ; DOS 2: A:\DIR\NAME -> enter DIR
         ld de,fname
         ld c,14
 .cp:    ld a,(hl)
@@ -56,7 +56,7 @@ getcmd:                         ; riga di comando (0080h: lunghezza + testo) -> 
         ld (fname),a
         ret
 
-ensure_spb:                     ; fname senza estensione -> aggiunge ".SPB" (conserva HL)
+ensure_spb:                     ; fname without extension -> appends ".SPB" (preserves HL)
         push hl
         ld hl,fname
         ld a,(hl)
@@ -92,7 +92,7 @@ spb_force:                      ; fname: toglie l'estensione digitata e mette ".
 .cut:   ld (hl),0
 .go:    jp ensure_spb
 
-prompt_spb:                     ; "Save as:" con al massimo 8 caratteri; C se annullato
+prompt_spb:                     ; "Save as:" with at most 8 characters; C if cancelled
         ld hl,s_saveas
         ld de,fname
         ld b,8
@@ -103,13 +103,13 @@ prompt_spb:                     ; "Save as:" con al massimo 8 caratteri; C se an
         or a
         ret
 
-parse_err:                      ; HL dopo il nome: " E<riga> <codice>" (ritorno dal compilatore)
+parse_err:                      ; HL after the name: " E<row> <code>" (return from the compiler)
 .sk:    ld a,(hl)
         cp ' '
         jr nz,.e
         inc hl
         jr .sk
-.e:     cp '+'                  ; " +": il programma e' appena stato eseguito dalla compilazione di questo sorgente
+.e:     cp '+'                  ; " +": the program has just been run from the compilation of this source
         jr nz,.e2
         ld a,1
         ld (cmdok),a
@@ -162,10 +162,10 @@ startup_load:
         ld a,h
         or l
         ret z
-        call goto_line          ; ritorno da un errore di compilazione: riga + messaggio
+        call goto_line          ; return from a compile error: row + message
         jp err_message
 
-mk_fcb:                         ; fname -> fcb (8.3 maiuscolo, unita' opzionale "A:")
+mk_fcb:                         ; fname -> fcb (8.3 uppercase, optional drive "A:")
         ld hl,fcb
         ld de,fcb+1
         ld bc,36
@@ -221,7 +221,7 @@ mk_fcb:                         ; fname -> fcb (8.3 maiuscolo, unita' opzionale 
         inc hl
         jr .rest
 
-fcb_rec1:                       ; dimensione record 1, posizione casuale 0
+fcb_rec1:                       ; record size 1, random position 0
         ld hl,1
         ld (fcb+14),hl
         ld hl,0
@@ -229,7 +229,7 @@ fcb_rec1:                       ; dimensione record 1, posizione casuale 0
         ld (fcb+35),hl
         ret
 
-; ---------------------------------------------------------------- caricamento
+; ---------------------------------------------------------------- loading
 load_file:
         xor a
         ld (compiled),a
@@ -255,7 +255,7 @@ load_file:
         ld de,fcb
         ld hl,IOSZ
         ld c,F_BRD
-        call BDOS               ; A = 0 completo, 1 = fine file; HL = byte letti
+        call BDOS               ; A = 0 complete, 1 = end of file; HL = bytes read
         ld (tmpb),a
         ld a,h
         or l
@@ -295,7 +295,7 @@ load_file:
 .ok:    ld hl,m_loaded
         jp mk_msg
 
-load_chunk:                     ; HL = sorgente, BC = byte -> C se fine file o buffer pieno
+load_chunk:                     ; HL = source, BC = bytes -> C if end of file or buffer full
 .l:     ld a,b
         or c
         ret z
@@ -344,7 +344,7 @@ load_chunk:                     ; HL = sorgente, BC = byte -> C se fine file o b
 .stop:  scf
         ret
 
-ld_put:                         ; A = byte da accodare al testo; C se il buffer e' pieno
+ld_put:                         ; A = byte to append to the text; C if the buffer is full
         push hl
         push de
         ld hl,(len)
@@ -373,35 +373,35 @@ ld_put:                         ; A = byte da accodare al testo; C se il buffer 
         ret
 
 ; ---------------------------------------------------------------- salvataggio
-save_file:                      ; -> C se errore (messaggio in msgptr)
+save_file:                      ; -> C on error (message in msgptr)
         ld a,(modified)
         or a
         jr z,.ncl
         xor a
-        ld (compiled),a        ; il testo e' cambiato dopo l'ultima compilazione
+        ld (compiled),a        ; text changed since the last compilation
 .ncl:   call mk_fcb
         xor a
         ld (inplace),a
-        ld de,fcb               ; sovrascrittura in posto: niente cancellazione e creazione (risparmia ~2 s di disco)
+        ld de,fcb               ; in-place overwrite: no delete and create (saves ~2 s of disk time)
         ld c,F_OPEN
         call BDOS
         or a
-        jr nz,.create           ; il file non esiste
-        ld hl,(fcb+18)          ; dimensione vecchia (FCB+16, 4 byte): oltre 64 KB si ricrea
+        jr nz,.create           ; the file does not exist
+        ld hl,(fcb+18)          ; old size (FCB+16, 4 bytes): beyond 64 KB it is recreated
         ld a,h
         or l
         jr nz,.recreate
         ld hl,(fcb+16)
         ld (oldsz),hl
         ex de,hl
-        ld hl,(len)             ; stima della nuova dimensione: testo + CR + ^Z + 1 KB di tolleranza
+        ld hl,(len)             ; estimate of the new size: text + CR + ^Z + 1 KB of tolerance
         ld bc,(nlines)
         add hl,bc
         ld bc,1025
         add hl,bc
         or a
         sbc hl,de
-        jr c,.recreate          ; il file e' molto piu' lungo del testo: meglio ricrearlo
+        jr c,.recreate          ; the file is much longer than the text: better to recreate it
         ld a,1
         ld (inplace),a
         jr .ok
@@ -412,7 +412,7 @@ save_file:                      ; -> C se errore (messaggio in msgptr)
 .create: call mk_fcb
         ld de,fcb
         ld c,F_DEL
-        call BDOS               ; l'errore (file inesistente) e' ignorato
+        call BDOS               ; the error (nonexistent file) is ignored
         call mk_fcb
         ld de,fcb
         ld c,F_MAKE
@@ -438,7 +438,7 @@ save_file:                      ; -> C se errore (messaggio in msgptr)
         or a
         sbc hl,de
         ld b,h
-        ld c,l                  ; BC = byte dopo il gap
+        ld c,l                  ; BC = bytes after the gap
         ld hl,(gs)
         ld de,(gsz)
         add hl,de
@@ -449,7 +449,7 @@ save_file:                      ; -> C se errore (messaggio in msgptr)
         ld a,(inplace)
         or a
         jr z,.cl
-        ld hl,(nbytes)          ; sovrascrittura piu' corta del file di prima: ^Z dopo il testo (il resto si ignora)
+        ld hl,(nbytes)          ; overwrite shorter than the previous file: ^Z after the text (the rest is ignored)
         ld de,(oldsz)
         or a
         sbc hl,de
@@ -481,7 +481,7 @@ save_file:                      ; -> C se errore (messaggio in msgptr)
         scf
         ret
 
-emit_seg:                       ; HL = sorgente, BC = byte; LF -> CR LF
+emit_seg:                       ; HL = source, BC = bytes; LF -> CR LF
 .l:     ld a,b
         or c
         ret z
@@ -500,7 +500,7 @@ emit_seg:                       ; HL = sorgente, BC = byte; LF -> CR LF
         pop hl
         jr .l
 
-put_io:                         ; A = byte da scrivere (buffer da IOSZ)
+put_io:                         ; A = byte to write (buffer from IOSZ)
         ld hl,(iop)
         ld (hl),a
         inc hl
@@ -539,13 +539,13 @@ flush_io:
         ret
 
 ; ---------------------------------------------------------------- interfaccia
-prompt_name:                    ; HL = prompt -> legge fname; C se annullato
+prompt_name:                    ; HL = prompt -> reads fname; C if cancelled
         ld de,fname
         ld b,14
         ld c,0
         jp prompt_line
 
-confirm_discard:                ; A = tasto; C = serve conferma (ripetere il tasto)
+confirm_discard:                ; A = key; C = confirmation needed (repeat the key)
         ld b,a
         ld a,(modified)
         or a
@@ -564,7 +564,7 @@ confirm_discard:                ; A = tasto; C = serve conferma (ripetere il tas
         ret
 
 k_new:
-        ld a,0FDh               ; codice fittizio per la conferma
+        ld a,0FDh               ; dummy code for the confirmation
         call confirm_discard
         ret c
         call ed_reset
@@ -591,12 +591,12 @@ k_saveas:
         ret z
         jp save_file
 
-; ---------------------------------------------------------------- MSX-DOS 2: SPBHOME (strumenti) e SPBPROJ (progetto)
-d2_detect:                      ; isdos2; se manca, SPBHOME = directory corrente
+; ---------------------------------------------------------------- MSX-DOS 2: SPBHOME (tools) and SPBPROJ (project)
+d2_detect:                      ; isdos2; if missing, SPBHOME = current directory
         xor a
         ld (isdos2),a
         ld b,0
-        ld c,6Fh                ; _DOSVER: solo il DOS 2 risponde con A=0 e B>=2
+        ld c,6Fh                ; _DOSVER: only DOS 2 answers with A=0 and B>=2
         call BDOS
         or a
         ret nz
@@ -614,7 +614,7 @@ d2_detect:                      ; isdos2; se manca, SPBHOME = directory corrente
         ld hl,s_envhome
         jr env_set
 
-cwd_abs:                        ; iobuf = "\percorso" della directory corrente
+cwd_abs:                        ; iobuf = "\path" of the current directory
         ld a,5Ch
         ld (iobuf),a
         ld de,iobuf+1
@@ -622,7 +622,7 @@ cwd_abs:                        ; iobuf = "\percorso" della directory corrente
         ld c,59h                ; _GETCD
         jp BDOS
 
-env_get:                        ; HL = nome -> iobuf = valore (vuoto se manca)
+env_get:                        ; HL = name -> iobuf = value (empty if missing)
         ld de,iobuf
         xor a
         ld (de),a
@@ -630,7 +630,7 @@ env_get:                        ; HL = nome -> iobuf = valore (vuoto se manca)
         ld c,6Bh                ; _GENV
         jp BDOS
 
-env_set:                        ; HL = nome, iobuf = valore
+env_set:                        ; HL = name, iobuf = value
         ld de,iobuf
         ld c,6Ch                ; _SENV
         jp BDOS
@@ -657,18 +657,18 @@ cd_env:
         ld c,5Ah                ; _CHDIR
         jp BDOS
 
-d2_proj:                        ; ritorno dal compilatore o dal programma: si riprende il progetto (SPBPROJ)
+d2_proj:                        ; return from the compiler or from the program: the project is resumed (SPBPROJ)
         ld a,(isdos2)
         or a
         ret z
         ld a,(cmdok)
         ld hl,errcode
         or (hl)
-        ret z                   ; avvio normale: la directory e' quella corrente
+        ret z                   ; normal start: the directory is the current one
         ld hl,s_envproj
         jr cd_env
 
-d2_path:                        ; HL = inizio del nome: con un percorso entra nella directory e HL punta al nome
+d2_path:                        ; HL = start of the name: with a path it enters the directory and HL points to the name
         ld a,(isdos2)
         or a
         ret z
@@ -721,9 +721,9 @@ d2_path:                        ; HL = inizio del nome: con un percorso entra ne
 s_envhome: db "SPBHOME",0
 s_envproj: db "SPBPROJ",0
 
-; ---------------------------------------------------------------- Open: finestra dei file .SPB (e cartelle su DOS 2)
-; Area di lavoro nel gap: [0] numero voci, [1] selezione, [2] prima voce visibile, [3] colonne, [4] DOS 2,
-; [5] temporaneo, [6..] percorso corrente (ASCIIZ, 74 byte), poi le voci da 14 byte: flag (1 = cartella) + nome 8.3 ASCIIZ.
+; ---------------------------------------------------------------- Open: window of .SPB files (and folders on DOS 2)
+; Work area in the gap: [0] number of entries, [1] selection, [2] first visible entry, [3] columns, [4] DOS 2,
+; [5] temporary, [6..] current path (ASCIIZ, 74 bytes), then the 14-byte entries: flag (1 = folder) + 8.3 ASCIIZ name.
 BW_ENT  equ 80
 BW_MAX  equ 120
 bw_cnt  equ 0
@@ -738,7 +738,7 @@ k_open:
         ld a,0Fh
         call confirm_discard
         ret c
-        ld hl,(len)             ; il gap in fondo al testo e' l'area di lavoro
+        ld hl,(len)             ; the gap at the end of the text is the work area
         call gap_to_ofs
         ld hl,(gsz)
         ld de,2048
@@ -760,8 +760,8 @@ k_open:
         ld (msgptr),hl
         ret
 
-bw_run:                         ; C = annullato; altrimenti fname = file scelto
-        call kw_reset           ; niente colori delle parole chiave sotto la finestra
+bw_run:                         ; C = cancelled; otherwise fname = chosen file
+        call kw_reset           ; no keyword colors under the window
         ld ix,(hscr)
         ld a,(sw)
         ld b,0
@@ -772,7 +772,7 @@ bw_run:                         ; C = annullato; altrimenti fname = file scelto
 .nd:    ld (ix+bw_ncol),b
         ld (ix+bw_dos2),0
         ld b,0
-        ld c,6Fh                ; _DOSVER: solo il DOS 2 risponde con A=0 e B>=2
+        ld c,6Fh                ; _DOSVER: only DOS 2 answers with A=0 and B>=2
         call BDOS
         or a
         jr nz,.d1
@@ -812,7 +812,7 @@ bw_run:                         ; C = annullato; altrimenti fname = file scelto
         cp 'z'+1
         jr nc,.key
         sub 20h
-.ju:    ld b,a                  ; lettera iniziale: salta alla prima voce che comincia cosi'
+.ju:    ld b,a                  ; initial letter: jumps to the first entry starting with it
         ld c,0
 .jl:    ld a,(ix+bw_cnt)
         cp c
@@ -889,7 +889,7 @@ bw_run:                         ; C = annullato; altrimenti fname = file scelto
 .cancel: scf
         ret
 
-bw_cap:                         ; A = voci per pagina (22 righe x colonne)
+bw_cap:                         ; A = entries per page (22 rows x columns)
         ld b,(ix+bw_ncol)
         xor a
 .l:     add a,22
@@ -911,7 +911,7 @@ bw_entry:                       ; A = indice -> HL = voce
         add hl,de
         ret
 
-bw_add:                         ; HL = nome ASCIIZ, A = flag (1 = cartella)
+bw_add:                         ; HL = ASCIIZ name, A = flag (1 = folder)
         push hl
         ld ix,(hscr)
         ld (ix+bw_tmp),a
@@ -942,7 +942,7 @@ bw_add:                         ; HL = nome ASCIIZ, A = flag (1 = cartella)
 bw_scan:
         call bw_scan0
         ; fall through
-bw_sort:                        ; cartelle prima, poi file; ordine alfabetico (bubble sort sulle voci da 14 byte)
+bw_sort:                        ; folders first, then files; alphabetical order (bubble sort on the 14-byte entries)
         ld ix,(hscr)
         ld a,(ix+bw_cnt)
         cp 2
@@ -1005,7 +1005,7 @@ bw_sort:                        ; cartelle prima, poi file; ordine alfabetico (b
         djnz .pass
         ret
 
-bw_scan0:                       ; elenca cartelle e file .SPB della directory corrente
+bw_scan0:                       ; lists folders and .SPB files of the current directory
         ld ix,(hscr)
         ld (ix+bw_cnt),0
         ld (ix+bw_path),0
@@ -1074,7 +1074,7 @@ bw_scan0:                       ; elenca cartelle e file .SPB della directory co
         ld de,iobuf
         ld c,F_DMA
         call BDOS
-        ld c,11h                ; ricerca del primo
+        ld c,11h                ; search for the first one
 .s1:    ld de,fcb
         call BDOS
         cp 0FFh
@@ -1092,10 +1092,10 @@ bw_scan0:                       ; elenca cartelle e file .SPB della directory co
         ld hl,msgbuf
         xor a
         call bw_add
-        ld c,12h                ; ricerca del successivo
+        ld c,12h                ; search for the next one
         jr .s1
 
-bw_fmt:                         ; HL = voce di directory (nome 8+3 in forma FCB) -> "NOME.SPB" in msgbuf
+bw_fmt:                         ; HL = directory entry (8+3 name in FCB form) -> "NAME.SPB" in msgbuf
         push hl
         inc hl
         ld de,msgbuf
@@ -1145,7 +1145,7 @@ bw_draw:
         ld hl,msgbuf
         call show_row0
         ld ix,(hscr)
-        call bw_cap             ; pagina che contiene la selezione
+        call bw_cap             ; page containing the selection
         ld c,a
         ld a,(ix+bw_sel)
         ld b,0
@@ -1159,7 +1159,7 @@ bw_draw:
         ld a,d
         jr .t
 .td:    ld (ix+bw_top),b
-        ld (ix+bw_tmp),b        ; indice della voce che si sta disegnando
+        ld (ix+bw_tmp),b        ; index of the entry being drawn
         ld d,1
 .row:   push de
         ld hl,rowbuf
@@ -1241,8 +1241,8 @@ s_star:  db "*.*",0
 s_spbm:  db "*.SPB",0
 s_spb3:  db "SPB"
 
-; ---------------------------------------------------------------- Segment: cambia file in un progetto a segmenti (NOME000, NOME001...)
-seg_chk:                        ; Z se fname = 5 caratteri + 3 cifre (+ estensione)
+; ---------------------------------------------------------------- Segment: switch file in a segmented project (NAME000, NAME001...)
+seg_chk:                        ; Z if fname = 5 characters + 3 digits (+ extension)
         ld hl,fname
         ld b,0
 .l:     ld a,(hl)
@@ -1269,7 +1269,7 @@ seg_chk:                        ; Z se fname = 5 caratteri + 3 cifre (+ estensio
 .no:    or 1
         ret
 
-seg_digits:                     ; A = numero (0-255) -> 3 cifre in fname+5..7
+seg_digits:                     ; A = number (0-255) -> 3 digits in fname+5..7
         ld hl,fname+5
         ld d,'0'
 .h:     sub 100
@@ -1310,14 +1310,14 @@ k_segment:
         ld hl,helpstr
         ld a,(hl)
         or a
-        ret z                   ; vuoto: annulla
+        ret z                   ; empty: cancel
         ld de,0
 .p:     ld a,(hl)
         or a
         jr z,.pd
         sub '0'
         cp 10
-        ret nc                  ; non numerico: annulla
+        ret nc                  ; not numeric: cancel
         push hl
         ld h,d
         ld l,e
@@ -1339,7 +1339,7 @@ k_segment:
         jr nz,.big
         ld a,e
         push af
-        call seg_probe          ; il file corrente non cambia finche' il segmento non e' valido
+        call seg_probe          ; the current file does not change until the segment is valid
         or a
         jr z,.none
         cp 2
@@ -1347,7 +1347,7 @@ k_segment:
         ld a,(modified)
         or a
         jr z,.ns
-        call save_file          ; il file corrente si salva prima di cambiare
+        call save_file          ; the current file is saved before switching
         jr nc,.ns
         pop af
         ret
@@ -1365,7 +1365,7 @@ k_segment:
         ld (msgptr),hl
         ret
 
-seg_probe:                      ; A = numero -> A = 0 non esiste, 1 .SPB, 2 .BIN (fname resta invariato)
+seg_probe:                      ; A = number -> A = 0 does not exist, 1 .SPB, 2 .BIN (fname is left unchanged)
         push af
         ld hl,fname+5
         ld de,msgbuf
@@ -1448,8 +1448,8 @@ m_cantcreate: db "Cannot create file",0
 m_diskfull:  db "Disk full or write error",0
 
 ; ---------------------------------------------------------------- F5: compila ed esegui
-; Il DOS 1 non ha EXEC: si salva il sorgente, si prepara la riga di comando " NOME.BAS" e si
-; carica QBC.COM a catena con il caricatore (ldr.bin) copiato a C000h.
+; DOS 1 has no EXEC: the source is saved, the command line " NAME.BAS" is prepared and
+; QBC.COM is chain-loaded with the loader (ldr.bin) copied to C000h.
 k_run:
         ld a,(fname)
         or a
@@ -1474,19 +1474,19 @@ k_run:
         ldir
 .save:  ld a,(modified)
         or a
-        jr nz,.dosave           ; testo cambiato: va salvato
+        jr nz,.dosave           ; text changed: it must be saved
         ld a,(onfile)
         or a
         jr z,.dosave            ; nessun file su disco: va salvato
         ld a,(compiled)
         or a
-        jr z,.comp              ; invariato ma non compilato (o errore): si ricompila senza salvare
-        call run_only           ; invariato e compilato: rilancia NOME.COM (ritorna solo se manca)
+        jr z,.comp              ; unchanged but not compiled (or error): recompile without saving
+        call run_only           ; unchanged and compiled: relaunch NAME.COM (returns only if missing)
         jr .comp
 .dosave: call save_file
         ret c
 .comp:  call leave_screen
-        call cd_home            ; DOS 2: QBC.COM e RT.BIN stanno nella directory degli strumenti
+        call cd_home            ; DOS 2: QBC.COM and RT.BIN are in the tools directory
         ld hl,fname
         ld de,0082h
         ld bc,16
@@ -1509,7 +1509,7 @@ k_run:
         ld de,0C000h
         ld bc,ldr_size
         ldir
-        ld hl,s_qbc             ; nome del programma da caricare (ldr_fn a C003h)
+        ld hl,s_qbc             ; name of the program to load (ldr_fn at C003h)
         ld de,0C003h
         ld bc,11
         ldir
@@ -1517,7 +1517,7 @@ k_run:
 s_bas:  db ".SPB",0
 s_qbc:  db "QBC     COM"
 
-run_only:                       ; NOME.COM esiste? allora lo carica con il caricatore (non torna)
+run_only:                       ; does NAME.COM exist? then load it with the loader (does not return)
         call mk_fcb
         ld hl,s_com3
         ld de,fcb+9
@@ -1532,7 +1532,7 @@ run_only:                       ; NOME.COM esiste? allora lo carica con il caric
         ld c,F_CLOSE
         call BDOS
         call leave_screen
-        ld a,1                  ; riga di comando non vuota: il programma sa di essere lanciato dall'editor e vi ritorna
+        ld a,1                  ; non-empty command line: the program knows it was launched from the editor and returns to it
         ld (0080h),a
         ld a,' '
         ld (0081h),a
@@ -1542,17 +1542,17 @@ run_only:                       ; NOME.COM esiste? allora lo carica con il caric
         ld de,0C000h
         ld bc,ldr_size
         ldir
-        ld hl,fcb+1             ; nome del programma da caricare (ldr_fn a C003h)
+        ld hl,fcb+1             ; name of the program to load (ldr_fn at C003h)
         ld de,0C003h
         ld bc,11
         ldir
         jp 0C000h
 s_com3: db "COM"
 
-goto_line:                      ; HL = riga (1..): cursore all'inizio della riga
+goto_line:                      ; HL = line (1..): cursor at the start of the line
         ld (tmp2),hl
-        call gap_to_cur         ; il gap segue il cursore (goto_ofs lo richiede)
-        ld de,0                 ; DE = offset, BC = riga corrente
+        call gap_to_cur         ; the gap follows the cursor (goto_ofs requires it)
+        ld de,0                 ; DE = offset, BC = current line
         ld bc,1
 .l:     push de
         ld hl,(tmp2)
@@ -1580,7 +1580,7 @@ goto_line:                      ; HL = riga (1..): cursore all'inizio della riga
         call upd_wantcol
         jp ensure_visible
 
-err_message:                    ; "Line N: testo" dal codice di errore
+err_message:                    ; "Line N: text" from the error code
         ld de,msgbuf
         ld hl,s_line
         call strcpy
@@ -1643,10 +1643,10 @@ e_20:    db "Cannot read QASM.OVL (inline assembler)",0
 ldr_img: INCBIN "../onmsx/build/ldr.bin"
 ldr_size equ $-ldr_img
 
-; ---------------------------------------------------------------- Help (solo .COM): HELP.TXT + HELP.IDX
-; HELP.IDX: record da 17 byte = nome (12, maiuscolo, riempito con zeri), posizione in HELP.TXT (3 byte), lunghezza (2 byte);
-; un record con il primo byte 0 chiude l'indice. L'argomento si legge con un accesso casuale e si mostra a pagine.
-hnorm:                          ; HELPSTR -> maiuscolo, riempito con zeri fino a 12; Z se vuoto
+; ---------------------------------------------------------------- Help (.COM only): HELP.TXT + HELP.IDX
+; HELP.IDX: 17-byte records = name (12, uppercase, zero-padded), position in HELP.TXT (3 bytes), length (2 bytes);
+; a record with first byte 0 ends the index. The topic is read with a random access and shown in pages.
+hnorm:                          ; HELPSTR -> uppercase, zero-padded to 12; Z if empty
         ld hl,helpstr
         ld b,12
         ld c,0
@@ -1670,7 +1670,7 @@ hnorm:                          ; HELPSTR -> maiuscolo, riempito con zeri fino a
         or a
         ret
 
-hword_get:                      ; parola sotto il cursore -> HELPSTR (vuota se non c'e')
+hword_get:                      ; word under the cursor -> HELPSTR (empty if none)
         ld hl,helpstr
         ld (hl),0
         ld hl,(cur)
@@ -1723,7 +1723,7 @@ k_hword:
         or a
         jr nz,help_lookup
 k_htopic:
-        call refresh            ; toglie il menu a tendina
+        call refresh            ; removes the pull-down menu
         call hword_get
         ld hl,s_topicp
         ld de,helpstr
@@ -1731,10 +1731,10 @@ k_htopic:
         ld c,2
         call prompt_line
         ret c
-help_lookup:                    ; HELPSTR = argomento
+help_lookup:                    ; HELPSTR = argument
         call hnorm
         ret z
-        ld hl,(len)             ; il gap in fondo al testo e' l'area di lavoro
+        ld hl,(len)             ; the gap at the end of the text is the work area
         call gap_to_ofs
         ld hl,(gsz)
         ld de,4200
@@ -1847,7 +1847,7 @@ s_hindexn: db "INDEX",0
 s_hidx:    db "HELP    IDX"
 s_htxt:    db "HELP    TXT"
 
-hopen:                          ; HL = nome FCB (11 byte): apre il file; NZ se manca
+hopen:                          ; HL = FCB name (11 bytes): opens the file; NZ if missing
         push hl
         ld hl,fcb
         ld de,fcb+1
@@ -1867,7 +1867,7 @@ hopen:                          ; HL = nome FCB (11 byte): apre il file; NZ se m
         xor a
         ret
 
-hnext:                          ; HL = riga -> HL = riga successiva (invariata se e' l'ultima)
+hnext:                          ; HL = line -> HL = next line (unchanged if it is the last)
         push hl
 .l:     ld a,(hl)
         or a
@@ -1883,7 +1883,7 @@ hnext:                          ; HL = riga -> HL = riga successiva (invariata s
 .end:   pop hl
         ret
 
-hprev:                          ; HL = riga -> HL = riga precedente
+hprev:                          ; HL = line -> HL = previous line
         ld de,(hlpbeg)
         push hl
         or a
@@ -1903,7 +1903,7 @@ hprev:                          ; HL = riga -> HL = riga precedente
         inc hl
         ret
 
-help_pager:                     ; testo a (HSCR), terminato da 0: Su/Giu, PgSu/PgGiu o Spazio, Home, Esc chiude
+help_pager:                     ; text at (HSCR), 0-terminated: Up/Down, PgUp/PgDn or Space, Home, Esc closes
         call kw_reset
         call ptr_hide
         ld hl,(hscr)

@@ -51,7 +51,7 @@ def esc(s):
 
 
 def md(s):
-    """testo dei topic: `codice` -> Courier, il resto escapato"""
+    """topic text: `code` -> Courier, the rest escaped"""
     parts = re.split(r'(`[^`]*`)', s)
     out = ''
     for p in parts:
@@ -97,10 +97,10 @@ class Doc(BaseDocTemplate):
 
 def cover_page(c, doc):
     W, H = A4
-    # fondo
+    # background
     c.setFillColor(NAVY)
     c.rect(0, 0, W, H, stroke=0, fill=1)
-    # fasce "pixel" stile MSX
+    # MSX-style "pixel" bands
     px = 14
     pal = [BLUE, CYAN, YEL, colors.HexColor('#ff5a5a'), colors.HexColor('#7be07b'), colors.HexColor('#b57bff')]
     import random
@@ -112,12 +112,12 @@ def cover_page(c, doc):
                 c.setFillAlpha(0.20 + 0.5 * (1 - gy / 9.0))
                 c.rect(gx * px, H - (gy + 1) * px, px - 2, px - 2, stroke=0, fill=1)
     c.setFillAlpha(1)
-    # barra a colori
+    # color bar
     bw = W / len(pal)
     for i, col in enumerate(pal):
         c.setFillColor(col)
         c.rect(i * bw, H * 0.40, bw, 6, stroke=0, fill=1)
-    # titolo
+    # title
     c.setFillColor(colors.white)
     c.setFont('Helvetica-Bold', 54)
     c.drawString(30 * mm, H * 0.60, 'SamPr')
@@ -129,7 +129,7 @@ def cover_page(c, doc):
     c.setFillColor(colors.HexColor('#c8d4ff'))
     c.setFont('Helvetica', 12)
     c.drawString(30 * mm, H * 0.60 - 120, 'Editor, Z80 compiler, inline assembler and debugger — all on the MSX')
-    # finto schermo MSX
+    # fake MSX screen
     sx, sy, sw, sh = 30 * mm, H * 0.40 + 40, 150 * mm, 0
     c.setFillColor(colors.HexColor('#e9edf9'))
     c.setFont('Helvetica-Bold', 13)
@@ -144,7 +144,7 @@ def cover_page(c, doc):
     c.setFillColor(YEL)
     c.drawString(30 * mm, 28 * mm, 'PRINT "Hello MSX!"')
     c.setFillColor(colors.white)
-    # cursore lampeggiante
+    # blinking cursor
     c.rect(30 * mm + 112, 28 * mm - 1, 6, 11, stroke=0, fill=1)
 
 
@@ -241,7 +241,7 @@ def build(fn):
         story.append(Paragraph(esc(title), H1))
         story += blocks_to_flow(blocks)
         story.append(PageBreak())
-    # riferimento
+    # reference
     story.append(Paragraph('Language reference', H1))
     story.append(Paragraph("Every statement and function, grouped by category. Syntax notation: <font face='Courier'>[ ]</font> = optional, "
                            "<font face='Courier'>{ }</font> = repeatable, <font face='Courier'>|</font> = alternative. Statement and function names "
@@ -263,7 +263,7 @@ def build(fn):
             continue
         story.append(Paragraph(esc(title), H1))
         story += blocks_to_flow(blocks)
-    # indice analitico
+    # alphabetical index
     story.append(PageBreak())
     story.append(Paragraph('Keyword index', H1))
     names = sorted({n for t in TOPICS for n in t['names']}, key=lambda s: s.upper())

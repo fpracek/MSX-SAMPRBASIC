@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""Test headless dell'editor: assembla (con testo demo), esegue in openMSX (NMS-8250)
-una sequenza temporizzata di tasti / eventi mouse simulati e verifica schermo e variabili.
+"""Headless editor test: assembles (with demo text), runs in openMSX (NMS-8250)
+a timed sequence of simulated keys / mouse events and checks screen and variables.
 
-uso: python etest.py [--shots]
+usage: python etest.py [--shots]
 """
 import os
 import re
@@ -107,7 +107,7 @@ class Scenario:
     def __init__(self, syms):
         self.syms = syms
         self.steps = []
-        self.t = 12.0                  # secondi emulati: tempo per il boot
+        self.t = 12.0                  # emulated seconds: time for boot
 
     def wait(self, s):
         self.t += s
@@ -130,7 +130,7 @@ class Scenario:
         self.do(f'poke16 {self.syms[name]} {v}', wait)
 
     def pointer(self, cx, cy):
-        """posiziona il puntatore al centro della cella (cx, cy)"""
+        """places the pointer at the center of cell (cx, cy)"""
         self.poke16('mpx', cx * 8 + 3, 0.0)
         self.poke16('mpy', cy * 8 + 3, 0.1)
 
@@ -157,14 +157,14 @@ def run(sc):
     tcl = os.path.join(BUILD, 'editor.tcl')
     open(tcl, 'w').write(sc.script())
     for f in os.listdir(BUILD):
-        if f.endswith(('.txt', '.vram', '.png')):          # nessun dump vecchio deve poter essere riletto
+        if f.endswith(('.txt', '.vram', '.png')):          # no old dump must be readable again
             os.remove(os.path.join(BUILD, f))
     subprocess.run([OPENMSX, '-machine', MACHINE, '-carta', os.path.join(BUILD, 'editor.rom'),
                     '-script', tcl], timeout=300)
 
 
 def render(name):
-    """ricostruisce lo schermo (SCREEN 0 W80, 6x8 px, blink = inverso) dalla VRAM salvata"""
+    """rebuilds the screen (SCREEN 0 W80, 6x8 px, blink = inverse) from the saved VRAM"""
     from PIL import Image
     v = open(os.path.join(BUILD, name + '.vram'), 'rb').read()
     FG, BG, KW = (255, 255, 255), (36, 36, 170), (255, 255, 120)
@@ -209,7 +209,7 @@ def check(cond, msg):
 
 
 def blink_cell(bl):
-    """(riga, colonna) della cella con il bit di blink acceso"""
+    """(row, column) of the cell with the blink bit set"""
     for r, c0, b in bl:
         for k in range(8):
             if b & (0x80 >> k):
@@ -224,45 +224,45 @@ def main():
     sc = Scenario(syms)
 
     sc.dump('s1_init', shots)
-    # --- tastiera: giu x3, destra x5, scrivo, invio, scrivo
+    # --- keyboard: down x3, right x5, type, enter, type
     sc.tap(8, 0x40, 3)
     sc.tap(8, 0x80, 5)
     sc.text('XY')
     sc.dump('s2_edit', shots)
     sc.tap(7, 0x80, 1)               # Enter
     sc.text('Z')
-    sc.tap(7, 0x20, 2)               # Backspace x2 (cancella Z e l'a-capo)
+    sc.tap(7, 0x20, 2)               # Backspace x2 (deletes Z and the line break)
     sc.dump('s3_enter_bs')
-    # --- scroll verticale con la tastiera: giu x30
+    # --- vertical scroll with the keyboard: down x30
     sc.tap(8, 0x40, 30, 0.2)
     sc.dump('s4_scrollv', shots)
-    # --- scroll orizzontale: vai sulla riga 7 (lunga) e premi End
-    sc.tap(8, 0x20, 30, 0.2)           # su x30
-    sc.tap(8, 0x40, 3, 0.25)           # giu x3
+    # --- horizontal scroll: go to row 7 (long) and press End
+    sc.tap(8, 0x20, 30, 0.2)           # up x30
+    sc.tap(8, 0x40, 3, 0.25)           # down x3
     sc.tap(7, 0x40, 1)                 # SELECT = End
     sc.dump('s5_end', shots)
     sc.tap(8, 0x02, 1)                 # Home
     sc.dump('s5b_home')
-    # --- mouse (modo test)
+    # --- mouse (test mode)
     sc.poke8('mmode', 1)
     sc.pointer(79, 22)
-    sc.click(0.15)                     # freccia giu' una volta
+    sc.click(0.15)                     # down arrow once
     sc.dump('s6_down', shots)
     sc.pointer(79, 21)
-    sc.click(0.15)                     # binario sotto il pollice? (pollice in alto) -> pagina giu'
+    sc.click(0.15)                     # track below the thumb? (thumb at the top) -> page down
     sc.dump('s7_pgdn')
     sc.pointer(79, 1)
-    sc.click(0.15)                     # freccia su
+    sc.click(0.15)                     # up arrow
     sc.dump('s8_up')
-    # trascina il pollice verticale: premi sul pollice e spostalo
-    sc.pointer(79, 8)                  # dopo s8 topline=25 -> pollice a riga 2+(24*19)//70 = 8
-    sc.poke8('tm_btn', 1, 0.3)         # premo e tengo premuto sul pollice
-    sc.poke16('mpy', 14 * 8 + 3, 0.5)  # trascino il puntatore alla riga 14
+    # drag the vertical thumb: press on the thumb and move it
+    sc.pointer(79, 8)                  # after s8 topline=25 -> thumb at row 2+(24*19)//70 = 8
+    sc.poke8('tm_btn', 1, 0.3)         # press and hold on the thumb
+    sc.poke16('mpy', 14 * 8 + 3, 0.5)  # drag the pointer to row 14
     sc.dump('s9_drag')
     sc.poke8('tm_btn', 0, 0.3)
-    sc.poke16('mpy', 2 * 8 + 3, 0.3)   # a pulsante rilasciato il pollice non deve seguire
+    sc.poke16('mpy', 2 * 8 + 3, 0.3)   # with the button released the thumb must not follow
     sc.dump('s9b_released')
-    # orizzontale
+    # horizontal
     sc.pointer(78, 23)
     sc.click(0.15)
     sc.dump('s10_hright', shots)
@@ -272,14 +272,14 @@ def main():
     sc.pointer(0, 23)
     sc.click(0.15)
     sc.dump('s12_hleft')
-    sc.pointer(1, 23)                  # pagina a sinistra: hscroll 78 -> 0, il pollice torna alla colonna 1
+    sc.pointer(1, 23)                  # page left: hscroll 78 -> 0, the thumb returns to column 1
     sc.click(0.15)
     sc.dump('s12a_hhome')
     sc.poke8('tm_btn', 1, 0.3)
     sc.poke16('mpx', 40 * 8 + 3, 0.5)
     sc.dump('s12b_hdrag', shots)
     sc.poke8('tm_btn', 0, 0.3)
-    # clic nel testo
+    # click in the text
     sc.pointer(12, 6)
     sc.click(0.15)
     sc.dump('s13_click', shots)
@@ -346,7 +346,7 @@ def main():
     exp_top = 1 + -(-(12 * 70) // 19)
     check(vs['topline'] == exp_top, f'trascinamento pollice V: topline={vs["topline"]} (atteso {exp_top})')
     check(vs['mdrag'] == 1, 'mdrag=1 durante il trascinamento')
-    ti = [i for i in range(2, 22) if rows[i][79] in '# ']   # il puntatore (XOR) sul pollice lo fa sembrare uno spazio
+    ti = [i for i in range(2, 22) if rows[i][79] in '# ']   # the pointer (XOR) on the thumb makes it look like a space
     check(ti == [14], f'pollice disegnato alla riga 14: {ti}')
     rows, vs, bl = load('s9b_released')
     check(vs['topline'] == exp_top and vs['mdrag'] == 0, f'rilascio: topline={vs["topline"]} mdrag={vs["mdrag"]}')

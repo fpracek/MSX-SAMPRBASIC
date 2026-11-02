@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Debugger (OPTION DEBUG) su openMSX: compila dtests/<nome>.bas, invia i tasti di dtests/<nome>.keys
-(riga: secondi dopo l'avvio, testo) e salva gli schermi TEXT 40x24 in build/<nome>_<n>.txt.
-uso: python dtest.py nome"""
+"""Debugger (OPTION DEBUG) on openMSX: compiles dtests/<name>.bas, sends the keys from dtests/<name>.keys
+(line: seconds after startup, text) and saves the TEXT 40x24 screens to build/<name>_<n>.txt.
+usage: python dtest.py name"""
 import os, shutil, subprocess, sys
 import qtest
 from qtest import BUILD, DISK, HERE, OPENMSX
@@ -79,7 +79,7 @@ for l in open(os.path.join(HERE, 'dtests', name + '.keys')):
         lines.append('after time %.1f {dump %s_%s}' % (t, name, txt.split()[1]))
     else:
         txt = txt.replace('SPACE', ' ').replace('ENTER', chr(92) + 'r')
-        txt = txt.replace('$', chr(92) + '$')       # Tcl: "N$(1)" sarebbe una variabile
+        txt = txt.replace('$', chr(92) + '$')       # Tcl: "N$(1)" would be a variable
         lines.append('after time %.1f {type "%s"}' % (t, txt))
 lines.append('after time %.1f exit' % (last + 3))
 open(os.path.join(BUILD, 'dtest.tcl'), 'w').write('\n'.join(lines))

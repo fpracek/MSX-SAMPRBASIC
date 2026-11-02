@@ -1,8 +1,8 @@
 ; =====================================================================
-; Caricatore a catena (MSX-DOS 1/2): vive a 0C000h, fuori dalla TPA bassa che sovrascrive.
-;   ldr_load : carica il programma ldr_fn (nome FCB 8+3) a 0100h e lo avvia
-;   ldr_copy : HL = sorgente, BC = lunghezza -> copia a 0100h e avvia
-; La riga di comando (0080h) e' preparata dal chiamante.
+; Chain loader (MSX-DOS 1/2): lives at 0C000h, outside the low TPA that it overwrites.
+;   ldr_load : loads the program ldr_fn (FCB name 8+3) at 0100h and starts it
+;   ldr_copy : HL = source, BC = length -> copies to 0100h and starts
+; The command line (0080h) is prepared by the caller.
 ; =====================================================================
 LDR     equ 0C000h
         ORG LDR
@@ -28,9 +28,9 @@ ldr_main: ld hl,ldr_fn
         ld c,0Fh                ; open
         call 5
         or a
-        jp nz,0                 ; file mancante: riavvio del DOS
+        jp nz,0                 ; missing file: DOS restart
         ld hl,1
-        ld (ldr_fcb+14),hl      ; record da 1 byte
+        ld (ldr_fcb+14),hl      ; 1-byte record
         ld hl,0
         ld (ldr_fcb+33),hl
         ld (ldr_fcb+35),hl

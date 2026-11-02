@@ -1,13 +1,13 @@
 ; =====================================================================
-; Sprite (SCREEN 5-8: modo sprite 2 del V9938: 32 sprite, colore per riga, 8x8 o 16x16)
-; Indirizzi delle tabelle dai registri salvati dal BIOS (R#5, R#6, R#11), solo indirizzi a 16 bit.
+; Sprites (SCREEN 5-8: V9938 sprite mode 2: 32 sprites, color per line, 8x8 or 16x16)
+; Table addresses from the registers saved by the BIOS (R#5, R#6, R#11), 16-bit addresses only.
 ; =====================================================================
 RG1SAV  equ 0F3E0h
 RG5SAV  equ 0F3E4h
 RG6SAV  equ 0F3E5h
 RG11SAV equ 0FFEAh
 
-spr_attr:                       ; -> HL = tabella degli attributi (negli schermi 5-8 la tabella dei colori sta 200h prima)
+spr_attr:                       ; -> HL = attribute table (in screens 5-8 the color table is 200h before)
         ld a,(SCRREAL)
         cp 4
         jr nc,.reg
@@ -32,7 +32,7 @@ spr_attr:                       ; -> HL = tabella degli attributi (negli schermi
         ld h,a
         ret
 
-spr_gen:                        ; -> DE = generatore dei pattern
+spr_gen:                        ; -> DE = pattern generator
         ld a,(SCRREAL)
         cp 4
         jr nc,.reg
@@ -53,12 +53,12 @@ spr_gen:                        ; -> DE = generatore dei pattern
         sla d
         ret
 
-spr_big:                        ; Z se i sprite sono 8x8, NZ se 16x16
+spr_big:                        ; Z if sprites are 8x8, NZ if 16x16
         ld a,(RG1SAV)
         and 2
         ret
 
-rt_sprsize:                     ; HL = 0..3: bit 1 = 16x16, bit 0 = ingrandimento (registro R#1)
+rt_sprsize:                     ; HL = 0..3: bit 1 = 16x16, bit 0 = magnification (register R#1)
         call chk_spr
         ld a,l
         and 3
@@ -74,7 +74,7 @@ rt_sprsize:                     ; HL = 0..3: bit 1 = 16x16, bit 0 = ingrandiment
         ei
         ret
 
-rt_sprdef:                      ; HL = stringa del pattern (8 o 32 byte), GX1 = numero del pattern
+rt_sprdef:                      ; HL = pattern string (8 or 32 bytes), GX1 = pattern number
         push hl
         call chk_spr
         ld b,3                  ; 8x8: n * 8
@@ -104,15 +104,15 @@ rt_sprdef:                      ; HL = stringa del pattern (8 o 32 byte), GX1 = 
         call vram_set
         pop bc
         pop de                  ; stringa
-        ld a,(de)               ; lunghezza
+        ld a,(de)               ; length
         inc de
         cp c
         jr c,.cp
         ld a,c
-.cp:    ld b,a                  ; byte da copiare
+.cp:    ld b,a                  ; bytes to copy
         ld a,c
         sub b
-        ld c,a                  ; byte di riempimento
+        ld c,a                  ; padding bytes
         ld a,b
         or a
         jr z,.pad
@@ -153,7 +153,7 @@ rt_sprput:                      ; GX1 = piano (0-31), GX2 = x, GY2 = y, GCOL = c
         cp 64
         jp nc,rt_eifc
         add a,a
-        add a,a                 ; 16x16: numero di pattern * 4
+        add a,a                 ; 16x16: pattern number * 4
 .pn:    ld (S2),a
         call gcolor
         and 0Fh
@@ -178,7 +178,7 @@ rt_sprput:                      ; GX1 = piano (0-31), GX2 = x, GY2 = y, GCOL = c
         jr .go
 .hide:  xor a
         ld (S4),a
-        ld a,217                ; fuori dallo schermo
+        ld a,217                ; off-screen
 .go:    ld (S5),a               ; Y - 1
         ld a,c
         ld (S6),a
@@ -203,7 +203,7 @@ rt_sprput:                      ; GX1 = piano (0-31), GX2 = x, GY2 = y, GCOL = c
         ld a,(SCRREAL)
         cp 4
         jr nc,.m2
-        ld a,(S3)               ; modo sprite 1: il colore (con EC) e' nell'attributo
+        ld a,(S3)               ; sprite mode 1: the color (with EC) is in the attribute
         ld hl,S6
         or (hl)
         out (VDPD),a
@@ -211,7 +211,7 @@ rt_sprput:                      ; GX1 = piano (0-31), GX2 = x, GY2 = y, GCOL = c
         ret
 .m2:    xor a
         out (VDPD),a
-        pop hl                  ; tabella dei colori: attributi - 200h + piano * 16
+        pop hl                  ; color table: attributes - 200h + plane * 16
         ld de,-200h
         add hl,de
         ld a,(S1)

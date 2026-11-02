@@ -1,8 +1,8 @@
 ; =====================================================================
-; Runtime per cartucce ROM (ROMMODE): avvio dalla INIT del BIOS, mapper, file non disponibili (niente DOS)
+; Runtime for ROM cartridges (ROMMODE): started from the BIOS INIT, mapper, files unavailable (no DOS)
 ; =====================================================================
 rom_init:
-        call 0138h              ; RSLREG: slot della pagina 1 (dove sta la cartuccia) -> pagina 2
+        call 0138h              ; RSLREG: page 1 slot (where the cartridge is) -> page 2
         rrca
         rrca
         and 3
@@ -25,7 +25,7 @@ rom_init:
         call 0024h              ; ENASLT
         ld a,(rt_target)
         sub 3
-        jr c,.go                ; ROM16 / ROM32: nessun registro di banco
+        jr c,.go                ; ROM16 / ROM32: no bank register
         add a,a
         ld e,a
         ld d,0
@@ -35,7 +35,7 @@ rom_init:
         inc hl
         ld d,(hl)
         ex de,hl
-.mw:    ld e,(hl)               ; coppie (indirizzo registro, valore), 0 = fine
+.mw:    ld e,(hl)               ; pairs (register address, value), 0 = end
         inc hl
         ld d,(hl)
         inc hl

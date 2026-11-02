@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Collaudo dell'assembler in linea (qasm.asm): esegue l'overlay sull'emulatore Z80, interpreta le righe "# ..."
-prodotte e confronta i byte con quelli di sjasmplus per un corpus di istruzioni. uso: python asmtest.py [-v]"""
+"""Acceptance test of the inline assembler (qasm.asm): runs the overlay on the Z80 emulator, interprets the "# ..." lines
+it produces and compares the bytes with those of sjasmplus for a corpus of instructions. usage: python asmtest.py [-v]"""
 import os
 import re
 import subprocess
@@ -57,7 +57,7 @@ def run_overlay(ovl, text):
 
 
 def decode(out, base=BASE):
-    """righe '# ...' -> byte (risolve +k e nomi)"""
+    """'# ...' lines -> bytes (resolves +k and names)"""
     res = bytearray()
     for ln in out.split('\r\n'):
         if not ln.startswith('#'):
@@ -179,7 +179,7 @@ def corpus():
             for i in idx[:4]:
                 L.append('%s %d,%s' % (k, b, i))
     L += ['IM 0', 'IM 1', 'IM 2', 'IN A,(5)', 'OUT (5),A', 'IN B,(C)', 'IN A,(C)', 'OUT (C),B', 'OUT (C),A', 'IN H,(C)', 'OUT (C),L']
-    # formati numerici ed espressioni
+    # numeric formats and expressions
     L += ['LD A,$1F', 'LD A,0x1F', 'LD A,1FH', 'LD A,0FFH', 'LD A,%101', 'LD A,101B', "LD A,'x'", 'LD HL,$1234', 'LD HL,0x1234',
           'LD HL,1234H', 'LD HL,65535', 'LD HL,2+3', 'LD HL,10-3', 'LD HL,$+5-$', 'LD A,10+5-3', 'LD A,-5']
     L += ['DB 1,2,3', 'DB "AB",0', 'DB "a;b"', 'DW 1234,$ABCD', 'DS 3', 'DS 4,7', 'DEFB 9', 'DEFW 77', 'DEFS 2']
@@ -187,7 +187,7 @@ def corpus():
 
 
 def labeled():
-    """prove con etichette locali, EQU e salti"""
+    """tests with local labels, EQU and jumps"""
     return [
         ['start:', 'LD A,5', 'loop: DEC A', 'JR NZ,loop', 'JP loop', 'CALL loop', 'JR end', 'NOP', 'DJNZ loop', 'end: RET'],
         ['VAL EQU 7', 'LD A,VAL', 'LD B,VAL+1', 'K: EQU 300', 'LD HL,K', 'LD HL,K*1+0' if False else 'LD HL,K+2'],
@@ -238,7 +238,7 @@ def main():
             print('  ok   %s (%d byte)' % (name, len(got)))
 
     L = corpus()
-    # ogni istruzione da sola, preceduta da un'etichetta (le forme senza operandi relativi sono indipendenti)
+    # each instruction on its own, preceded by a label (forms without relative operands are independent)
     for i in range(0, len(L), 25):
         chunk = L[i:i + 25]
         text = '__ASM\n' + '\n'.join(chunk) + '\n__ENDASM\n'
@@ -253,7 +253,7 @@ def main():
             if not chunk:
                 continue
         if out is None or ref is None or decode(out) != ref or True:
-            # ripete una per una per localizzare gli errori
+            # repeat them one by one to locate the errors
             ok = out is not None and ref is not None
             if ok:
                 try:

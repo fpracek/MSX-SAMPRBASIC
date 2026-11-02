@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
-"""Test di annulla / ripeti (build ROM, NMS-8250, registro da 2 KB): battute raggruppate, Backspace,
-cancellazione di una selezione, incolla, coda di redo scartata da una nuova modifica, sostituzione
-globale come un solo passo, registro pieno (i gruppi piu' vecchi vengono scartati), voci del menu."""
+"""Undo / redo test (ROM build, NMS-8250, 2 KB log): grouped keystrokes, Backspace,
+deleting a selection, paste, redo queue discarded by a new edit, global replace
+as a single step, full log (the oldest groups are discarded), menu items."""
 import sys
 
 import etest
@@ -38,7 +38,7 @@ def shift_tap(sc, key, n):
 
 
 def check_view_h(rows, m, vs, label):
-    """come check_view ma tiene conto dello scorrimento orizzontale (hscroll)"""
+    """like check_view but takes the horizontal scroll (hscroll) into account"""
     h, top = vs['hscroll'], vs['topline']
     bad = []
     for r in range(1, 23):
@@ -67,7 +67,7 @@ def main():
         check_view(rows, m, vs['topline'], sel, label)
         return rows, vs
 
-    # ---- A-C: battute in un solo gruppo
+    # ---- A-C: keystrokes in a single group
     sc.text('Hello', 1.0)
     sc.dump('u1_typed')
     chord(sc, *UNDO)
@@ -75,7 +75,7 @@ def main():
     chord(sc, *REDO)
     sc.dump('u3_redo')
     chord(sc, *UNDO)
-    # ---- D: due gruppi separati da un movimento
+    # ---- D: two groups separated by a movement
     sc.text('AB', 0.8)
     sc.tap(*RIGHT, 1, 0.4)
     sc.text('CD', 0.8)
@@ -89,19 +89,19 @@ def main():
     sc.dump('u7_redo_both')
     chord(sc, *UNDO)
     chord(sc, *UNDO)
-    # ---- E: Backspace x3 in un solo gruppo
+    # ---- E: Backspace x3 in a single group
     sc.tap(*RIGHT, 5, 0.3)
     sc.tap(*BS, 3, 0.3)
     sc.dump('u8_bs')
     chord(sc, *UNDO)
     sc.dump('u9_undo_bs')
-    # ---- F: cancellazione di una selezione
+    # ---- F: deleting a selection
     shift_tap(sc, RIGHT, 4)
     sc.tap(*DEL, 1, 0.6)
     sc.dump('u10_seldel')
     chord(sc, *UNDO)
     sc.dump('u11_undo_seldel')
-    # ---- G: incolla
+    # ---- G: paste
     sc.tap(*HOME, 1, 0.4)
     shift_tap(sc, RIGHT, 5)
     chord(sc, *CTRL_C)
@@ -110,14 +110,14 @@ def main():
     sc.dump('u12_paste')
     chord(sc, *UNDO)
     sc.dump('u13_undo_paste')
-    # ---- H: una nuova modifica scarta la coda di redo
+    # ---- H: a new edit discards the redo queue
     sc.text('X', 0.8)
     chord(sc, *UNDO)
     sc.text('Y', 0.8)
     chord(sc, *REDO)
     sc.dump('u14_redo_discarded')
     chord(sc, *UNDO)
-    # ---- I: sostituzione globale = un passo
+    # ---- I: global replace = one step
     chord(sc, *CTRL_T)
     sc.text('riga\\r', 0.8)
     sc.text('ROW\\r', 1.0)
@@ -128,9 +128,9 @@ def main():
     chord(sc, *REDO, gap=2.0)
     sc.dump('u17_redo_replace')
     chord(sc, *UNDO, gap=2.0)
-    # ---- J: registro pieno: Backspace x300 (record da 8 byte, capienza 256)
+    # ---- J: full log: Backspace x300 (8-byte records, capacity 256)
     chord(sc, *CTRL_F)
-    sc.tap(*BS, 4, 0.25)                # cancella 'riga' precaricato
+    sc.tap(*BS, 4, 0.25)                # delete the preloaded 'riga'
     sc.text('009 riga\\r', 1.5)
     sc.tap(*SELECT, 1, 0.6)
     sc.tap(*BS, 300, 0.2)
@@ -140,7 +140,7 @@ def main():
     sc.dump('u19_undo_overflow')
     chord(sc, *UNDO)
     sc.dump('u20_nothing')
-    # ---- K: dal menu Edit
+    # ---- K: from the Edit menu
     sc.text('Z', 0.8)
     sc.tap(*ESC, 1, 0.4)
     sc.tap(*RIGHT, 1, 0.4)
@@ -153,7 +153,7 @@ def main():
 
     etest.run(sc)
 
-    # ---------------------------------------------------------- verifica
+    # ---------------------------------------------------------- verification
     print('--- u1-u3 battute: un solo passo')
     m.replace((1, 0), (1, 0), 'Hello')
     rows, vs = view('u1_typed', 'u1')
@@ -227,7 +227,7 @@ def main():
         if i < 0:
             continue
         if ln == 2 and i < 5:
-            continue                       # la corrispondenza della riga 2 inizia prima del cursore (col 5)
+            continue                       # the match on row 2 starts before the cursor (col 5)
         repl.lines[ln - 1] = s[:i] + 'ROW' + s[i + 4:]
         count += 1
     saved, m.lines = m.lines, repl.lines
@@ -248,7 +248,7 @@ def main():
     after = text[:c - 300] + text[c:]
     rows, vs = L('u18_bs300')
     check(vs['len'] == len(text) - 300 and vs['cur'] == c - 300, f'len={vs["len"]} (atteso {len(text) - 300}) cur={vs["cur"]}')
-    # restano gli ultimi 300-256 = 44 record: rifanno comparire 44 caratteri (i piu' lontani dal cursore)
+    # the last 300-256 = 44 records remain: they bring back 44 characters (the ones farthest from the cursor)
     keep = 300 - 256
     m.lines = (text[:c - 256] + text[c:]).split('\n')
     rows, vs = L('u19_undo_overflow')

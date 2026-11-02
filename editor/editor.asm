@@ -1,12 +1,12 @@
 ; =====================================================================
-; MSXQB editor di testo - prototipo (ROM 16K a 4000h, MSX2, SCREEN 0 W80)
+; MSXQB text editor - prototype (16K ROM at 4000h, MSX2, SCREEN 0 W80)
 ;
-; Schermo (80x24):  riga 0      barra del titolo (video inverso)
-;                   righe 1-22  testo (colonne 0-78) + barra verticale (col 79)
-;                   riga 23     barra orizzontale
-; Buffer: gap buffer in RAM, offset logici; LF = fine riga, max 254 colonne.
-; Mouse: movimento+pulsanti via BIOS (GTPAD/GTTRIG) oppure, con mmode=1,
-;        dai byte tm_dx/tm_dy/tm_btn (per i test automatici).
+; Screen (80x24):  row 0      title bar (inverse video)
+;                   rows 1-22  text (columns 0-78) + vertical bar (col 79)
+;                   row 23     horizontal bar
+; Buffer: gap buffer in RAM, logical offsets; LF = end of line, max 254 columns.
+; Mouse: movement+buttons via BIOS (GTPAD/GTTRIG) or, with mmode=1,
+;        from the bytes tm_dx/tm_dy/tm_btn (for automated tests).
 ; =====================================================================
 CHGET   equ 009Fh
 CHSNS   equ 009Ch
@@ -25,9 +25,9 @@ VDPC    equ 99h
 EXPTBL  equ 0FCC1h
 CALSLT  equ 001Ch
 
-RAMB    equ 0C000h              ; variabili in pagina 3 (sempre RAM, visibile al debugger)
+RAMB    equ 0C000h              ; variables in page 3 (always RAM, visible to the debugger)
 
-        MACRO BIOS addr         ; chiama una routine del BIOS (da DOS via CALSLT)
+        MACRO BIOS addr         ; call a BIOS routine (from DOS via CALSLT)
         IFDEF COM
         ld ix,addr
         call bioscall
@@ -38,12 +38,12 @@ RAMB    equ 0C000h              ; variabili in pagina 3 (sempre RAM, visibile al
 
 LF      equ 0Ah
 NAMT    equ 0000h               ; name table
-BLKT    equ 0800h               ; blink table (10 byte per riga)
+BLKT    equ 0800h               ; blink table (10 bytes per row)
 PATT    equ 1000h               ; pattern table
 VCOLS   equ 79
 VROWS   equ 22
-TV      equ 20                  ; celle di binario verticale (righe 2..21)
-TH      equ 77                  ; celle di binario orizzontale (colonne 1..77)
+TV      equ 20                  ; vertical track cells (rows 2..21)
+TH      equ 77                  ; horizontal scrollbar track cells (columns 1..77)
 MAXCOL  equ 254
 HMAX    equ MAXCOL-VCOLS+1      ; massimo scroll orizzontale (176)
 KWCOL   equ 0B4h               ; parole chiave: giallo chiaro su blu
@@ -52,76 +52,76 @@ MPAD    equ 12                  ; GTPAD: 12 = mouse porta 1 (16 = porta 2)
 
         IFDEF COM
 BUF     equ 3F00h               ; gap buffer: 3A00h-BFFFh (TPA, pagine 0-2)
-UNDO    equ RAMB+0460h          ; registro di annullamento: C460h-CFFFh
+UNDO    equ RAMB+0460h          ; undo log: C460h-CFFFh
 UNDOSZ  equ 0BA0h
-CLIP    equ UNDO+UNDOSZ         ; clipboard: D000h fino a (0006h)-0300h
+CLIP    equ UNDO+UNDOSZ         ; clipboard: D000h up to (0006h)-0300h
         ELSE
-BUF     equ RAMB+0460h          ; gap buffer (fino a bufend)
-UNDO    equ 0DE00h              ; registro di annullamento di 2 KB (solo build ROM)
+BUF     equ RAMB+0460h          ; gap buffer (up to bufend)
+UNDO    equ 0DE00h              ; 2 KB undo log (ROM build only)
 UNDOSZ  equ 0800h
-CLIP    equ 0E600h              ; clipboard di 2.5 KB (solo build ROM)
+CLIP    equ 0E600h              ; 2.5 KB clipboard (ROM build only)
         ENDIF
 
 ; ---- RAM
-kwf     equ RAMB+0400h              ; 10 byte: flag di colore della riga (un bit per colonna)
-kwword  equ RAMB+040Ah              ; 16 byte: parola in esame (maiuscola)
+kwf     equ RAMB+0400h              ; 10 bytes: row color flags (one bit per column)
+kwword  equ RAMB+040Ah              ; 16 bytes: word under examination (uppercase)
 kwptr   equ RAMB+041Ah              ; w
-kwq     equ RAMB+041Ch              ; b  dentro una stringa tra virgolette
+kwq     equ RAMB+041Ch              ; b  inside a quoted string
 kwlen   equ RAMB+041Dh              ; b
 kwcol   equ RAMB+041Eh              ; b
-curch   equ RAMB+041Fh              ; b  carattere sotto il cursore
-cph     equ RAMB+0420h              ; b  fase del cursore (1 = visibile)
-blcnt   equ RAMB+0421h              ; b  contatore di quadri
-curdr   equ RAMB+0422h              ; b  il glifo del cursore e' disegnato
-compiled equ RAMB+0424h             ; b  NOME.COM e' la compilazione del testo attuale (marcatore " +" dal programma)
-onfile  equ RAMB+0425h              ; b  il testo corrisponde a un file su disco (caricato o salvato)
-oldsz   equ RAMB+0427h              ; w  dimensione del file prima di una sovrascrittura in posto
-inplace equ RAMB+0429h              ; b  il salvataggio sovrascrive il file esistente
-cmdok   equ RAMB+0426h              ; b  la riga di comando aveva il marcatore " +"
-sw      equ RAMB+0430h              ; b  larghezza dello schermo: 80 (MSX2) o 40 (MSX1)
-swm1    equ RAMB+0431h              ; b  sw-1 (colonna della barra verticale = VCOLS)
-swm2    equ RAMB+0432h              ; b  sw-2 (colonna della freccia destra)
-thv     equ RAMB+0433h              ; b  sw-3 (celle del binario orizzontale)
-m2flag  equ RAMB+0434h              ; b  0 = MSX1 (TMS9918: niente tabella di blink, R#12/13/14), altrimenti MSX2 o superiore
+curch   equ RAMB+041Fh              ; b  character under the cursor
+cph     equ RAMB+0420h              ; b  cursor phase (1 = visible)
+blcnt   equ RAMB+0421h              ; b  frame counter
+curdr   equ RAMB+0422h              ; b  the cursor glyph is drawn
+compiled equ RAMB+0424h             ; b  NOME.COM is the compilation of the current text (" +" marker from the program)
+onfile  equ RAMB+0425h              ; b  the text matches a file on disk (loaded or saved)
+oldsz   equ RAMB+0427h              ; w  file size before an in-place overwrite
+inplace equ RAMB+0429h              ; b  saving overwrites the existing file
+cmdok   equ RAMB+0426h              ; b  the command line had the " +" marker
+sw      equ RAMB+0430h              ; b  screen width: 80 (MSX2) or 40 (MSX1)
+swm1    equ RAMB+0431h              ; b  sw-1 (vertical bar column = VCOLS)
+swm2    equ RAMB+0432h              ; b  sw-2 (right arrow column)
+thv     equ RAMB+0433h              ; b  sw-3 (horizontal scrollbar track cells)
+m2flag  equ RAMB+0434h              ; b  0 = MSX1 (TMS9918: no blink table, R#12/13/14), otherwise MSX2 or higher
 vcolsw  equ RAMB+0435h              ; w  VCOLS = sw-1
 vcw1    equ RAMB+0437h              ; w  VCOLS-1
 nvcw1   equ RAMB+0439h              ; w  -(VCOLS-1)
 hmaxw   equ RAMB+043Bh              ; w  HMAX (massimo scroll orizzontale)
 hmax1w  equ RAMB+043Dh              ; w  HMAX+1
-pattb   equ RAMB+043Fh              ; w  tabella dei pattern: 1000h (80 colonne) o 0800h (40)
-mxmax   equ RAMB+0441h              ; w  limite x del mouse = sw*8
-rbm2    equ RAMB+0443h              ; w  indirizzo di rowbuf+sw-2
-helpstr equ RAMB+0448h              ; 16 byte: argomento di help (maiuscolo, 12 caratteri con riempimento a zero)
-hlptop  equ RAMB+0458h              ; w  prima riga visibile del testo di help
-hlpbeg  equ RAMB+045Ah              ; w  inizio del testo di help
-hscr    equ RAMB+045Ch              ; w  area di lavoro (nel gap) con il testo di help
+pattb   equ RAMB+043Fh              ; w  pattern table: 1000h (80 columns) or 0800h (40)
+mxmax   equ RAMB+0441h              ; w  mouse x limit = sw*8
+rbm2    equ RAMB+0443h              ; w  address of rowbuf+sw-2
+helpstr equ RAMB+0448h              ; 16 bytes: help topic (uppercase, 12 characters zero-padded)
+hlptop  equ RAMB+0458h              ; w  first visible row of the help text
+hlpbeg  equ RAMB+045Ah              ; w  start of the help text
+hscr    equ RAMB+045Ch              ; w  work area (in the gap) with the help text
 isdos2  equ RAMB+045Eh              ; b  1 = MSX-DOS 2 (directory e variabili d'ambiente)
-kutmp   equ RAMB+0445h              ; w  JIFFY d'inizio dell'attesa dei tasti
+kutmp   equ RAMB+0445h              ; w  JIFFY at the start of the key wait
 modal   equ RAMB+0447h              ; b  1 = finestra modale (About): i clic vanno a modal_click
-kwnext  equ RAMB+0423h              ; b  prossima riga schermo (0..) da colorare nei tempi morti (VROWS = fatto)
-cur     equ RAMB+0000h              ; w  offset logico del cursore
-len     equ RAMB+0002h              ; w  lunghezza del testo
-gs      equ RAMB+0004h              ; w  inizio gap (offset logico)
+kwnext  equ RAMB+0423h              ; b  next screen row (0..) to color during idle time (VROWS = done)
+cur     equ RAMB+0000h              ; w  logical offset of the cursor
+len     equ RAMB+0002h              ; w  text length
+gs      equ RAMB+0004h              ; w  gap start (logical offset)
 gsz     equ RAMB+0006h              ; w  dimensione gap
-top     equ RAMB+0008h              ; w  offset della prima riga visibile
-topline equ RAMB+000Ah              ; w  numero (1..) della prima riga visibile
-curline equ RAMB+000Ch              ; w  riga del cursore
-nlines  equ RAMB+000Eh              ; w  righe totali
-hscroll equ RAMB+0010h              ; w  colonna di sinistra visibile
-wantcol equ RAMB+0012h              ; w  colonna "desiderata" per su/giu
+top     equ RAMB+0008h              ; w  offset of the first visible row
+topline equ RAMB+000Ah              ; w  number (1..) of the first visible row
+curline equ RAMB+000Ch              ; w  cursor row
+nlines  equ RAMB+000Eh              ; w  total rows
+hscroll equ RAMB+0010h              ; w  leftmost visible column
+wantcol equ RAMB+0012h              ; w  "desired" column for up/down
 mpx     equ RAMB+0014h              ; w  mouse x (pixel 0..639)
 mpy     equ RAMB+0016h              ; w  mouse y (pixel 0..191)
 mprev   equ RAMB+0018h
-mdrag   equ RAMB+0019h              ; 0 niente, 1 trascina pollice V, 2 pollice H, 3 ripetizione
+mdrag   equ RAMB+0019h              ; 0 none, 1 drag V thumb, 2 H thumb, 3 repeat
 mact    equ RAMB+001Ah
 mtimer  equ RAMB+001Bh
-mcx     equ RAMB+001Ch              ; cella del puntatore
+mcx     equ RAMB+001Ch              ; pointer cell
 mcy     equ RAMB+001Dh
 mshown  equ RAMB+001Eh
 mactive equ RAMB+001Fh
-blx     equ RAMB+0020h              ; cella del cursore lampeggiante (FF = nessuna)
+blx     equ RAMB+0020h              ; blinking cursor cell (FF = none)
 bly     equ RAMB+0021h
-dirty   equ RAMB+0022h              ; bit0 = testo da ridisegnare
+dirty   equ RAMB+0022h              ; bit0 = text needs redrawing
 mmode   equ RAMB+0023h              ; 0 = BIOS, 1 = test
 tm_dx   equ RAMB+0024h
 tm_dy   equ RAMB+0025h
@@ -145,75 +145,75 @@ sc_r    equ RAMB+003Dh              ; w
 sc_acc  equ RAMB+003Fh              ; w
 sc_rem  equ RAMB+0041h              ; w
 sc_res  equ RAMB+0043h              ; w
-numtmp  equ RAMB+0045h              ; 6 byte
-gpa     equ RAMB+004Ch              ; w  indirizzo fisico dell'inizio gap (FFFF = nessun gap)
-gpb     equ RAMB+004Eh              ; w  indirizzo fisico della fine gap
-rowbuf  equ RAMB+0050h              ; 96 byte
-bufend  equ RAMB+00B0h              ; w  ultimo byte del buffer (sentinella 0)
-bufsz   equ RAMB+00B2h              ; w  dimensione del buffer
-modified equ RAMB+00B4h             ; b  testo modificato dall'ultimo salvataggio
-pendkey equ RAMB+00B5h              ; b  tasto in attesa di conferma
+numtmp  equ RAMB+0045h              ; 6 bytes
+gpa     equ RAMB+004Ch              ; w  physical address of the gap start (FFFF = no gap)
+gpb     equ RAMB+004Eh              ; w  physical address of the gap end
+rowbuf  equ RAMB+0050h              ; 96 bytes
+bufend  equ RAMB+00B0h              ; w  last byte of the buffer (sentinel 0)
+bufsz   equ RAMB+00B2h              ; w  buffer size
+modified equ RAMB+00B4h             ; b  text modified since the last save
+pendkey equ RAMB+00B5h              ; b  key awaiting confirmation
 csrsave equ RAMB+00B6h              ; b  CSRSW originale (ripristinato all'uscita)
 ioerr   equ RAMB+00B7h              ; b
-msgptr  equ RAMB+00B8h              ; w  messaggio da mostrare nel titolo (0 = nessuno)
-iop     equ RAMB+00BAh              ; w  puntatore di scrittura in iobuf
-lcol    equ RAMB+00BCh              ; b  colonna corrente durante il caricamento
-nbytes  equ RAMB+00BDh              ; w  byte letti/scritti
-fname   equ RAMB+00C0h              ; 16 byte, nome file 0-terminato
-fcb     equ RAMB+00D0h              ; 37 byte
-msgbuf  equ RAMB+00F8h              ; 64 byte (messaggi composti)
-iobuf   equ RAMB+0140h              ; 512 byte per i trasferimenti file
+msgptr  equ RAMB+00B8h              ; w  message to show in the title (0 = none)
+iop     equ RAMB+00BAh              ; w  write pointer into iobuf
+lcol    equ RAMB+00BCh              ; b  current column during loading
+nbytes  equ RAMB+00BDh              ; w  bytes read/written
+fname   equ RAMB+00C0h              ; 16 bytes, 0-terminated file name
+fcb     equ RAMB+00D0h              ; 37 bytes
+msgbuf  equ RAMB+00F8h              ; 64 bytes (composed messages)
+iobuf   equ RAMB+0140h              ; 512 bytes for file transfers
 IOSZ    equ 512
-selanc  equ RAMB+0340h              ; w  ancora della selezione (FFFF = nessuna)
-cliplen equ RAMB+0342h              ; w  byte nella clipboard
-clipsz  equ RAMB+0344h              ; w  capacita' della clipboard
-selps   equ RAMB+0346h              ; w  selezione: indirizzi fisici (per il disegno)
+selanc  equ RAMB+0340h              ; w  selection anchor (FFFF = none)
+cliplen equ RAMB+0342h              ; w  bytes in the clipboard
+clipsz  equ RAMB+0344h              ; w  clipboard capacity
+selps   equ RAMB+0346h              ; w  selection: physical addresses (for drawing)
 selpe   equ RAMB+0348h              ; w
-selact  equ RAMB+034Ah              ; b  selezione presente durante il disegno
-gtgt    equ RAMB+034Ch              ; w  destinazione del gap
-tgtrow  equ RAMB+034Eh              ; b  cella bersaglio (riga 1..22)
-tgtcol  equ RAMB+034Fh              ; b  cella bersaglio (colonna 0..78)
+selact  equ RAMB+034Ah              ; b  selection present while drawing
+gtgt    equ RAMB+034Ch              ; w  gap destination
+tgtrow  equ RAMB+034Eh              ; b  target cell (row 1..22)
+tgtcol  equ RAMB+034Fh              ; b  target cell (column 0..78)
 menuopen equ RAMB+0350h             ; b  menu aperto (0 = nessuno, 1..NMENU)
 menusel equ RAMB+0351h              ; b  voce evidenziata
-mw      equ RAMB+0352h              ; b  larghezza del riquadro
-mn      equ RAMB+0353h              ; b  numero di voci
-mx0     equ RAMB+0354h              ; b  colonna del riquadro
-mi      equ RAMB+0355h              ; b  voce in corso di disegno
-mrec    equ RAMB+0356h              ; w  puntatore alle voci
-MENUW   equ 6                       ; larghezza di ogni titolo nella barra
+mw      equ RAMB+0352h              ; b  box width
+mn      equ RAMB+0353h              ; b  number of entries
+mx0     equ RAMB+0354h              ; b  box column
+mi      equ RAMB+0355h              ; b  entry currently being drawn
+mrec    equ RAMB+0356h              ; w  pointer to the entries
+MENUW   equ 6                       ; width of each title in the bar
 NMENU   equ 5
-srchstr equ RAMB+0360h              ; 33 byte: testo cercato (0-terminato)
-replstr equ RAMB+0380h              ; 33 byte: testo sostitutivo
-casestr equ RAMB+03A0h              ; 16 byte: etichetta "Match case: off/on"
-srchlow equ RAMB+03B0h              ; 33 byte: copia del testo cercato (minuscolo se si ignora la differenza)
+srchstr equ RAMB+0360h              ; 33 bytes: search text (0-terminated)
+replstr equ RAMB+0380h              ; 33 bytes: replacement text
+casestr equ RAMB+03A0h              ; 16 bytes: "Match case: off/on" label
+srchlow equ RAMB+03B0h              ; 33 bytes: copy of the search text (lowercase if case is ignored)
 mcase   equ RAMB+03D2h              ; b  1 = maiuscole/minuscole distinte
-slen    equ RAMB+03D3h              ; b  lunghezza del testo cercato
-rlen    equ RAMB+03D4h              ; b  lunghezza del testo sostitutivo
-smask   equ RAMB+03D5h              ; b  20h = ignora il caso, 0 = lo distingue
-swrap   equ RAMB+03D6h              ; b  la ricerca ha girato intorno
-rall    equ RAMB+03D7h              ; b  sostituisci tutto senza chiedere
-spos    equ RAMB+03D8h              ; w  inizio dell'intervallo di ricerca
-slim    equ RAMB+03DAh              ; w  fine (esclusa) dell'intervallo
-sdelta  equ RAMB+03DCh              ; w  scarto fisico dell'intervallo
-rcount  equ RAMB+03DEh              ; w  sostituzioni fatte
-insn    equ RAMB+03E0h              ; w  byte da inserire
-pdst    equ RAMB+03E2h              ; w  prompt di riga: destinazione
-pprm    equ RAMB+03E4h              ; w  prompt di riga: testo del prompt
+slen    equ RAMB+03D3h              ; b  length of the search text
+rlen    equ RAMB+03D4h              ; b  length of the replacement text
+smask   equ RAMB+03D5h              ; b  20h = ignore case, 0 = match case
+swrap   equ RAMB+03D6h              ; b  the search wrapped around
+rall    equ RAMB+03D7h              ; b  replace all without asking
+spos    equ RAMB+03D8h              ; w  start of the search range
+slim    equ RAMB+03DAh              ; w  end (exclusive) of the range
+sdelta  equ RAMB+03DCh              ; w  physical offset of the interval
+rcount  equ RAMB+03DEh              ; w  replacements made
+insn    equ RAMB+03E0h              ; w  bytes to insert
+pdst    equ RAMB+03E2h              ; w  line prompt: destination
+pprm    equ RAMB+03E4h              ; w  line prompt: prompt text
 pmax    equ RAMB+03E6h              ; b
-pflag   equ RAMB+03E7h              ; b  bit0 spazi, bit1 parte dal testo attuale, bit2 invio vuoto accettato
-plen    equ RAMB+00BEh              ; b  lunghezza del testo digitato nel prompt
-ucur    equ RAMB+03E8h              ; w  fine dei record applicati (prossimo undo = quello prima)
-uend    equ RAMB+03EAh              ; w  fine dei record validi (oltre ucur: redo)
-uglue   equ RAMB+03ECh              ; b  il prossimo record si unisce al gruppo precedente
-ukind   equ RAMB+03EDh              ; b  tipo della serie di battute in corso (0 = nessuna)
-unolog  equ RAMB+03EEh              ; b  durante undo/redo non si registra
-utype   equ RAMB+03EFh              ; b  tipo del record da scrivere (1 inserimento, 2 cancellazione)
+pflag   equ RAMB+03E7h              ; b  bit0 spaces, bit1 start from the current text, bit2 empty Enter accepted
+plen    equ RAMB+00BEh              ; b  length of the text typed in the prompt
+ucur    equ RAMB+03E8h              ; w  end of the applied records (next undo = the one before)
+uend    equ RAMB+03EAh              ; w  end of the valid records (beyond ucur: redo)
+uglue   equ RAMB+03ECh              ; b  the next record joins the previous group
+ukind   equ RAMB+03EDh              ; b  type of the keystroke run in progress (0 = none)
+unolog  equ RAMB+03EEh              ; b  no recording during undo/redo
+utype   equ RAMB+03EFh              ; b  type of the record to write (1 insertion, 2 deletion)
 uoff    equ RAMB+03F0h              ; w
 ulen    equ RAMB+03F2h              ; w
 usrc    equ RAMB+03F4h              ; w
-urec    equ RAMB+03F6h              ; w  record in lavorazione
-errline equ RAMB+03F8h              ; w  riga dell'errore di compilazione (0 = nessuno)
-errcode equ RAMB+03FAh              ; b  codice dell'errore
+urec    equ RAMB+03F6h              ; w  record being worked on
+errline equ RAMB+03F8h              ; w  compile error row (0 = none)
+errcode equ RAMB+03FAh              ; b  error code
 
         DEVICE NOSLOT64K
         IFDEF COM
@@ -228,11 +228,11 @@ errcode equ RAMB+03FAh              ; b  codice dell'errore
 
 start:
         IFDEF COM
-        ld hl,(0006h)           ; base del BDOS = fine della TPA (stack sotto di essa)
+        ld hl,(0006h)           ; BDOS base = end of the TPA (stack below it)
         ld sp,hl
         ld hl,0BFFFh
         ld (bufend),hl
-        ld hl,(0006h)           ; clipboard: dal fondo dei dati fino a 768 byte sotto il BDOS
+        ld hl,(0006h)           ; clipboard: from the end of the data up to 768 bytes below the BDOS
         ld de,-(CLIP+0300h)
         add hl,de
         bit 7,h
@@ -241,7 +241,7 @@ start:
 .cs:    ld (clipsz),hl
         ld a,(CSRSW)
         ld (csrsave),a
-        call getcmd             ; nome file dalla riga di comando
+        call getcmd             ; file name from the command line
         ELSE
         di
         ld sp,0F380h
@@ -251,7 +251,7 @@ start:
         ld hl,0A00h
         ld (clipsz),hl
         xor a
-        ld (fname),a            ; (la RAM all'avvio non e' a zero)
+        ld (fname),a            ; (RAM at startup is not zeroed)
         ENDIF
         xor a
         ld (CSRSW),a
@@ -261,7 +261,7 @@ start:
         ld (LINLEN),a
         BIOS INITXT
         BIOS ERAFNK
-        ld hl,0F87Fh            ; F1-F4: un solo carattere ciascuno (aprono i menu File, Edit, Find, Help)
+        ld hl,0F87Fh            ; F1-F4: a single character each (open the File, Edit, Find, Help menus)
         ld de,fkcodes
         ld b,4
 .fk:    ld a,(de)
@@ -275,13 +275,13 @@ start:
         inc h
 .fn:    inc de
         djnz .fk
-        ld hl,0F8BFh            ; stringa del tasto F5 = 15h (un solo carattere gestito dall'editor)
+        ld hl,0F8BFh            ; F5 key string = 15h (a single character handled by the editor)
         ld (hl),15h
         inc hl
         ld (hl),0
-        call keys_up            ; il tasto premuto per uscire dal programma puo' essere ancora giu': non deve ripetersi nel testo
+        call keys_up            ; the key pressed to exit the program may still be down: it must not repeat in the text
         IFDEF COM
-        ld hl,0F8CFh            ; F6 (Shift+F1): menu Help + "W" = aiuto sulla parola sotto il cursore
+        ld hl,0F8CFh            ; F6 (Shift+F1): Help menu + "W" = help on the word under the cursor
         ld (hl),0Ah
         inc hl
         ld (hl),'W'
@@ -300,7 +300,7 @@ start:
         inc hl
         ld (hl),0
         ENDIF
-        BIOS KILBUF             ; scarta i tasti in attesa (ripetizioni, F5 del lancio precedente)
+        BIOS KILBUF             ; discard pending keys (repeats, F5 from the previous launch)
         call vdp_init
         call font_load
         call blink_clear
@@ -330,7 +330,7 @@ main:   halt
         jr main
 
         IFDEF COM
-bioscall:                       ; chiamata BIOS (IX = indirizzo) dalla RAM di MSX-DOS
+bioscall:                       ; BIOS call (IX = address) from MSX-DOS RAM
         ld iy,(EXPTBL-1)
         call CALSLT
         ei
@@ -338,7 +338,7 @@ bioscall:                       ; chiamata BIOS (IX = indirizzo) dalla RAM di MS
         ENDIF
 
 ; ---------------------------------------------------------------- VDP
-vsetw:                          ; HL = indirizzo VRAM (scrittura); clobbera A
+vsetw:                          ; HL = VRAM address (write); clobbers A
         di
         ld a,l
         out (VDPC),a
@@ -349,7 +349,7 @@ vsetw:                          ; HL = indirizzo VRAM (scrittura); clobbera A
         ei
         ret
 
-vsetr:                          ; HL = indirizzo VRAM (lettura); clobbera A
+vsetr:                          ; HL = VRAM address (read); clobbers A
         di
         ld a,l
         out (VDPC),a
@@ -361,7 +361,7 @@ vsetr:                          ; HL = indirizzo VRAM (lettura); clobbera A
         nop
         ret
 
-width_init:                      ; versione MSX (byte 002Dh): 80 colonne su MSX2, 40 su MSX1; parametri di layout
+width_init:                      ; MSX version (byte 002Dh): 80 columns on MSX2, 40 on MSX1; layout parameters
         IFDEF COM
         ld hl,002Dh
         ld a,(EXPTBL)
@@ -421,13 +421,13 @@ width_init:                      ; versione MSX (byte 002Dh): 80 colonne su MSX2
         ret
 
 vdp_init:
-        ld a,0F4h               ; R#7: testo 15 su blu
+        ld a,0F4h               ; R#7: text 15 on blue
         out (VDPC),a
         ld a,87h
         out (VDPC),a
         ld a,(m2flag)
         or a
-        ret z                   ; MSX1: niente R#12/R#13/R#14 (i numeri sopra il 7 si sovrapporrebbero ai registri 0-7)
+        ret z                   ; MSX1: no R#12/R#13/R#14 (numbers above 7 would overlap registers 0-7)
         xor a                   ; R#14 = 0
         out (VDPC),a
         ld a,8Eh
@@ -436,13 +436,13 @@ vdp_init:
         out (VDPC),a
         ld a,8Ch
         out (VDPC),a
-        ld a,KWBLINK            ; R#13: nessuna alternanza, i caratteri flaggati restano nel colore alternativo
+        ld a,KWBLINK            ; R#13: no alternation, flagged characters stay in the alternate color
         out (VDPC),a
         ld a,8Dh
         out (VDPC),a
         ret
 
-font_load:                      ; 128-255 = copie negate di 0-127 (font gia' in VRAM da INITXT), glifi 1-5 propri
+font_load:                      ; 128-255 = inverted copies of 0-127 (font already in VRAM from INITXT), glyphs 1-5 custom
         ld hl,(pattb)
         ld de,1024
         add hl,de
@@ -452,12 +452,12 @@ font_load:                      ; 128-255 = copie negate di 0-127 (font gia' in 
 .cp:    push af
         push hl
         push de
-        call vsetr              ; legge il glifo sorgente
+        call vsetr              ; read the source glyph
         ld hl,rowbuf
         ld b,8
         ld c,VDPD
         inir
-        pop hl                  ; HL = destinazione
+        pop hl                  ; HL = destination
         push hl
         call vsetw
         ld hl,rowbuf
@@ -490,7 +490,7 @@ font_load:                      ; 128-255 = copie negate di 0-127 (font gia' in 
         add hl,hl
         ld de,(pattb)
         add hl,de
-        ex de,hl                ; DE = indirizzo normale
+        ex de,hl                ; DE = normal address
         pop hl                  ; HL = glifo
         push hl
         push de
@@ -512,7 +512,7 @@ font_load:                      ; 128-255 = copie negate di 0-127 (font gia' in 
         djnz .g
         ret
 
-gl_write:                       ; HL = 8 byte, DE = indirizzo VRAM, A = maschera xor
+gl_write:                       ; HL = 8 bytes, DE = VRAM address, A = xor mask
         ld c,a
         push hl
         ex de,hl
@@ -536,14 +536,14 @@ glyphs: db 000h,000h,030h,078h,0FCh,000h,000h,000h     ; 1 freccia su
         db 030h,030h,030h,030h,030h,030h,030h,030h     ; 7 linea verticale
         db 000h,000h,000h,03Ch,03Ch,030h,030h,030h     ; 8 angolo alto-sinistra
         db 000h,000h,000h,0F0h,0F0h,030h,030h,030h     ; 9 angolo alto-destra
-        db 000h,000h,000h,000h,000h,000h,000h,000h     ; 10 (vuoto, e' LF)
+        db 000h,000h,000h,000h,000h,000h,000h,000h     ; 10 (empty, it is LF)
         db 030h,030h,030h,03Ch,03Ch,000h,000h,000h     ; 11 angolo basso-sinistra
         db 030h,030h,030h,0F0h,0F0h,000h,000h,000h     ; 12 angolo basso-destra
 
 blink_clear:
         ld a,(m2flag)
         or a
-        jr z,.nb                ; MSX1: a 0800h c'e' la tabella dei pattern
+        jr z,.nb                ; MSX1: the pattern table is at 0800h
         ld hl,BLKT
         call vsetw
         ld b,240
@@ -561,7 +561,7 @@ blink_clear:
         ld (kwnext),a
         ret
 
-cell_addr:                      ; D = riga, E = colonna -> HL; clobbera D, BC
+cell_addr:                      ; D = row, E = column -> HL; clobbers D, BC
         ld l,d
         ld h,0
         ld b,h
@@ -580,7 +580,7 @@ cell_addr:                      ; D = riga, E = colonna -> HL; clobbera D, BC
         add hl,de
         ret
 
-put_cell:                       ; A = carattere, D = riga, E = colonna (preserva DE)
+put_cell:                       ; A = character, D = row, E = column (preserves DE)
         ld (tmpc),a
         push de
         call cell_addr
@@ -590,7 +590,7 @@ put_cell:                       ; A = carattere, D = riga, E = colonna (preserva
         out (VDPD),a
         ret
 
-get_cell:                       ; D = riga, E = colonna -> A (preserva DE)
+get_cell:                       ; D = row, E = column -> A (preserves DE)
         push de
         call cell_addr
         call vsetr
@@ -598,7 +598,7 @@ get_cell:                       ; D = riga, E = colonna -> A (preserva DE)
         pop de
         ret
 
-blink_op:                       ; D = riga, E = colonna, C = 0 spegne / 1 accende
+blink_op:                       ; D = row, E = column, C = 0 off / 1 on
         ld a,c
         ld (tmpc),a
         ld l,d
@@ -608,7 +608,7 @@ blink_op:                       ; D = riga, E = colonna, C = 0 spegne / 1 accend
         add hl,hl
         add hl,hl
         add hl,bc
-        add hl,hl               ; riga*10
+        add hl,hl               ; row*10
         ld a,e
         rrca
         rrca
@@ -652,7 +652,7 @@ blink_op:                       ; D = riga, E = colonna, C = 0 spegne / 1 accend
         ret
 
 ; ---------------------------------------------------------------- aritmetica
-udiv:                           ; HL / DE (senza segno) -> HL quoziente, DE resto
+udiv:                           ; HL / DE (unsigned) -> HL quotient, DE remainder
         ld b,h
         ld c,l
         ld hl,0
@@ -730,7 +730,7 @@ scale:                          ; C = x, HL = y, DE = z -> HL = x*y/z  (y,z < 32
 .zero:  ld hl,0
         ret
 
-clamp:                          ; HL = valore, DE = max+1 -> HL limitato a 0..max
+clamp:                          ; HL = value, DE = max+1 -> HL clamped to 0..max
         bit 7,h
         jr z,.p
         ld hl,0
@@ -744,7 +744,7 @@ clamp:                          ; HL = valore, DE = max+1 -> HL limitato a 0..ma
         dec hl
         ret
 
-dec16:                          ; HL = valore -> cifre decimali in (DE), DE avanza
+dec16:                          ; HL = value -> decimal digits at (DE), DE advances
         push de
         ld de,numtmp
         ld bc,-10000
@@ -784,7 +784,7 @@ dec16:                          ; HL = valore -> cifre decimali in (DE), DE avan
         inc de
         ret
 
-strcpy:                         ; HL = sorgente (0-terminata), DE = destinazione
+strcpy:                         ; HL = source (0-terminated), DE = destination
 .l:     ld a,(hl)
         or a
         ret z
@@ -794,7 +794,7 @@ strcpy:                         ; HL = sorgente (0-terminata), DE = destinazione
         jr .l
 
 ; ---------------------------------------------------------------- buffer
-phys:                           ; HL = offset logico -> HL = indirizzo fisico; clobbera DE
+phys:                           ; HL = logical offset -> HL = physical address; clobbers DE
         ld de,(gs)
         push hl
         or a
@@ -814,7 +814,7 @@ getb:                           ; HL = offset -> A; preserva HL; clobbera DE
         pop hl
         ret
 
-set_sentinel:                   ; scrive 0 sul primo byte del gap (se il gap non e' vuoto)
+set_sentinel:                   ; writes 0 to the first byte of the gap (if the gap is not empty)
         ld hl,(gsz)
         ld a,h
         or l
@@ -825,7 +825,7 @@ set_sentinel:                   ; scrive 0 sul primo byte del gap (se il gap non
         ld (hl),0
         ret
 
-line_start:                     ; HL = offset -> HL = inizio della riga
+line_start:                     ; HL = offset -> HL = start of the line
 .l:     ld a,h
         or l
         ret z
@@ -836,7 +836,7 @@ line_start:                     ; HL = offset -> HL = inizio della riga
         inc hl
         ret
 
-line_end:                       ; HL = offset -> HL = posizione del LF (o len)
+line_end:                       ; HL = offset -> HL = position of the LF (or len)
 .l:     ld de,(len)
         push hl
         or a
@@ -849,7 +849,7 @@ line_end:                       ; HL = offset -> HL = posizione del LF (o len)
         inc hl
         jr .l
 
-next_line_start:                ; HL = offset -> HL = inizio riga successiva; C se non c'e'
+next_line_start:                ; HL = offset -> HL = start of next line; C if there is none
         call line_end
         ld de,(len)
         push hl
@@ -863,11 +863,11 @@ next_line_start:                ; HL = offset -> HL = inizio riga successiva; C 
 .none:  scf
         ret
 
-prev_line_start:                ; HL = inizio di una riga (>0) -> inizio della precedente
+prev_line_start:                ; HL = start of a line (>0) -> start of the previous one
         dec hl
         jp line_start
 
-cur_col:                        ; -> HL = colonna del cursore (0..)
+cur_col:                        ; -> HL = cursor column (0..)
         ld hl,(cur)
         push hl
         call line_start
@@ -882,9 +882,9 @@ upd_wantcol:
         ld (wantcol),hl
         ret
 
-gap_to_cur:                     ; porta il gap sul cursore
+gap_to_cur:                     ; move the gap to the cursor
         ld hl,(cur)
-gap_to_ofs:                     ; porta il gap sull'offset HL
+gap_to_ofs:                     ; move the gap to offset HL
         ld (gtgt),hl
         ld de,(gs)
         or a
@@ -910,11 +910,11 @@ gap_to_ofs:                     ; porta il gap sull'offset HL
         ld hl,(gs)
         ld de,BUF
         add hl,de
-        dec hl                  ; sorgente (ultimo byte)
+        dec hl                  ; source (last byte)
         ld de,(gsz)
         push hl
         add hl,de
-        ex de,hl                ; DE = destinazione
+        ex de,hl                ; DE = destination
         pop hl
         lddr
 .done:  ld hl,(gtgt)
@@ -922,7 +922,7 @@ gap_to_ofs:                     ; porta il gap sull'offset HL
         jp set_sentinel
 
 ; ---------------------------------------------------------------- init
-ed_reset:                       ; testo vuoto (usa bufend)
+ed_reset:                       ; empty text (uses bufend)
         call u_clear
         ld hl,(bufend)
         ld de,BUF
@@ -942,7 +942,7 @@ ed_reset:                       ; testo vuoto (usa bufend)
         ld (curline),hl
         ld (nlines),hl
         ld hl,(bufend)
-        ld (hl),0               ; sentinella di fine testo
+        ld (hl),0               ; end-of-text sentinel
         ld hl,0FFFFh
         ld (selanc),hl
         xor a
@@ -984,7 +984,7 @@ ed_init:
         or a
         sbc hl,de               ; bufsz - len
         ld (gsz),hl
-        ld hl,BUF               ; nlines = 1 + numero di LF
+        ld hl,BUF               ; nlines = 1 + number of LFs
         ld bc,(len)
         ld de,1
 .cnt:   ld a,b
@@ -1008,7 +1008,7 @@ mark_text:
         ld (dirty),a
         ret
 
-set_topline:                    ; HL = riga voluta (limitata a 1..nlines)
+set_topline:                    ; HL = wanted row (clamped to 1..nlines)
         ld a,h
         or l
         jr nz,.nz
@@ -1046,7 +1046,7 @@ set_topline:                    ; HL = riga voluta (limitata a 1..nlines)
         call mark_text
         jr .f
 
-scroll_v:                       ; HL = delta (con segno) righe
+scroll_v:                       ; HL = signed row delta
         ld de,(topline)
         add hl,de
         bit 7,h
@@ -1054,7 +1054,7 @@ scroll_v:                       ; HL = delta (con segno) righe
         ld hl,1
 .p:     jp set_topline
 
-scroll_h:                       ; HL = delta (con segno) colonne
+scroll_h:                       ; HL = signed column delta
         ld de,(hscroll)
         add hl,de
         bit 7,h
@@ -1076,7 +1076,7 @@ scroll_h:                       ; HL = delta (con segno) colonne
         ld (hscroll),hl
         jp mark_text
 
-ensure_visible:                 ; scorre la vista in modo che il cursore sia visibile
+ensure_visible:                 ; scroll the view so that the cursor is visible
         ld hl,(curline)
         ld de,(topline)
         or a
@@ -1117,7 +1117,7 @@ ensure_visible:                 ; scorre la vista in modo che il cursore sia vis
         ld (hscroll),hl
         jp mark_text
 
-; ---------------------------------------------------------------- movimento
+; ---------------------------------------------------------------- movement
 key_left:
         ld hl,(cur)
         ld a,h
@@ -1179,7 +1179,7 @@ key_up:
         ex de,hl
         or a
         sbc hl,de               ; ls - ps
-        dec hl                  ; lunghezza riga precedente
+        dec hl                  ; previous line length
         ld de,(wantcol)
         push hl
         or a
@@ -1204,7 +1204,7 @@ key_down:
         pop de                  ; DE = ns, HL = ne
         push de
         or a
-        sbc hl,de               ; lunghezza
+        sbc hl,de               ; length
         ld de,(wantcol)
         push hl
         or a
@@ -1220,7 +1220,7 @@ key_down:
         ld (curline),hl
         ret
 
-set_col:                        ; HL = colonna voluta (limitata alla riga)
+set_col:                        ; HL = wanted column (clamped to the line)
         ld (tmp1),hl
         ld hl,(cur)
         call line_start
@@ -1229,7 +1229,7 @@ set_col:                        ; HL = colonna voluta (limitata alla riga)
         call line_end
         ld de,(tmp2)
         or a
-        sbc hl,de               ; lunghezza riga
+        sbc hl,de               ; line length
         ld de,(tmp1)
         push hl
         or a
@@ -1263,7 +1263,7 @@ key_pgdn:
         ret
 
 ; ---------------------------------------------------------------- modifica
-ed_insert:                      ; A = carattere -> C se non inserito
+ed_insert:                      ; A = character -> C if not inserted
         ld (tmpb),a
         cp LF
         jr z,.go
@@ -1307,7 +1307,7 @@ ed_insert:                      ; A = carattere -> C se non inserito
         ld hl,(nlines)
         inc hl
         ld (nlines),hl
-.nl:    ld hl,(cur)             ; registra l'inserimento (1 byte in tmpb)
+.nl:    ld hl,(cur)             ; record the insertion (1 byte in tmpb)
         dec hl
         ld (uoff),hl
         ld hl,1
@@ -1338,7 +1338,7 @@ ed_backspace:
         ld de,BUF
         add hl,de
         ld a,(hl)
-        push af                 ; registra la cancellazione del carattere (a cur-1)
+        push af                 ; record the deletion of the character (at cur-1)
         ld (usrc),hl
         ld hl,(cur)
         dec hl
@@ -1371,7 +1371,7 @@ ed_backspace:
         sbc hl,de
         jr z,.ok
         jr c,.ok
-        ld hl,(cur)             ; il cursore ha superato l'inizio della vista
+        ld hl,(cur)             ; the cursor has gone past the start of the view
         call line_start
         ld (top),hl
         ld hl,(curline)
@@ -1397,7 +1397,7 @@ ed_delete:
         ld de,BUF
         add hl,de
         ld a,(hl)
-        push af                 ; registra la cancellazione del carattere (a cur)
+        push af                 ; record the deletion of the character (at cur)
         ld (usrc),hl
         ld hl,(cur)
         ld (uoff),hl
@@ -1431,18 +1431,18 @@ handle_key:
         or a
         jr z,.nm
         ld a,b
-        jp menu_key             ; menu aperto: i tasti vanno al menu
+        jp menu_key             ; menu open: keys go to the menu
 .nm:    ld a,b
         cp 1Bh
-        jr z,.pk                ; ESC (apre il menu) non annulla una conferma
-        ld a,(pendkey)          ; la conferma vale solo se si ripete lo stesso tasto
+        jr z,.pk                ; ESC (opens the menu) does not cancel a confirmation
+        ld a,(pendkey)          ; confirmation counts only if the same key is repeated
         cp b
         jr z,.pk
         xor a
         ld (pendkey),a
 .pk:    ld hl,0
-        ld (msgptr),hl          ; ogni tasto cancella il messaggio
-        call ukind_key          ; una serie di battute dello stesso tipo e' un solo passo di undo
+        ld (msgptr),hl          ; any key clears the message
+        call ukind_key          ; a run of keystrokes of the same type is a single undo step
         push bc
         call ensure_visible
         pop bc
@@ -1453,7 +1453,7 @@ handle_key:
         jr z,.del
         jr nc,.fin
         push af
-        call sel_delete         ; la digitazione sostituisce la selezione
+        call sel_delete         ; typing replaces the selection
         pop af
         call ed_insert
         jr .fin
@@ -1487,12 +1487,12 @@ handle_key:
         jp (hl)
 .fin:   call ensure_visible
         call sel_range
-        call nc,mark_text       ; selezione attiva: ridisegna
+        call nc,mark_text       ; selection active: redraw
         jp refresh
 
-fkcodes: db 02h,04h,05h,0Ah     ; codici di F1-F4
+fkcodes: db 02h,04h,05h,0Ah     ; F1-F4 codes
 
-keys_up:                        ; attende che nessun tasto sia premuto (al massimo ~10 s)
+keys_up:                        ; wait until no key is pressed (at most ~10 s)
         ld hl,(0FC9Eh)          ; JIFFY
         ld (kutmp),hl
 .t:     ld b,0
@@ -1514,7 +1514,7 @@ keys_up:                        ; attende che nessun tasto sia premuto (al massi
         ld de,500
         or a
         sbc hl,de
-        ret nc                  ; tasto bloccato: si prosegue comunque
+        ret nc                  ; stuck key: proceed anyway
         halt
         jr .t
 
@@ -1537,7 +1537,7 @@ keytab: db 0Dh
         db 0Ch                  ; Shift+Home
         dw k_home
         db 18h
-        dw k_x                  ; SELECT = Fine, Ctrl+X = taglia
+        dw k_x                  ; SELECT = End, Ctrl+X = cut
         db 10h
         dw k_pgup
         db 0Eh
@@ -1562,7 +1562,7 @@ keytab: db 0Dh
         dw k_findnext
         db 14h
         dw k_replace
-        db 15h                  ; F5 (la stringa del tasto funzione e' un solo byte 15h)
+        db 15h                  ; F5 (the function key string is a single byte 15h)
         dw k_run
         db 02h                  ; F1-F4: menu File, Edit, Find, Help
         dw k_f1
@@ -1601,7 +1601,7 @@ k_tab:  call sel_delete
         ret
 
 
-; ---------------------------------------------------------------- selezione / clipboard
+; ---------------------------------------------------------------- selection / clipboard
 key_mods:                       ; -> A: bit0 = Shift premuto, bit1 = Ctrl premuto
         ld a,6
         BIOS SNSMAT
@@ -1623,7 +1623,7 @@ k_pgup: call sel_prep
         jp key_pgup
 k_pgdn: call sel_prep
         jp key_pgdn
-k_x:    ld a,7                  ; stesso codice 18h: SELECT (Fine) oppure Ctrl+X (taglia)
+k_x:    ld a,7                  ; same code 18h: SELECT (End) or Ctrl+X (cut)
         BIOS SNSMAT
         bit 6,a
         jp nz,k_cut
@@ -1634,7 +1634,7 @@ k_bs:   call sel_range
         jp c,ed_backspace
         jp sel_delete
 
-k_ins:  call key_mods           ; Ctrl+Ins = copia, Shift+Ins = incolla
+k_ins:  call key_mods           ; Ctrl+Ins = copy, Shift+Ins = paste
         bit 1,a
         jp nz,k_copy
         bit 0,a
@@ -1650,7 +1650,7 @@ k_selall:
         ld (curline),hl
         jp upd_wantcol
 
-sel_prep:                       ; prima di un movimento: Shift estende, altrimenti annulla
+sel_prep:                       ; before a movement: Shift extends, otherwise clears
         call sel_range
         jr c,.q
         call mark_text
@@ -1669,7 +1669,7 @@ sel_prep:                       ; prima di un movimento: Shift estende, altrimen
         ld (selanc),hl
         ret
 
-sel_range:                      ; -> NC con HL = inizio, DE = fine se c'e' una selezione; C se vuota
+sel_range:                      ; -> NC with HL = start, DE = end if there is a selection; C if empty
         ld hl,(selanc)
         ld a,h
         and l
@@ -1680,7 +1680,7 @@ sel_range:                      ; -> NC con HL = inizio, DE = fine se c'e' una s
         sbc hl,de
         jr z,.none
         jr c,.fw
-        add hl,de               ; ancora dopo il cursore: inizio = cursore
+        add hl,de               ; anchor after the cursor: start = cursor
         ex de,hl
         or a
         ret
@@ -1690,20 +1690,20 @@ sel_range:                      ; -> NC con HL = inizio, DE = fine se c'e' una s
 .none:  scf
         ret
 
-sel_delete:                     ; elimina la selezione attiva (NC) oppure non fa nulla (C)
+sel_delete:                     ; delete the active selection (NC) or do nothing (C)
         call sel_range
         ret c
         ld (tmp1),hl
         ld (tmp2),de
         ex de,hl
-        call gap_to_ofs         ; ora [inizio,fine) e' contiguo prima del gap
+        call gap_to_ofs         ; now [start,end) is contiguous before the gap
         ld hl,(tmp2)
         ld de,(tmp1)
         or a
         sbc hl,de
         ld b,h
-        ld c,l                  ; BC = byte da togliere
-        ld (ulen),bc            ; registra la cancellazione [inizio, fine)
+        ld c,l                  ; BC = bytes to remove
+        ld (ulen),bc            ; record the deletion [start, end)
         ld hl,(tmp1)
         ld (uoff),hl
         ld de,BUF
@@ -1744,7 +1744,7 @@ sel_delete:                     ; elimina la selezione attiva (NC) oppure non fa
         or a
         sbc hl,de
         ld (len),hl
-        ld hl,(cur)             ; se il cursore era in fondo, la riga corrente scende
+        ld hl,(cur)             ; if the cursor was at the end, the current row moves down
         ld de,(tmp2)
         or a
         sbc hl,de
@@ -1767,7 +1767,7 @@ sel_delete:                     ; elimina la selezione attiva (NC) oppure non fa
         sbc hl,de
         jr z,.tk
         jr c,.tk
-        ld hl,(cur)             ; l'inizio della vista era dentro la parte tolta
+        ld hl,(cur)             ; the start of the view was inside the removed part
         call line_start
         ld (top),hl
         ld hl,(curline)
@@ -1782,10 +1782,10 @@ sel_delete:                     ; elimina la selezione attiva (NC) oppure non fa
         or a
         ret
 
-k_copy: call key_mods           ; 03h: Ctrl+C = copia (STOP da solo = niente)
+k_copy: call key_mods           ; 03h: Ctrl+C = copy (STOP alone = nothing)
         bit 1,a
         ret z
-sel_copy:                       ; copia la selezione nella clipboard; C se impossibile
+sel_copy:                       ; copy the selection to the clipboard; C if impossible
         call sel_range
         ret c
         ld (tmp1),hl
@@ -1839,7 +1839,7 @@ k_paste:
         ld (msgptr),hl
         ret
 
-ins_block:                      ; HL = sorgente, BC = n byte: li inserisce al cursore; C se manca spazio
+ins_block:                      ; HL = source, BC = n bytes: insert them at the cursor; C if out of space
         ld (tmp2),hl
         ld (insn),bc
         call gap_to_cur         ; (clobbera tutto)
@@ -1850,7 +1850,7 @@ ins_block:                      ; HL = sorgente, BC = n byte: li inserisce al cu
         jr nc,.room
         scf
         ret
-.room:  ld hl,(cur)             ; registra l'inserimento
+.room:  ld hl,(cur)             ; record the insertion
         ld (uoff),hl
         ld hl,(insn)
         ld (ulen),hl
@@ -1862,7 +1862,7 @@ ins_block:                      ; HL = sorgente, BC = n byte: li inserisce al cu
         ld hl,(gs)
         ld de,BUF
         add hl,de
-        ex de,hl                ; DE = destinazione
+        ex de,hl                ; DE = destination
         ld hl,(tmp2)
         ldir
         ld hl,(tmp2)
@@ -1900,7 +1900,7 @@ ins_block:                      ; HL = sorgente, BC = n byte: li inserisce al cu
         or a
         ret
 
-count_lf:                       ; HL = puntatore, BC = byte -> DE = numero di LF
+count_lf:                       ; HL = pointer, BC = bytes -> DE = number of LFs
         ld de,0
 .l:     ld a,b
         or c
@@ -1917,14 +1917,14 @@ m_copied:   db "Copied ",0
 m_clipfull: db "Selection too big for the clipboard",0
 m_noroom:   db "No room to paste",0
 
-key_shift:                      ; -> A = 1 se Shift premuto
+key_shift:                      ; -> A = 1 if Shift is pressed
         call key_mods
         and 1
         ret
 
-mk_msg:                         ; HL = prefisso, numero in (tmp1) -> msgptr = "prefisso N bytes"
+mk_msg:                         ; HL = prefix, number in (tmp1) -> msgptr = "prefix N bytes"
         ld de,s_bytes
-mk_msgs:                        ; HL = prefisso, DE = suffisso, numero in (tmp1)
+mk_msgs:                        ; HL = prefix, DE = suffix, number in (tmp1)
         push de
         ld de,msgbuf
         call strcpy
@@ -1941,9 +1941,9 @@ mk_msgs:                        ; HL = prefisso, DE = suffisso, numero in (tmp1)
 s_bytes: db " bytes",0
 
 
-; ---------------------------------------------------------------- barra dei menu
-; menutab: per menu larghezza del riquadro, numero di voci, puntatore alle voci.
-; voce (7 byte): etichetta, scorciatoia, gestore, tasto rapido.
+; ---------------------------------------------------------------- menu bar
+; menutab: per menu box width, number of entries, pointer to the entries.
+; entry (7 bytes): label, shortcut, handler, hotkey.
 menutab:
         db 24,6
         dw it_file
@@ -2053,7 +2053,7 @@ s_ctt:    db "Ctrl+T",0
 m_keys:   db "Esc F1-F4 menu F5 run F6/F7 help F8 seg ^S/W/O/Q file ^C/X/V ^Z/Y ^F/G/T",0
 m_nodisk: db "No disk access in this build",0
 
-k_menu: ld a,1                  ; ESC: apre il menu File
+k_menu: ld a,1                  ; ESC: opens the File menu
 open_menu:
         ld (menuopen),a
         xor a
@@ -2072,8 +2072,8 @@ k_mdel: call sel_range
         jp c,ed_delete
         jp sel_delete
 
-k_about:                        ; finestra centrata con cornice e tasto OK (clic, Invio o Esc)
-        call refresh            ; toglie il menu a tendina
+k_about:                        ; centered window with frame and OK button (click, Enter or Esc)
+        call refresh            ; remove the drop-down menu
         call ptr_hide
         ld a,24
         ld (mw),a
@@ -2105,7 +2105,7 @@ k_about:                        ; finestra centrata con cornice e tasto OK (clic
         ld a,12
         call mrow_put
         call mrow_blank
-        ld hl,rowbuf+9          ; tasto OK in video normale
+        ld hl,rowbuf+9          ; OK button in normal video
         ld (hl),'['
         inc hl
         ld (hl),' '
@@ -2126,13 +2126,13 @@ k_about:                        ; finestra centrata con cornice e tasto OK (clic
         call mrow_put
         ld a,(mx0)
         add a,9
-        ld (hlptop),a           ; x del tasto OK (da/a)
+        ld (hlptop),a           ; x of the OK button (from/to)
         add a,5
         ld (hlptop+1),a
         ld a,13
-        ld (hlpbeg),a           ; riga del tasto
+        ld (hlpbeg),a           ; button row
         xor a
-        ld (hlpbeg+1),a         ; risultato del clic
+        ld (hlpbeg+1),a         ; click result
         inc a
         ld (modal),a
 .wait:  call mouse_poll
@@ -2151,7 +2151,7 @@ k_about:                        ; finestra centrata con cornice e tasto OK (clic
         call ptr_hide
         jp mark_text
 
-modal_click:                    ; clic con una finestra aperta: vale solo sul tasto OK
+modal_click:                    ; click with a window open: counts only on the OK button
         ld a,(mcy)
         ld hl,hlpbeg
         cp (hl)
@@ -2187,7 +2187,7 @@ k_quit: ld hl,m_nodisk
         ret
         ENDIF
 
-menu_info:                      ; menu aperto -> B = larghezza, C = voci, HL = elenco voci, D = colonna
+menu_info:                      ; menu open -> B = width, C = entries, HL = entry list, D = column
         ld a,(menuopen)
         dec a
         ld e,a
@@ -2211,7 +2211,7 @@ menu_info:                      ; menu aperto -> B = larghezza, C = voci, HL = e
         add a,a
         add a,d
         ld d,a                  ; 6*k
-        ld a,(sw)               ; il riquadro non esce dallo schermo (40 colonne: i menu a destra si spostano a sinistra)
+        ld a,(sw)               ; the box does not leave the screen (40 columns: menus on the right shift left)
         sub b
         cp d
         jr nc,.o
@@ -2221,10 +2221,10 @@ menu_info:                      ; menu aperto -> B = larghezza, C = voci, HL = e
 menu_close:
         xor a
         ld (menuopen),a
-        call mark_text          ; il testo sotto il riquadro va ridisegnato
+        call mark_text          ; the text under the box must be redrawn
         jp refresh
 
-menu_exec:                      ; esegue la voce evidenziata
+menu_exec:                      ; execute the highlighted entry
         call menu_info
         ld a,(menusel)
         push hl
@@ -2247,7 +2247,7 @@ menu_exec:                      ; esegue la voce evidenziata
         push de
         xor a
         ld (menuopen),a
-        ld (uglue),a            ; ogni comando di menu e' un gruppo a se'
+        ld (uglue),a            ; each menu command is a group of its own
         ld (ukind),a
         call mark_text
         pop hl
@@ -2257,7 +2257,7 @@ menu_exec:                      ; esegue la voce evidenziata
 .back:  call ensure_visible
         jp refresh
 
-menu_key:                       ; A = tasto, menu aperto
+menu_key:                       ; A = key, menu open
         cp 1Bh
         jp z,menu_close
         ld b,1                  ; F1-F4: passa direttamente a quel menu
@@ -2274,7 +2274,7 @@ menu_key:                       ; A = tasto, menu aperto
         jr nz,.nfk
 .fk:    ld a,b
         jp .st
-.nfk:   cp 15h                  ; F5: chiude il menu ed esegue
+.nfk:   cp 15h                  ; F5: closes the menu and runs
         jr nz,.nf5
         call menu_close
         jp k_run
@@ -2289,7 +2289,7 @@ menu_key:                       ; A = tasto, menu aperto
         jr z,.up
         cp 1Fh
         jr z,.down
-        cp 'a'                  ; tasto rapido (maiuscole/minuscole)
+        cp 'a'                  ; hotkey (upper/lower case)
         jr c,.hk0
         cp 'z'+1
         jr nc,.hk0
@@ -2328,7 +2328,7 @@ menu_key:                       ; A = tasto, menu aperto
 .st:    ld (menuopen),a
         xor a
         ld (menusel),a
-        call mark_text          ; il riquadro precedente va cancellato
+        call mark_text          ; the previous box must be erased
         jp refresh
 .up:    ld a,(menusel)
         or a
@@ -2347,7 +2347,7 @@ menu_key:                       ; A = tasto, menu aperto
 .d1:    ld (menusel),a
         jp refresh
 
-menu_hit:                       ; puntatore sopra una voce? -> A = indice oppure FF
+menu_hit:                       ; pointer over an entry? -> A = index or FF
         call menu_info
         ld a,(mcy)
         sub 2
@@ -2360,7 +2360,7 @@ menu_hit:                       ; puntatore sopra una voce? -> A = indice oppure
         jr c,.no
         jr z,.no                ; bordo sinistro
         dec a
-        ld d,a                  ; colonna interna
+        ld d,a                  ; inner column
         ld a,b
         sub 2
         cp d
@@ -2371,7 +2371,7 @@ menu_hit:                       ; puntatore sopra una voce? -> A = indice oppure
 .no:    ld a,0FFh
         ret
 
-menu_hover:                     ; il puntatore si e' mosso con il menu aperto
+menu_hover:                     ; the pointer moved with the menu open
         call menu_hit
         cp 0FFh
         ret z
@@ -2381,7 +2381,7 @@ menu_hover:                     ; il puntatore si e' mosso con il menu aperto
         ld (hl),a
         jp refresh
 
-menu_click:                     ; pulsante premuto con il menu aperto
+menu_click:                     ; button pressed with the menu open
         ld a,(mcy)
         or a
         jr z,.title
@@ -2403,7 +2403,7 @@ menu_click:                     ; pulsante premuto con il menu aperto
         inc a
         ld hl,menuopen
         cp (hl)
-        jp z,menu_close         ; stesso titolo: chiude
+        jp z,menu_close         ; same title: closes
         ld (hl),a
         xor a
         ld (menusel),a
@@ -2423,7 +2423,7 @@ mrow_border:                    ; A = glifo sinistro, E = glifo destro (video in
         ld (hl),e
         ret
 
-mrow_blank:                     ; riga interna: bordi 87h e spazi inversi
+mrow_blank:                     ; inner row: 87h borders and inverse spaces
         ld hl,rowbuf
         ld (hl),87h
         inc hl
@@ -2436,7 +2436,7 @@ mrow_blank:                     ; riga interna: bordi 87h e spazi inversi
         ld (hl),87h
         ret
 
-mrow_str:                       ; HL = stringa, DE = destinazione in rowbuf (copia con bit 7)
+mrow_str:                       ; HL = string, DE = destination in rowbuf (copies with bit 7)
 .l:     ld a,(hl)
         or a
         ret z
@@ -2446,7 +2446,7 @@ mrow_str:                       ; HL = stringa, DE = destinazione in rowbuf (cop
         inc de
         jr .l
 
-mrow_put:                       ; A = riga schermo: scrive mw celle di rowbuf a (riga, mx0)
+mrow_put:                       ; A = screen row: writes mw cells of rowbuf at (row, mx0)
         ld d,a
         ld a,(mx0)
         ld e,a
@@ -2459,7 +2459,7 @@ mrow_put:                       ; A = riga schermo: scrive mw celle di rowbuf a 
         otir
         ret
 
-menu_draw:                      ; riquadro a discesa del menu aperto
+menu_draw:                      ; drop-down box of the open menu
         call menu_info
         ld a,b
         ld (mw),a
@@ -2476,7 +2476,7 @@ menu_draw:                      ; riquadro a discesa del menu aperto
         xor a
         ld (mi),a
 .row:   call mrow_blank
-        ld a,(mi)               ; record della voce = elenco + 7*i
+        ld a,(mi)               ; entry record = list + 7*i
         ld l,a
         ld h,0
         ld d,h
@@ -2547,9 +2547,9 @@ menu_draw:                      ; riquadro a discesa del menu aperto
         jp mrow_put
 
 
-; ---------------------------------------------------------------- prompt di riga, cerca, sostituisci
-; prompt_line: HL = prompt, DE = destinazione (0-term), B = lunghezza massima,
-;              C = bit0 spazi ammessi, bit1 parte dal testo attuale, bit2 Invio vuoto accettato
+; ---------------------------------------------------------------- line prompt, find, replace
+; prompt_line: HL = prompt, DE = destination (0-term), B = max length,
+;              C = bit0 spaces allowed, bit1 start from the current text, bit2 empty Enter accepted
 prompt_line:
         ld (pdst),de
         ld (pprm),hl
@@ -2665,7 +2665,7 @@ prompt_line:
 .cancel: scf
         ret
 
-show_row0:                      ; HL = testo: lo mostra in video inverso sulla riga 0
+show_row0:                      ; HL = text: shows it in inverse video on row 0
         push hl
         ld hl,rowbuf
         ld de,rowbuf+1
@@ -2692,7 +2692,7 @@ show_row0:                      ; HL = testo: lo mostra in video inverso sulla r
         otir
         ret
 
-strlen_a:                       ; HL = stringa 0-terminata -> A = lunghezza
+strlen_a:                       ; HL = 0-terminated string -> A = length
         ld b,0
 .l:     ld a,(hl)
         or a
@@ -2703,7 +2703,7 @@ strlen_a:                       ; HL = stringa 0-terminata -> A = lunghezza
 .d:     ld a,b
         ret
 
-find_prep:                      ; gap sul cursore, maschera del caso, copia del testo cercato
+find_prep:                      ; gap at the cursor, case mask, copy of the search text
         call gap_to_cur
         ld a,(mcase)
         or a
@@ -2729,7 +2729,7 @@ find_prep:                      ; gap sul cursore, maschera del caso, copia del 
 .d:     ld (de),a
         ret
 
-match_here:                     ; HL = testo (fisico) -> Z se coincide con srchlow; preserva HL, DE, BC
+match_here:                     ; HL = text (physical) -> Z if it matches srchlow; preserves HL, DE, BC
         push hl
         push de
         push bc
@@ -2759,7 +2759,7 @@ match_here:                     ; HL = testo (fisico) -> Z se coincide con srchl
         pop hl
         ret
 
-scan:                           ; cerca in [spos, min(slim, len-m+1)) con scarto fisico sdelta -> NC e HL = inizio, C se non trovato
+scan:                           ; search in [spos, min(slim, len-m+1)) with physical offset sdelta -> NC and HL = start, C if not found
         ld a,(slen)
         ld e,a
         ld d,0
@@ -2767,17 +2767,17 @@ scan:                           ; cerca in [spos, min(slim, len-m+1)) con scarto
         or a
         sbc hl,de               ; len - m
         ret c
-        inc hl                  ; ultima posizione + 1
+        inc hl                  ; last position + 1
         ld de,(slim)
         push hl
         or a
         sbc hl,de
         pop hl
         jr c,.t1                ; len-m+1 < slim: vale len-m+1
-        ex de,hl                ; altrimenti vale slim
+        ex de,hl                ; otherwise equals slim
 .t1:    ld de,(spos)
         or a
-        sbc hl,de               ; numero di posizioni
+        sbc hl,de               ; number of positions
         jr c,.none
         jr z,.none
         ld d,h
@@ -2786,12 +2786,12 @@ scan:                           ; cerca in [spos, min(slim, len-m+1)) con scarto
         ld bc,BUF
         add hl,bc
         ld bc,(sdelta)
-        add hl,bc               ; HL = indirizzo fisico di partenza
+        add hl,bc               ; HL = starting physical address
         ld a,(smask)
         ld c,a
         ld a,(srchlow)
         or c
-        ld b,a                  ; B = primo carattere (filtro rapido), C = maschera
+        ld b,a                  ; B = first character (quick filter), C = mask
 .l:     ld a,(hl)
         or c
         cp b
@@ -2811,11 +2811,11 @@ scan:                           ; cerca in [spos, min(slim, len-m+1)) con scarto
         sbc hl,bc
         ld bc,(sdelta)
         or a
-        sbc hl,bc               ; HL = offset logico dell'inizio
+        sbc hl,bc               ; HL = logical offset of the start
         or a
         ret
 
-do_find_fw:                     ; dal cursore alla fine (senza girare) -> NC, HL = inizio
+do_find_fw:                     ; from the cursor to the end (no wrap-around) -> NC, HL = start
         ld a,(slen)
         or a
         jr nz,.go
@@ -2830,7 +2830,7 @@ do_find_fw:                     ; dal cursore alla fine (senza girare) -> NC, HL
         ld (slim),hl
         jp scan
 
-do_find:                        ; dal cursore alla fine, poi dall'inizio fino al cursore
+do_find:                        ; from the cursor to the end, then from the start up to the cursor
         xor a
         ld (swrap),a
         call do_find_fw
@@ -2847,7 +2847,7 @@ do_find:                        ; dal cursore alla fine, poi dall'inizio fino al
         ld d,0
         ld hl,(cur)
         or a
-        sbc hl,de               ; cur - m: le corrispondenze devono finire prima del cursore
+        sbc hl,de               ; cur - m: matches must end before the cursor
         jr c,.none
         inc hl
         ld (slim),hl
@@ -2860,7 +2860,7 @@ do_find:                        ; dal cursore alla fine, poi dall'inizio fino al
 .none:  scf
         ret
 
-goto_ofs:                       ; DE = nuovo offset del cursore (gap sul vecchio cursore): aggiorna curline
+goto_ofs:                       ; DE = new cursor offset (gap at the old cursor): updates curline
         ld (tmp1),de
         ld hl,(cur)
         or a
@@ -2868,7 +2868,7 @@ goto_ofs:                       ; DE = nuovo offset del cursore (gap sul vecchio
         jr z,.set
         jr c,.fw
         ld b,h
-        ld c,l                  ; BC = cur - destinazione
+        ld c,l                  ; BC = cur - destination
         ld hl,BUF
         add hl,de
         call count_lf
@@ -2882,12 +2882,12 @@ goto_ofs:                       ; DE = nuovo offset del cursore (gap sul vecchio
         or a
         sbc hl,de
         ld b,h
-        ld c,l                  ; BC = destinazione - cur
+        ld c,l                  ; BC = destination - cur
         ld hl,(cur)
         ld de,BUF
         add hl,de
         ld de,(gsz)
-        add hl,de               ; dopo il gap
+        add hl,de               ; after the gap
         call count_lf
         ld hl,(curline)
         add hl,de
@@ -2896,7 +2896,7 @@ goto_ofs:                       ; DE = nuovo offset del cursore (gap sul vecchio
         ld (cur),hl
         ret
 
-find_show:                      ; HL = inizio della corrispondenza: la seleziona, cursore in fondo
+find_show:                      ; HL = start of the match: selects it, cursor at the end
         ld (selanc),hl
         ld a,(slen)
         ld e,a
@@ -2905,7 +2905,7 @@ find_show:                      ; HL = inizio della corrispondenza: la seleziona
         ex de,hl
         call goto_ofs
         call upd_wantcol
-        ld hl,(curline)         ; centra la riga se non e' visibile
+        ld hl,(curline)         ; center the row if it is not visible
         ld de,(topline)
         or a
         sbc hl,de
@@ -2969,7 +2969,7 @@ k_case:
         ldir
         ret
 
-ask_replace:                    ; -> A = 'y', 'n', 'a' oppure 0 (Esc)
+ask_replace:                    ; -> A = 'y', 'n', 'a' or 0 (Esc)
         ld hl,s_askrep
         call show_row0
 .k:     BIOS CHGET
@@ -2986,7 +2986,7 @@ ask_replace:                    ; -> A = 'y', 'n', 'a' oppure 0 (Esc)
 .esc:   xor a
         ret
 
-k_replace:                      ; Ctrl+T: sostituisce con conferma (Y/N/A/Esc)
+k_replace:                      ; Ctrl+T: replace with confirmation (Y/N/A/Esc)
         ld hl,s_findp
         ld de,srchstr
         ld b,30
@@ -3068,9 +3068,9 @@ m_replaced: db "Replaced ",0
 
 
 ; ---------------------------------------------------------------- annulla / ripeti
-; Registro in UNDO..UNDO+UNDOSZ: record = tipo (1 inserimento, 2 cancellazione; bit 7 = si unisce al
-; gruppo precedente), offset (w), lunghezza (w), dati, dimensione del record (w, per leggere all'indietro).
-; ucur separa i record applicati da quelli ripetibili (redo); una nuova modifica scarta questi ultimi.
+; Log in UNDO..UNDO+UNDOSZ: record = type (1 insertion, 2 deletion; bit 7 = merges with the
+; previous group), offset (w), length (w), data, record size (w, for reading backwards).
+; ucur separates applied records from repeatable (redo) ones; a new edit discards the latter.
 u_clear:
         ld hl,UNDO
         ld (ucur),hl
@@ -3081,7 +3081,7 @@ u_clear:
         ld (unolog),a
         ret
 
-ukind_key:                      ; B = tasto (preservato): decide se il gruppo continua
+ukind_key:                      ; B = key (preserved): decides whether the group continues
         push bc
         ld a,b
         ld c,0                  ; 0 = comando qualsiasi
@@ -3092,7 +3092,7 @@ ukind_key:                      ; B = tasto (preservato): decide se il gruppo co
         jr nc,.set
         ld c,1                  ; carattere stampabile
         jr .set
-.del:   call key_mods           ; Shift+Canc e' "taglia": non e' una serie di cancellazioni
+.del:   call key_mods           ; Shift+Del is "cut": not a run of deletions
         and 1
         jr nz,.set
         ld c,3
@@ -3111,7 +3111,7 @@ ukind_key:                      ; B = tasto (preservato): decide se il gruppo co
         jr nz,.brk
         ld a,c
         or a
-        jr nz,.keep             ; stessa serie: il gruppo continua
+        jr nz,.keep             ; same run: the group continues
 .brk:   xor a
         ld (uglue),a
         ld a,c
@@ -3119,7 +3119,7 @@ ukind_key:                      ; B = tasto (preservato): decide se il gruppo co
 .keep:  pop bc
         ret
 
-ulog:                           ; A = tipo; uoff, ulen, usrc descrivono la modifica gia' decisa
+ulog:                           ; A = type; uoff, ulen, usrc describe the already decided change
         ld (utype),a
         ld a,(unolog)
         or a
@@ -3131,13 +3131,13 @@ ulog:                           ; A = tipo; uoff, ulen, usrc descrivono la modif
         or a
         sbc hl,de
         jr c,.fits
-        call u_clear            ; non entra nemmeno da solo: si rinuncia all'annullamento
+        call u_clear            ; does not fit even alone: undo is given up
         ld hl,m_nundo2
         ld (msgptr),hl
         ret
 .fits:  ld hl,(ucur)
-        ld (uend),hl            ; una nuova modifica scarta la coda di redo
-        ld a,(uglue)            ; fusione con l'inserimento precedente (battute contigue)
+        ld (uend),hl            ; a new edit discards the redo tail
+        ld a,(uglue)            ; merge with the previous insertion (contiguous keystrokes)
         or a
         jp z,.new
         ld a,(utype)
@@ -3157,13 +3157,13 @@ ulog:                           ; A = tipo; uoff, ulen, usrc descrivono la modif
         ld de,UNDO+UNDOSZ
         or a
         sbc hl,de
-        jp nc,.new              ; manca il posto per un byte in piu'
+        jp nc,.new              ; no room for one more byte
         ld hl,(ucur)
         dec hl
         dec hl
         ld e,(hl)
         inc hl
-        ld d,(hl)               ; DE = dimensione dell'ultimo record
+        ld d,(hl)               ; DE = size of the last record
         ld hl,(ucur)
         or a
         sbc hl,de
@@ -3179,7 +3179,7 @@ ulog:                           ; A = tipo; uoff, ulen, usrc descrivono la modif
         inc hl
         ld c,(hl)
         inc hl
-        ld b,(hl)               ; BC = lunghezza
+        ld b,(hl)               ; BC = length
         ld a,b
         or a
         jp nz,.new
@@ -3188,16 +3188,16 @@ ulog:                           ; A = tipo; uoff, ulen, usrc descrivono la modif
         jp nc,.new
         ex de,hl                ; HL = offset
         ld de,(uoff)
-        ex de,hl                ; DE = offset del record, HL = nuovo offset
+        ex de,hl                ; DE = record offset, HL = new offset
         push hl
         ld h,d
         ld l,e
-        add hl,bc               ; fine dell'ultimo record
+        add hl,bc               ; end of the last record
         pop de                  ; DE = nuovo offset
         or a
         sbc hl,de
-        jp nz,.new              ; non contiguo
-        ld hl,(usrc)            ; contiguo: il byte va al posto del vecchio trailer
+        jp nz,.new              ; not contiguous
+        ld hl,(usrc)            ; contiguous: the byte replaces the old trailer
         ld a,(hl)
         ld hl,(ucur)
         dec hl
@@ -3207,9 +3207,9 @@ ulog:                           ; A = tipo; uoff, ulen, usrc descrivono la modif
         inc hl
         inc hl
         inc hl
-        inc (hl)                ; lunghezza + 1
+        inc (hl)                ; length + 1
         ld a,(hl)
-        add a,7                 ; nuova dimensione del record
+        add a,7                 ; new record size
         ld hl,(ucur)
         inc hl
         ld (ucur),hl
@@ -3220,7 +3220,7 @@ ulog:                           ; A = tipo; uoff, ulen, usrc descrivono la modif
         inc hl
         ld (hl),0
         ret
-.new:   ld hl,(ulen)            ; libera i gruppi piu' vecchi finche' il record entra
+.new:   ld hl,(ulen)            ; free the oldest groups until the record fits
         ld de,7
         add hl,de
         ex de,hl
@@ -3252,18 +3252,18 @@ ulog:                           ; A = tipo; uoff, ulen, usrc descrivono la modif
         inc hl
         ld (hl),b
         inc hl
-        ex de,hl                ; DE = destinazione dei dati
+        ex de,hl                ; DE = data destination
         ld a,b
         or c
         jr z,.nd
         ld hl,(usrc)
         ldir
-.nd:    ex de,hl                ; HL = posto del trailer
+.nd:    ex de,hl                ; HL = trailer location
         ld de,(ulen)
         push hl
         ld hl,7
         add hl,de
-        ex de,hl                ; DE = dimensione del record
+        ex de,hl                ; DE = record size
         pop hl
         ld (hl),e
         inc hl
@@ -3275,14 +3275,14 @@ ulog:                           ; A = tipo; uoff, ulen, usrc descrivono la modif
         ld (uglue),a
         ret
 
-u_drop:                         ; elimina il gruppo piu' vecchio (il registro viene compattato)
+u_drop:                         ; delete the oldest group (the log is compacted)
         ld hl,UNDO
         ld de,(uend)
         or a
         push hl
         sbc hl,de
         pop hl
-        jp nc,u_clear           ; gia' vuoto
+        jp nc,u_clear           ; already empty
 .l:     push hl
         inc hl
         inc hl
@@ -3292,7 +3292,7 @@ u_drop:                         ; elimina il gruppo piu' vecchio (il registro vi
         ld d,(hl)
         ld hl,7
         add hl,de
-        ex de,hl                ; DE = dimensione del record
+        ex de,hl                ; DE = record size
         pop hl
         add hl,de               ; HL = record successivo
         ld de,(uend)
@@ -3300,15 +3300,15 @@ u_drop:                         ; elimina il gruppo piu' vecchio (il registro vi
         or a
         sbc hl,de
         pop hl
-        jr nc,.done             ; fine del registro
+        jr nc,.done             ; end of the log
         ld a,(hl)
         and 80h
-        jr nz,.l                ; unito al precedente: stesso gruppo
-.done:  push hl                 ; HL = primo byte da conservare
+        jr nz,.l                ; merged with the previous: same group
+.done:  push hl                 ; HL = first byte to keep
         ld de,UNDO
         or a
         sbc hl,de
-        ex de,hl                ; DE = byte eliminati
+        ex de,hl                ; DE = bytes removed
         ld hl,(uend)
         or a
         sbc hl,de
@@ -3322,7 +3322,7 @@ u_drop:                         ; elimina il gruppo piu' vecchio (il registro vi
         or a
         sbc hl,de
         ld b,h
-        ld c,l                  ; BC = byte da spostare
+        ld c,l                  ; BC = bytes to move
         pop hl
         ld de,UNDO
         ld a,b
@@ -3331,7 +3331,7 @@ u_drop:                         ; elimina il gruppo piu' vecchio (il registro vi
         ldir
         ret
 
-u_hdr:                          ; record in urec -> DE = offset, BC = lunghezza
+u_hdr:                          ; record in urec -> DE = offset, BC = length
         ld hl,(urec)
         inc hl
         ld e,(hl)
@@ -3343,20 +3343,20 @@ u_hdr:                          ; record in urec -> DE = offset, BC = lunghezza
         ld b,(hl)
         ret
 
-u_remove:                       ; elimina [offset, offset+lunghezza); il cursore resta all'inizio
+u_remove:                       ; delete [offset, offset+length); the cursor stays at the start
         call gap_to_cur
         call u_hdr
         push de
         ld h,d
         ld l,e
         add hl,bc
-        ex de,hl                ; DE = fine dell'intervallo
+        ex de,hl                ; DE = end of the range
         call goto_ofs
         pop hl
         ld (selanc),hl
         jp sel_delete
 
-u_restore:                      ; reinserisce i dati del record; il cursore va in fondo
+u_restore:                      ; reinsert the record data; the cursor goes to the end
         call gap_to_cur
         call u_hdr
         push bc
@@ -3364,10 +3364,10 @@ u_restore:                      ; reinserisce i dati del record; il cursore va i
         pop bc
         ld hl,(urec)
         ld de,5
-        add hl,de               ; HL = dati
+        add hl,de               ; HL = data
         jp ins_block
 
-u_apply_inv:                    ; annulla il record in urec
+u_apply_inv:                    ; undo the record in urec
         ld hl,(urec)
         ld a,(hl)
         and 7Fh
@@ -3375,7 +3375,7 @@ u_apply_inv:                    ; annulla il record in urec
         jr z,u_remove
         jr u_restore
 
-u_apply_fwd:                    ; ripete il record in urec
+u_apply_fwd:                    ; redo the record in urec
         ld hl,(urec)
         ld a,(hl)
         and 7Fh
@@ -3408,7 +3408,7 @@ k_undo:                         ; Ctrl+Z
         dec hl
         ld e,(hl)
         inc hl
-        ld d,(hl)               ; DE = dimensione dell'ultimo record applicato
+        ld d,(hl)               ; DE = size of the last applied record
         ld hl,(ucur)
         or a
         sbc hl,de
@@ -3418,7 +3418,7 @@ k_undo:                         ; Ctrl+Z
         ld hl,(urec)
         ld a,(hl)
         and 80h
-        jp z,u_finish           ; inizio del gruppo
+        jp z,u_finish           ; start of the group
         ld hl,(ucur)
         ld de,UNDO
         or a
@@ -3449,18 +3449,18 @@ k_redo:                         ; Ctrl+Y
         ld d,(hl)
         ld hl,7
         add hl,de
-        ex de,hl                ; DE = dimensione del record
+        ex de,hl                ; DE = record size
         ld hl,(urec)
         add hl,de
         ld (ucur),hl
         ld de,(uend)
         or a
         sbc hl,de
-        jp nc,u_finish          ; fine del registro
+        jp nc,u_finish          ; end of the log
         ld hl,(ucur)
         ld a,(hl)
         and 80h
-        jr nz,.loop             ; il prossimo e' dello stesso gruppo
+        jr nz,.loop             ; the next one is in the same group
         jp u_finish
 
 m_nundo:  db "Nothing to undo",0
@@ -3473,7 +3473,7 @@ refresh:
         ld a,(dirty)
         and 1
         jr z,.nr
-        xor a                   ; il ridisegno del testo cancella il cursore disegnato
+        xor a                   ; redrawing the text erases the drawn cursor
         ld (curdr),a
         call redraw_text
 .nr:    ld a,1
@@ -3490,7 +3490,7 @@ refresh:
         call nz,menu_draw
         jp ptr_show
 
-build_row:                      ; costruisce rowbuf per la riga che inizia in (rp)
+build_row:                      ; build rowbuf for the line starting at (rp)
         ld hl,rowbuf
         ld de,rowbuf+1
         ld bc,(vcw1)
@@ -3499,7 +3499,7 @@ build_row:                      ; costruisce rowbuf per la riga che inizia in (r
         ld a,(reof)
         or a
         ret nz
-        ld hl,(rp)              ; indirizzo fisico
+        ld hl,(rp)              ; physical address
         ld bc,(hscroll)
 .skip:  ld a,b
         or c
@@ -3530,7 +3530,7 @@ build_row:                      ; costruisce rowbuf per la riga che inizia in (r
         inc de
         inc hl
         djnz .cp
-.adv:   ld a,(hl)               ; scarta il resto della riga
+.adv:   ld a,(hl)               ; discard the rest of the line
         or a
         jr z,.ga
         cp LF
@@ -3540,7 +3540,7 @@ build_row:                      ; costruisce rowbuf per la riga che inizia in (r
 .gc:    call gapchk
         jr nz,.cp
         jr .eof
-.cps:   ld a,(hl)               ; copia con selezione
+.cps:   ld a,(hl)               ; copy with selection
         or a
         jr z,.gcs
         cp LF
@@ -3551,7 +3551,7 @@ build_row:                      ; costruisce rowbuf per la riga che inizia in (r
         inc hl
         djnz .cps
         jr .adv
-.lfs:   ld a,' '                ; a-capo selezionato = spazio inverso a fine riga
+.lfs:   ld a,' '                ; selected line break = inverse space at end of line
         call selmark
         ld (de),a
         jr .nl
@@ -3567,7 +3567,7 @@ build_row:                      ; costruisce rowbuf per la riga che inizia in (r
         ld (rp),hl
         ret
 
-selmark:                        ; A = carattere, HL = puntatore fisico -> A |= 80h se selezionato
+selmark:                        ; A = character, HL = physical pointer -> A |= 80h if selected
         push de
         push af
         ld de,(selps)
@@ -3594,7 +3594,7 @@ selmark:                        ; A = carattere, HL = puntatore fisico -> A |= 8
         pop de
         ret
 
-gapchk:                         ; HL punta a un byte 0: gap (salta, NZ) oppure fine testo (Z)
+gapchk:                         ; HL points to a 0 byte: gap (skip, NZ) or end of text (Z)
         push de
         ld de,(gpa)
         ld a,l
@@ -3661,7 +3661,7 @@ redraw_text:
         jr nz,.row
         jp kw_reset
 
-vthumb_idx:                     ; -> A = posizione del pollice (0..TV-1)
+vthumb_idx:                     ; -> A = thumb position (0..TV-1)
         ld hl,(nlines)
         dec hl
         ld a,h
@@ -3677,7 +3677,7 @@ vthumb_idx:                     ; -> A = posizione del pollice (0..TV-1)
 .z:     xor a
         ret
 
-hthumb_idx:                     ; -> A = posizione del pollice (0..TH-1)
+hthumb_idx:                     ; -> A = thumb position (0..TH-1)
         ld hl,(hscroll)
         ld de,(hmaxw)
         ld a,(thv)
@@ -3761,7 +3761,7 @@ draw_title:
         ld a,h
         or l
         jr z,.nomsg
-        ld de,rowbuf+25         ; messaggio al posto di nome e stato
+        ld de,rowbuf+25         ; message in place of name and status
         call strcpy
         jr .inv
 .nomsg: ld de,rowbuf+25
@@ -3800,7 +3800,7 @@ draw_title:
 .o:     set 7,(hl)
         inc hl
         djnz .o
-        ld a,(menuopen)         ; il titolo del menu aperto va in video normale
+        ld a,(menuopen)         ; the title of the open menu goes in normal video
         or a
         jr z,.wr
         dec a
@@ -3827,8 +3827,8 @@ draw_title:
         otir
         ret
 
-draw_title40:                   ; 40 colonne: barra dei menu (30 colonne) e stato "riga:colonna" a destra;
-        ld hl,(msgptr)          ; un messaggio occupa tutta la barra
+draw_title40:                   ; 40 columns: menu bar (30 columns) and "row:column" status on the right;
+        ld hl,(msgptr)          ; a message fills the whole bar
         ld a,h
         or l
         jr z,.nomsg
@@ -3868,7 +3868,7 @@ s_title: db "SamPr Basic",0
 s_ln:   db "Ln ",0
 s_col:  db "  Col ",0
 
-cur_blink:                      ; ogni 32 quadri: il cursore appare/scompare
+cur_blink:                      ; every 32 frames: the cursor appears/disappears
         ld a,(cph)
         xor 1
         ld (cph),a
@@ -3876,7 +3876,7 @@ cur_blink:                      ; ogni 32 quadri: il cursore appare/scompare
         call cursor_show
         jp ptr_show
 
-cursor_show:                    ; il cursore e' il glifo inverso (bit 7) della cella; (blx, bly) = cella del cursore
+cursor_show:                    ; the cursor is the inverse glyph (bit 7) of the cell; (blx, bly) = cursor cell
         ld a,(curdr)
         or a
         jr z,.nc
@@ -3892,7 +3892,7 @@ cursor_show:                    ; il cursore e' il glifo inverso (bit 7) della c
         ld (blx),a
         ld a,(menuopen)
         or a
-        ret nz                  ; con il menu aperto il cursore non si mostra
+        ret nz                  ; with the menu open the cursor is not shown
         call cur_col
         ld de,(hscroll)
         or a
@@ -3935,7 +3935,7 @@ cursor_show:                    ; il cursore e' il glifo inverso (bit 7) della c
         ld (curdr),a
         ret
 
-kw_isw:                         ; A -> CF = 1 se e' 0-9 A-Z a-z _ $
+kw_isw:                         ; A -> CF = 1 if it is 0-9 A-Z a-z _ $
         cp '$'
         jr z,.y
         cp '_'
@@ -3954,7 +3954,7 @@ kw_isw:                         ; A -> CF = 1 se e' 0-9 A-Z a-z _ $
 .y:     scf
         ret
 
-kw_up:                          ; A -> maiuscola (senza bit 7)
+kw_up:                          ; A -> uppercase (without bit 7)
         and 7Fh
         cp 'a'
         ret c
@@ -3963,7 +3963,7 @@ kw_up:                          ; A -> maiuscola (senza bit 7)
         sub 20h
         ret
 
-kw_find:                        ; HL = parola, C = lunghezza (2..10) -> Z se e' una parola chiave (HL conservato)
+kw_find:                        ; HL = word, C = length (2..10) -> Z if it is a keyword (HL preserved)
         ld a,(hl)
         call kw_up
         cp '_'
@@ -3974,7 +3974,7 @@ kw_find:                        ; HL = parola, C = lunghezza (2..10) -> Z se e' 
         jr c,.no
         cp 26
         jr nc,.no
-.ix:    ld e,a                  ; indice = iniziale * 9 + (lunghezza - 2)
+.ix:    ld e,a                  ; index = initial * 9 + (length - 2)
         ld d,0
         push hl
         ld h,d
@@ -3994,7 +3994,7 @@ kw_find:                        ; HL = parola, C = lunghezza (2..10) -> Z se e' 
         inc hl
         ld d,(hl)
         push de
-        pop ix                  ; IX = parole di quella lunghezza che iniziano con la lettera
+        pop ix                  ; IX = words of that length starting with the letter
         pop hl
 .e:     ld a,(ix+0)
         or a
@@ -4011,7 +4011,7 @@ kw_find:                        ; HL = parola, C = lunghezza (2..10) -> Z se e' 
         pop hl
         xor a
         ret
-.mm:    pop hl                  ; IX dentro la voce: B caratteri (compreso questo) restano da saltare
+.mm:    pop hl                  ; IX inside the entry: B characters (including this one) remain to be skipped
         push bc
         ld c,b
         ld b,0
@@ -4021,7 +4021,7 @@ kw_find:                        ; HL = parola, C = lunghezza (2..10) -> Z se e' 
 .no:    or 1
         ret
 
-kw_mark:                        ; flag per le colonne KWCOL .. KWCOL+KWLEN-1
+kw_mark:                        ; flags for columns KWCOL .. KWCOL+KWLEN-1
         ld a,(kwcol)
         ld b,a
         ld a,(kwlen)
@@ -4052,7 +4052,7 @@ kw_mark:                        ; flag per le colonne KWCOL .. KWCOL+KWLEN-1
         jr nz,.m
         ret
 
-kw_scan:                        ; ROWBUF (VCOLS caratteri) -> flag di colore delle parole chiave in KWF
+kw_scan:                        ; ROWBUF (VCOLS characters) -> keyword color flags in KWF
         ld hl,kwf
         ld de,kwf+1
         ld (hl),0
@@ -4061,7 +4061,7 @@ kw_scan:                        ; ROWBUF (VCOLS caratteri) -> flag di colore del
         ld hl,(vcolsw)
         ld de,rowbuf
         add hl,de
-        ld (hl),0               ; sentinella (classe 4): la scansione non esce dalla riga
+        ld (hl),0               ; sentinel (class 4): the scan does not leave the line
         xor a
         ld (kwq),a
         ld hl,rowbuf-1
@@ -4077,7 +4077,7 @@ kw_scan:                        ; ROWBUF (VCOLS caratteri) -> flag di colore del
         jr z,.quote
         cp 3
         jr nz,.out              ; sentinella
-        jr .out                 ; apostrofo: commento fino a fine riga
+        jr .out                 ; apostrophe: comment to end of line
 .quote: ld a,(kwq)
         xor 1
         ld (kwq),a
@@ -4090,13 +4090,13 @@ kw_scan:                        ; ROWBUF (VCOLS caratteri) -> flag di colore del
         ld a,(de)
         cp 1
         jr z,.wl
-        dec hl                  ; HL = ultimo carattere della parola
+        dec hl                  ; HL = last character of the word
         ld a,(kwq)
         or a
-        jr nz,.nx               ; dentro una stringa: nessuna parola chiave
+        jr nz,.nx               ; inside a string: no keyword
         ld a,c
         cp 2
-        jr c,.nx                ; una sola lettera
+        jr c,.nx                ; a single letter
         cp 11
         jr nc,.nx               ; troppo lunga
         push hl
@@ -4104,10 +4104,10 @@ kw_scan:                        ; ROWBUF (VCOLS caratteri) -> flag di colore del
         ld a,(hl)
         and 7Fh
         cp 40h
-        jr c,.nokw              ; comincia con una cifra
+        jr c,.nokw              ; starts with a digit
         call kw_find
         jr nz,.nokw
-        ld a,l                  ; colonna = KWPTR - ROWBUF
+        ld a,l                  ; column = KWPTR - ROWBUF
         sub low rowbuf
         ld (kwcol),a
         ld a,c
@@ -4116,7 +4116,7 @@ kw_scan:                        ; ROWBUF (VCOLS caratteri) -> flag di colore del
         ld a,(kwlen)
         cp 3
         jr nz,.nokw
-        ld hl,(kwptr)           ; REM: il resto della riga e' commento
+        ld hl,(kwptr)           ; REM: the rest of the line is a comment
         ld a,(hl)
         call kw_up
         cp 'R'
@@ -4138,7 +4138,7 @@ kw_scan:                        ; ROWBUF (VCOLS caratteri) -> flag di colore del
         jp .nx
 .out:   ret
 
-kw_put:                         ; A = riga schermo (1..22): KWF -> tabella di blink
+kw_put:                         ; A = screen row (1..22): KWF -> blink table
         ld l,a
         ld h,0
         ld d,h
@@ -4146,7 +4146,7 @@ kw_put:                         ; A = riga schermo (1..22): KWF -> tabella di bl
         add hl,hl
         add hl,hl
         add hl,de
-        add hl,hl               ; riga * 10
+        add hl,hl               ; row * 10
         ld de,BLKT
         add hl,de
         call vsetw
@@ -4156,7 +4156,7 @@ kw_put:                         ; A = riga schermo (1..22): KWF -> tabella di bl
         otir
         ret
 
-kw_reset:                       ; testo ridisegnato: i colori si azzerano e si ricalcolano nei tempi morti
+kw_reset:                       ; text redrawn: colors are cleared and recomputed during idle time
         ld a,(m2flag)
         or a
         ret z                   ; MSX1: nessun colore
@@ -4169,7 +4169,7 @@ kw_reset:                       ; testo ridisegnato: i colori si azzerano e si r
         ld (kwnext),a
         ret
 
-kw_idle:                        ; nessun tasto in attesa: colora fino a 2 righe leggendole dalla VRAM
+kw_idle:                        ; no key waiting: color up to 2 rows reading them from VRAM
         ld a,(m2flag)
         or a
         ret z
@@ -4186,7 +4186,7 @@ kw_idle:                        ; nessun tasto in attesa: colora fino a 2 righe 
 kw_do1:
         ld a,(kwnext)
         inc a
-        ld d,a                  ; riga schermo 1..22
+        ld d,a                  ; screen row 1..22
         ld e,0
         push de
         call cell_addr
@@ -4223,7 +4223,7 @@ mouse_init:
         ld (mcy),a
         ret
 
-mouse_read:                     ; riempie rdx, rdy (con segno), rbtn (bit0 sinistro, bit1 destro)
+mouse_read:                     ; fills rdx, rdy (signed), rbtn (bit0 left, bit1 right)
         ld a,(mmode)
         or a
         jr nz,.test
@@ -4368,7 +4368,7 @@ mouse_poll:
         ld (mdrag),a
         ret
 
-start_repeat:                   ; A = azione
+start_repeat:                   ; A = action
         ld (mact),a
         ld a,3
         ld (mdrag),a
@@ -4415,7 +4415,7 @@ mouse_press:
         ld a,(modal)
         or a
         jp nz,modal_click
-        xor a                   ; un clic chiude il gruppo di annullamento
+        xor a                   ; a click closes the undo group
         ld (uglue),a
         ld (ukind),a
         ld a,(menuopen)
@@ -4443,7 +4443,7 @@ mouse_press:
         cp 22
         ld a,2
         jp z,start_repeat
-        call vthumb_idx         ; (clobbera D/E: ricarico la riga del puntatore)
+        call vthumb_idx         ; (clobbers D/E: reload the pointer row)
         add a,2
         ld b,a
         ld a,(mcy)
@@ -4488,7 +4488,7 @@ mouse_press:
         ld a,2
         ld (mdrag),a
         ret
-.row0:  ld a,e                  ; clic sulla barra dei menu
+.row0:  ld a,e                  ; click on the menu bar
         cp MENUW*NMENU
         ret nc
         ld b,0
@@ -4530,7 +4530,7 @@ mouse_hold:
         jr c,.run
         call vthumb_idx
         add a,2
-        ld b,a                  ; riga del pollice
+        ld b,a                  ; thumb row
         ld a,(mcy)
         ld c,a
         ld a,(mact)
@@ -4553,7 +4553,7 @@ mouse_hold:
         jr c,.run
         call hthumb_idx
         inc a
-        ld b,a                  ; colonna del pollice
+        ld b,a                  ; thumb column
         ld a,(mcx)
         ld c,a
         ld a,(mact)
@@ -4594,7 +4594,7 @@ drag_v:
         ld de,(topline)
         push de
         call set_topline
-        call vthumb_idx         ; l'arrotondamento puo' lasciare il pollice una cella indietro
+        call vthumb_idx         ; rounding may leave the thumb one cell behind
         ld b,a
         ld a,(tmpd)
         cp b
@@ -4627,10 +4627,10 @@ drag_h:
         dec a
         ld e,a
         ld d,0
-        call scale              ; HL = scroll candidato (arrotondato per difetto)
+        call scale              ; HL = candidate scroll (rounded down)
         ld de,(hscroll)
-        ld (tmp1),de            ; valore precedente
-        ld (hscroll),hl         ; provvisorio: il pollice deve cadere nella cella del puntatore
+        ld (tmp1),de            ; previous value
+        ld (hscroll),hl         ; tentative: the thumb must fall in the pointer cell
         call hthumb_idx
         ld b,a
         ld a,(tmpd)
@@ -4648,7 +4648,7 @@ drag_h:
         call mark_text
         jp refresh
 
-cell_to_cursor:                 ; sposta il cursore sulla cella (tgtrow, tgtcol)
+cell_to_cursor:                 ; move the cursor to the cell (tgtrow, tgtcol)
         ld a,(tgtrow)
         dec a
         ld l,a
@@ -4689,7 +4689,7 @@ cell_to_cursor:                 ; sposta il cursore sulla cella (tgtrow, tgtcol)
         jp upd_wantcol
 
 
-click_text:                     ; pulsante premuto nell'area di testo: sposta il cursore e inizia la selezione
+click_text:                     ; button pressed in the text area: move the cursor and start the selection
         ld a,(mcy)
         ld (tgtrow),a
         ld a,(mcx)
@@ -4697,7 +4697,7 @@ click_text:                     ; pulsante premuto nell'area di testo: sposta il
         call key_shift
         or a
         jr z,.ns
-        ld hl,(selanc)          ; Shift+clic: estende la selezione
+        ld hl,(selanc)          ; Shift+click: extends the selection
         ld a,h
         and l
         inc a
@@ -4708,7 +4708,7 @@ click_text:                     ; pulsante premuto nell'area di testo: sposta il
         jr .fin
 .ns:    call cell_to_cursor
         ld hl,(cur)
-        ld (selanc),hl          ; ancora = punto del clic (selezione vuota finche' non si trascina)
+        ld (selanc),hl          ; anchor = click point (empty selection until dragged)
 .fin:   ld a,4
         ld (mdrag),a
         ld a,3
@@ -4716,7 +4716,7 @@ click_text:                     ; pulsante premuto nell'area di testo: sposta il
         call mark_text
         jp refresh
 
-drag_text:                      ; pulsante tenuto premuto: la selezione segue il puntatore
+drag_text:                      ; button held down: the selection follows the pointer
         ld hl,mtimer
         dec (hl)
         jr nz,.nosc
@@ -4724,12 +4724,12 @@ drag_text:                      ; pulsante tenuto premuto: la selezione segue il
         ld a,(mcy)
         cp 2
         jr nc,.chk2
-        ld hl,-1                ; puntatore in alto: scorre su
+        ld hl,-1                ; pointer at the top: scroll up
         call scroll_v
         jr .nosc
 .chk2:  cp 22
         jr c,.nosc
-        ld hl,1                 ; puntatore in basso: scorre giu'
+        ld hl,1                 ; pointer at the bottom: scroll down
         call scroll_v
 .nosc:  ld a,(mcy)
         or a

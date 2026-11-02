@@ -1,14 +1,14 @@
 ; =====================================================================
-; Suono: BEEP, SOUND reg,val e PLAY (MML a 3 voci, bloccante, tempo dal JIFFY)
-; Stato delle voci (12 byte): +0 puntatore, +2 caratteri rimasti, +3 ottava, +4 lunghezza, +5 volume,
-; +6 tick rimasti (word), +8 numero della voce, +9 1 = nota in corso
+; Sound: BEEP, SOUND reg,val and PLAY (3-voice MML, blocking, tempo from JIFFY)
+; Voice state (12 bytes): +0 pointer, +2 characters left, +3 octave, +4 length, +5 volume,
+; +6 ticks left (word), +8 voice number, +9 1 = note playing
 ; =====================================================================
 PSGA    equ 0A0h
 PSGD    equ 0A1h
 BEEPB   equ 00C0h
 SV_SIZE equ 12
 
-psg_w:                          ; A = registro, E = valore
+psg_w:                          ; A = register, E = value
         di
         out (PSGA),a
         ld a,e
@@ -23,7 +23,7 @@ rt_beep:
         pop ix
         ret
 
-rt_sound:                       ; SOUND GX1 = registro, GY1 = valore
+rt_sound:                       ; SOUND GX1 = register, GY1 = value
         ld hl,(GX1)
         ld a,h
         or a
@@ -53,7 +53,7 @@ getc:                           ; -> A = carattere maiuscolo, avanza (conserva H
         sub 32
         ret
 
-peekc:                          ; -> A = prossimo carattere (0 alla fine), senza avanzare
+peekc:                          ; -> A = next character (0 at the end), without advancing
         ld a,(ix+2)
         or a
         ret z
@@ -64,7 +64,7 @@ peekc:                          ; -> A = prossimo carattere (0 alla fine), senza
         pop hl
         ret
 
-getnum:                         ; -> HL = numero decimale; Z se non c'era nessuna cifra
+getnum:                         ; -> HL = decimal number; Z if there were no digits
         ld hl,0
         ld b,0
 .g:     call peekc
@@ -113,7 +113,7 @@ div16:                          ; HL / DE -> HL
         jr nz,.l
         ret
 
-ticks_for:                      ; HL = lunghezza (1-64) -> HL = tick (JIFFY)
+ticks_for:                      ; HL = length (1-64) -> HL = ticks (JIFFY)
         ld b,l
         ld de,(PTEMPO)
         ld hl,0
@@ -123,7 +123,7 @@ ticks_for:                      ; HL = lunghezza (1-64) -> HL = tick (JIFFY)
         ld hl,(PHZ)
         jp div16
 
-getlen:                         ; lunghezza facoltativa + punti -> HL = tick (almeno 1)
+getlen:                         ; optional length + dots -> HL = ticks (at least 1)
         call getnum
         jr nz,.has
         ld l,(ix+4)
@@ -155,7 +155,7 @@ getlen:                         ; lunghezza facoltativa + punti -> HL = tick (al
         ld hl,1
         ret
 
-clampnum:                       ; HL = valore, B = massimo, C = minimo -> A
+clampnum:                       ; HL = value, B = maximum, C = minimum -> A
         ld a,h
         or a
         ld a,b
@@ -169,7 +169,7 @@ clampnum:                       ; HL = valore, B = massimo, C = minimo -> A
         ld a,b
         ret
 
-silence:                        ; spegne la voce IX
+silence:                        ; silences voice IX
         ld a,(ix+8)
         add a,8
         ld e,0
@@ -230,7 +230,7 @@ setnote:                        ; C = semitono (-1..12), B = ottava
 pertab: dw 1710,1614,1523,1438,1357,1281,1209,1141,1077,1017,960,906
 notebase: db 9,11,0,2,4,5,7
 
-parse:                          ; legge i comandi MML finche' non produce una nota o una pausa
+parse:                          ; reads MML commands until it produces a note or a rest
 .nx:    ld a,(ix+2)
         or a
         jp z,.end
@@ -457,7 +457,7 @@ rt_play:
         ld a,l
         cp 1
         jr nz,.d2
-        ld a,(ix+9)             ; ultimo tick di una nota: breve stacco
+        ld a,(ix+9)             ; last tick of a note: short gap
         or a
         jr z,.d2
         call silence

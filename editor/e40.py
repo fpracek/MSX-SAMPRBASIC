@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Test dell'editor a 40 colonne su MSX1 (openMSX, Sony HB-75P, build ROM): layout, cursore, scroll verticale e orizzontale,
-barre, mouse (modo test), menu. uso: python e40.py"""
+"""Test of the 40-column editor on MSX1 (openMSX, Sony HB-75P, ROM build): layout, cursor, vertical and horizontal scroll,
+bars, mouse (test mode), menus. usage: python e40.py"""
 import os
 import sys
 
@@ -20,23 +20,23 @@ def main():
     demo = demo_lines()
     sc = Scenario(syms)
     sc.dump('w1_init')
-    sc.tap(8, 0x40, 3)                 # giu x3
-    sc.tap(8, 0x80, 5)                 # destra x5
+    sc.tap(8, 0x40, 3)                 # down x3
+    sc.tap(8, 0x80, 5)                 # right x5
     sc.text('XY')
     sc.dump('w2_edit')
-    sc.tap(8, 0x40, 3, 0.4)            # giu x3 -> riga 7 (lunga)
+    sc.tap(8, 0x40, 3, 0.4)            # down x3 -> row 7 (long)
     sc.tap(7, 0x40, 1)                 # SELECT = End
     sc.dump('w3_end')
     sc.tap(8, 0x02, 1)                 # Home
     sc.dump('w4_home')
-    sc.tap(8, 0x40, 30, 0.45)          # giu x30: scroll verticale
+    sc.tap(8, 0x40, 30, 0.45)          # down x30: vertical scroll
     sc.dump('w5_scrollv')
-    sc.poke8('mmode', 1)               # mouse (modo test)
+    sc.poke8('mmode', 1)               # mouse (test mode)
     sc.pointer(39, 22)
-    sc.click(0.15)                     # freccia giu'
+    sc.click(0.15)                     # down arrow
     sc.dump('w6_mouse_down')
-    sc.tap(7, 0x04, 1, 0.5)            # Esc: menu File
-    sc.tap(8, 0x80, 4, 0.4)            # destra x4: menu Run (l'ultimo, a destra)
+    sc.tap(7, 0x04, 1, 0.5)            # Esc: File menu
+    sc.tap(8, 0x80, 4, 0.4)            # right x4: Run menu (the last one, on the right)
     sc.dump('w7_menu')
     etest.run(sc)
 

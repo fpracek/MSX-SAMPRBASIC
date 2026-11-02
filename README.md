@@ -78,6 +78,7 @@ Work on the PC with the same workflow and the **same files** as on the MSX: the 
 
 ## Documentation
 
+- **[User manual and reference (Markdown)](doc/MANUAL.md)**: readable online, generated from `doc/` with `python doc/gen_md.py`; improvements welcome as pull requests
 - **[User manual and reference (PDF)](dist/SamPrBasic-Manual.pdf)**: cover, installation, editor, language, every statement with syntax and example, assembler, debugger, cartridges, BIN, errors and limits.
 - Online help in the editor (Help menu).
 - Implementation notes: [`onmsx/README.md`](onmsx/README.md) (compiler and runtime, stages 1–28), [`editor/README.md`](editor/README.md) (editor), [`DESIGN-ONMSX.md`](DESIGN-ONMSX.md) (design).

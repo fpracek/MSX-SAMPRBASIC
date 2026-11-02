@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
-"""MSXQB prototype compiler: dialetto stile QuickBASIC -> Z80 (sjasmplus).
+"""MSXQB prototype compiler: QuickBASIC-style dialect -> Z80 (sjasmplus).
 
-Parse one-pass con emissione diretta (niente AST), cosi' da poter essere
-riscritto 1:1 in Z80. Tipi: INTEGER 16 bit (default, suffisso %) e STRING ($).
+One-pass parser with direct code emission (no AST), so that it can be
+rewritten 1:1 in Z80. Types: 16-bit INTEGER (default, % suffix) and STRING ($).
 """
 import re
 import sys
@@ -92,7 +92,7 @@ class Compiler:
         self.arrays = {}              # name -> (label, count)
         self.consts = {}
         self.funcs = {}
-        self.cur = None               # Func in compilazione
+        self.cur = None               # Func being compiled
         self.blocks = []
         self.nlab = 0
         self.tmp = False
@@ -100,10 +100,10 @@ class Compiler:
         self.pos = 0
         self.lineno = 0
         self.mode = mode
-        self.refs = []                # (label, lineno) di GOTO/GOSUB/THEN
+        self.refs = []                # (label, lineno) of GOTO/GOSUB/THEN
         self.defined = set()
 
-    # ------------------------------------------------------------ utilita'
+    # ------------------------------------------------------------ utilities
     def err(self, msg):
         raise CompileError(f"riga {self.lineno}: {msg}")
 
@@ -165,7 +165,7 @@ class Compiler:
             self.err("atteso identificatore")
         return t[1]
 
-    # ------------------------------------------------------------ variabili
+    # ------------------------------------------------------------ variables
     def gaddr(self, name):
         if name not in self.gvars:
             self.gvars[name] = self.gsize
@@ -194,7 +194,7 @@ class Compiler:
         return ('G', self.gaddr(name))
 
     def ptr_local(self, d):
-        """HL = IX + d (clobbera DE)"""
+        """HL = IX + d (clobbers DE)"""
         self.emit('push ix')
         self.emit('pop hl')
         self.emit(f'ld de,{d}')
@@ -219,7 +219,7 @@ class Compiler:
         return t
 
     def store_var(self, name):
-        """valore in HL -> variabile"""
+        """value in HL -> variable"""
         kind, v = self.resolve(name)
         if vtype(name) == 'I':
             if kind == 'G':
@@ -247,7 +247,7 @@ class Compiler:
             self.lits[text] = f'str_{len(self.lits)}'
         return self.lits[text]
 
-    # ------------------------------------------------------------ espressioni
+    # ------------------------------------------------------------ expressions
     def expr(self):
         return self.e_or()
 
@@ -367,7 +367,7 @@ class Compiler:
             self.emit('pop de')
             if op == '*':
                 self.emit('call rt_mul')
-            else:                      # '/' = divisione intera (v0, niente float)
+            else:                      # '/' = integer division (v0, no float)
                 self.emit('ex de,hl')
                 self.emit('call rt_div')
         return t
@@ -385,8 +385,8 @@ class Compiler:
         return self.primary()
 
     def args(self, n_min, n_max):
-        """parse '(' a, b, ... ')' ; ritorna lista dei tipi; lascia gli argomenti
-        precedenti sullo stack e l'ultimo in HL"""
+        """parse '(' a, b, ... ')' ; returns the list of types; leaves the earlier
+        arguments on the stack and the last one in HL"""
         self.expect_p('(')
         types = []
         while True:
@@ -401,7 +401,7 @@ class Compiler:
         return types
 
     def builtin(self, name):
-        """chiamata funzione predefinita; None se non e' un builtin"""
+        """built-in function call; None if it is not a builtin"""
         e = self.emit
         if name in ('LEN', 'ASC', 'VAL'):
             self.want('S', self.args(1, 1)[0])
@@ -559,9 +559,9 @@ class Compiler:
         self.emit(f'ld de,{lab}')
         self.emit('add hl,de')
 
-    # ------------------------------------------------------------ statement
+    # ------------------------------------------------------------ statements
     def with_temps(self, fn):
-        """esegue fn() e, se ha creato stringhe temporanee, rilascia lo heap"""
+        """runs fn() and, if it created temporary strings, releases the heap"""
         old = self.tmp
         self.tmp = False
         start = len(self.code)
@@ -573,7 +573,7 @@ class Compiler:
         self.tmp = old
 
     def cond_jz(self, target):
-        """valuta la condizione e salta a target se falsa"""
+        """evaluates the condition and jumps to target if false"""
         def f():
             self.want('I', self.expr())
         self.with_temps(f)
@@ -592,7 +592,7 @@ class Compiler:
         self.err(msg)
 
     def program_lines(self):
-        """[(lineno, toks)] nell'ordine di compilazione, applicando la modalita'
+        """[(lineno, toks)] in compilation order, applying the mode
         (OPTION NUMBERED | LABELS | MIXED)"""
         src = [(i, lex(ln, i)) for i, ln in enumerate(self.lines, 1)]
         src = [(i, tk) for i, tk in src if tk]
@@ -626,7 +626,7 @@ class Compiler:
 
     def compile(self):
         prog = self.program_lines()
-        # prescan: firme di SUB/FUNCTION (forward reference)
+        # prescan: SUB/FUNCTION signatures (forward reference)
         for i, tk in prog:
             if tk[0][0] == 'N':
                 tk = tk[1:]
@@ -648,7 +648,7 @@ class Compiler:
             self.lineno = i
             self.toks = tk
             self.pos = 0
-            if self.toks[0][0] == 'N':       # numero di riga = label
+            if self.toks[0][0] == 'N':       # line number = label
                 self.defined.add(f'L_{self.toks[0][1]}')
                 self.label(f'L_{self.toks[0][1]}')
                 self.pos = 1
@@ -699,13 +699,13 @@ class Compiler:
         if h:
             self.next()
             return h()
-        # assegnamento o chiamata SUB senza CALL
+        # assignment or SUB call without CALL
         if w in self.funcs and self.funcs[w].kind == 'SUB':
             self.next()
             return self.call_sub(self.funcs[w])
         return self.st_assign()
 
-    # --- assegnamento
+    # --- assignment
     def st_let(self):
         self.st_assign()
 
@@ -886,7 +886,7 @@ class Compiler:
             if not self.accept_p(','):
                 break
 
-    # --- salti
+    # --- jumps
     def st_goto(self):
         self.emit(f'jp {self.target()}')
 
@@ -911,7 +911,7 @@ class Compiler:
         return lab
 
     def is_goto_target(self):
-        """dopo THEN/ELSE: numero di riga, oppure etichetta nuda (IF x THEN fine)"""
+        """after THEN/ELSE: line number, or bare label (IF x THEN fine)"""
         t = self.peek()
         if t[0] == 'N':
             return True
@@ -927,7 +927,7 @@ class Compiler:
         els = self.newlab()
         self.cond_jz(els)
         self.expect_kw('THEN')
-        if self.at_end():                          # forma a blocchi
+        if self.at_end():                          # block form
             self.blocks.append({'kind': 'IF', 'else': els, 'end': self.newlab()})
             return
         end = self.newlab()
@@ -1178,7 +1178,7 @@ class Compiler:
         if kind == 'FUNCTION':
             if f.ret == 'S':
                 self.resolve(name)
-                # la stringa risultato parte vuota
+                # the result string starts out empty
                 kind_, off = self.resolve(name)
                 self.ptr_local(off)
                 self.emit('ld (hl),0')
@@ -1247,7 +1247,7 @@ class Compiler:
         for text, lab in self.lits.items():
             data = ','.join(str(ord(c) & 0xFF) for c in text)
             out.append(f'{lab}: db {len(text)}' + (',' + data if data else ''))
-        # variabili globali (EQU)
+        # global variables (EQU)
         addr = 0
         for name, off in self.gvars.items():
             out.append(f'v_{sym(name)} equ DATA_BASE+{off}')

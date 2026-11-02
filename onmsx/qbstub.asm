@@ -1,4 +1,4 @@
-; SAMPRBAS.COM di prova: stampa la riga di comando ricevuta (per i test del compilatore)
+; test SAMPRBAS.COM: prints the command line received (for compiler tests)
         ORG 0100h
         ld hl,0081h
         ld a,(0080h)

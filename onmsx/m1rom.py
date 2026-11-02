@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
-"""Prova su MSX1 (openMSX, Sony HB-75P) delle cartucce gia' compilate da rtest.py (build/rN.rom): confronta il testo a schermo
-(40 colonne) con rtests/rN.exp. uso: python m1rom.py [nome ...]"""
+"""MSX1 test (openMSX, Sony HB-75P) of the cartridges already compiled by rtest.py (build/rN.rom): compares the on-screen text
+(40 columns) with rtests/rN.exp. usage: python m1rom.py [name ...]"""
 import os, re, subprocess, sys
 import qtest, rtest
 
