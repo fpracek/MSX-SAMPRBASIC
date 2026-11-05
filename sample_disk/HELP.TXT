@@ -73,7 +73,8 @@ MALLOC       MGET
 OPTIONS (OPTION)
 OPTION       BIN
 DOS          OPTION MIXED
-OPTION BREAK OPTION DEBUG
+OPTION BREAK OPTION MAP
+OPTION DEBUG
 
 GUIDE
 ASM          DEBUG
@@ -1656,6 +1657,7 @@ OPTION NUMBERED | LABELS | MIXED
 OPTION TARGET type
 OPTION DEBUG
 OPTION BREAK
+OPTION MAP
 
 Compilation directives, to be placed
 at the start of the source. NUMBERED:
@@ -1666,7 +1668,9 @@ output format (see OPTION TARGET).
 DEBUG enables the debugger (see
 DEBUG). BREAK lets CTRL+STOP stop a
 program started from the editor (see
-OPTION BREAK).
+OPTION BREAK). MAP (cartridges) writes
+the map file used by the Visual Studio
+Code debugger (see OPTION MAP).
 
 Example:
   OPTION LABELS
@@ -1696,7 +1700,9 @@ ASCII16, KONAMI, SCC remain valid. A
 cartridge waits for a key at the end
 and restarts the machine; cartridges
 have no files, no BLOAD/BSAVE and no
-full debugger; the inline assembler
+on-screen debugger (the Visual Studio
+Code extension can debug them, see
+OPTION MAP); the inline assembler
 works.
 
 Example:
@@ -1808,6 +1814,33 @@ Example:
     n = n + 1
   LOOP
 See also: OPTION, OPTION DEBUG
+OPTION MAP
+----------
+
+OPTION MAP
+
+Cartridges only. The compiler also
+writes NAME.MAP next to NAME.ROM: for
+every statement the segment and the
+address of its code, for every
+SUB/FUNCTION its range and its local
+variables, and the global variables.
+The cartridge itself is byte for byte
+the one you would get without the
+option (no hooks, no extra code), so
+what you debug is what you ship. The
+map is what lets the Visual Studio
+Code extension debug a multi-segment
+cartridge: breakpoints and stepping in
+any segment (the active segment is
+recognized from the ROM contents),
+call stack, local and global
+variables. You never write this option
+yourself: the extension adds it to a
+temporary copy of the project when you
+start the debugger.
+See also: OPTION, OPTION TARGET,
+OPTION DEBUG
 OPTION DEBUG
 ------------
 

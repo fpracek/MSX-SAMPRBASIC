@@ -141,10 +141,15 @@ pseg    equ ST+225              ; b  current segment during the pre-scan
 nfar    equ ST+226              ; b  voci usate in FARTAB
 romopen equ ST+227              ; b  the ROM file has already been created
         IFDEF ROMMODE
-FARTABC equ 4100h
-SEGT    equ 4180h
-FCBSV   equ 41A8h
-FARX    equ 4194h
+FARTABC equ 4300h
+SEGT    equ 4380h
+FCBSV   equ 43A8h
+FARX    equ 4394h
+FCBMAP  equ 0C000h              ; OPTION MAP: FCB of NAME.MAP (the chain loader is not needed while compiling)
+MAPBUF  equ 0C030h              ; 128-byte buffer of the map file
+MAPPOS  equ 0C0B0h              ; 3 bytes: position in the file
+MPFILL  equ 0C0B3h              ; bytes in MAPBUF
+mpf     equ ST+214              ; OPTION MAP active
         ELSE
         IFDEF BINMODE
 FARTABC equ 4AC0h
@@ -1354,7 +1359,8 @@ rom_werr:
         ld (tline),hl
         ERR E_WRITE
 
-rom_create:                     ; NAME.ROM: creates the file (only once)
+build_oname:                    ; HL = extension (5 bytes): oname = NAME + extension, namep -> oname
+        push hl
         ld hl,fname
         ld de,oname
 .c:     ld a,(hl)
@@ -1372,11 +1378,16 @@ rom_create:                     ; NAME.ROM: creates the file (only once)
         dec de
         dec de
         dec de
-.nm:    ld hl,s_rom
+.nm:    pop hl
         ld bc,5
         ldir
         ld hl,oname
         ld (namep),hl
+        ret
+
+rom_create:                     ; NAME.ROM: creates the file (only once)
+        ld hl,s_rom
+        call build_oname
         call mk_fcb
         ld de,fcb
         ld c,F_DEL
@@ -1395,6 +1406,222 @@ rom_create:                     ; NAME.ROM: creates the file (only once)
         ld (romopen),a
         ret
 
+        IFDEF ROMMODE
+; ---------------------------------------------------------------- OPTION MAP: NAME.MAP for the debugger of the PC
+; File: "SPBM" 1 <target>, then records: 'S' file seg addr line (a statement starts at addr), 'F' file seg name[12] entry line1 line2 end n locals[n*16]
+; (a SUB/FUNCTION), 'G' n globals[n*16], 'E'. The ROM is the same as without the option.
+map_open:                       ; creates NAME.MAP and writes the header
+        ld hl,s_mapx
+        call build_oname
+        call mk_fcb
+        ld de,fcb
+        ld c,F_DEL
+        call BDOS
+        call mk_fcb
+        ld de,fcb
+        ld c,F_MAKE
+        call BDOS
+        or a
+        ret nz                  ; cannot be created: no map
+        ld hl,fcb
+        ld de,FCBMAP
+        ld bc,37
+        ldir
+        ld a,1                  ; record size: 1 byte
+        ld (FCBMAP+14),a
+        xor a
+        ld (FCBMAP+15),a
+        ld (MPFILL),a
+        ld (MAPPOS),a
+        ld (MAPPOS+1),a
+        ld (MAPPOS+2),a
+        inc a
+        ld (mpf),a
+        ld hl,s_maph
+        ld b,5
+.h:     ld a,(hl)
+        call map_byte
+        inc hl
+        djnz .h
+        ld a,(target)
+        jr map_byte
+
+map_byte:                       ; A -> map file (all registers are kept)
+        push af
+        push bc
+        push de
+        push hl
+        ld b,a
+        ld a,(MPFILL)
+        ld e,a
+        ld d,0
+        ld hl,MAPBUF
+        add hl,de
+        ld (hl),b
+        inc a
+        ld (MPFILL),a
+        cp 128
+        call z,map_flush
+        pop hl
+        pop de
+        pop bc
+        pop af
+        ret
+
+map_word:                       ; HL -> map file
+        ld a,l
+        call map_byte
+        ld a,h
+        jr map_byte
+
+map_flush:                      ; writes MAPBUF at the current position
+        ld a,(MPFILL)
+        or a
+        ret z
+        ld de,MAPBUF
+        ld c,F_DMA
+        call BDOS
+        ld hl,(MAPPOS)
+        ld (FCBMAP+33),hl
+        ld a,(MAPPOS+2)
+        ld (FCBMAP+35),a
+        xor a
+        ld (FCBMAP+36),a
+        ld a,(MPFILL)
+        ld l,a
+        ld h,0
+        push hl
+        ld de,FCBMAP
+        ld c,F_BWR
+        call BDOS
+        pop de
+        ld hl,(MAPPOS)
+        add hl,de
+        ld (MAPPOS),hl
+        jr nc,.nc
+        ld hl,MAPPOS+2
+        inc (hl)
+.nc:    xor a
+        ld (MPFILL),a
+        ld de,OUT0              ; the DMA goes back to the ROM buffer
+        ld c,F_DMA
+        jp BDOS
+
+map_stmt:                       ; a statement starts here (not inside inline assembler blocks)
+        ld a,(mpf)
+        or a
+        ret z
+        ld a,(ttype)
+        cp T_P
+        jr nz,.r
+        ld a,(tval)
+        cp '#'
+        ret z
+.r:     ld a,'S'
+        call map_byte
+        ld a,(mfcur)
+        call map_byte
+        ld a,(curseg)
+        call map_byte
+        call get_pc
+        call map_word
+        ld hl,(tline)
+        jr map_word
+
+map_func:                       ; end of a SUB/FUNCTION
+        ld a,(mpf)
+        or a
+        ret z
+        ld a,'F'
+        call map_byte
+        ld a,(mfcur)
+        call map_byte
+        ld a,(curseg)
+        call map_byte
+        ld hl,(fcur)
+        ld b,12
+.nm:    ld a,(hl)
+        call map_byte
+        inc hl
+        djnz .nm
+        ld hl,(fcur)
+        ld de,17
+        add hl,de
+        ld a,(hl)
+        call map_byte
+        inc hl
+        ld a,(hl)
+        call map_byte
+        ld hl,(dbgfs)
+        call map_word
+        ld hl,(lineno)
+        call map_word
+        call get_pc
+        call map_word
+        ld a,(nloc)
+        call map_byte
+        ld a,(nloc)
+        or a
+        ret z
+        ld l,a
+        ld h,0
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        ld b,h
+        ld c,l
+        ld hl,LOCT
+.lp:    ld a,(hl)
+        call map_byte
+        inc hl
+        dec bc
+        ld a,b
+        or c
+        jr nz,.lp
+        ret
+
+map_end:                        ; global variables, end mark, close
+        ld a,(mpf)
+        or a
+        ret z
+        ld a,'G'
+        call map_byte
+        ld a,(nvar)
+        call map_byte
+        ld a,(nvar)
+        or a
+        jr z,.e
+        ld l,a
+        ld h,0
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        ld b,h
+        ld c,l
+        ld hl,VART
+.lp:    ld a,(hl)
+        call map_byte
+        inc hl
+        dec bc
+        ld a,b
+        or c
+        jr nz,.lp
+.e:     ld a,'E'
+        call map_byte
+        call map_flush
+        ld de,FCBMAP
+        ld c,F_CLOSE
+        call BDOS
+        xor a
+        ld (mpf),a
+        ret
+
+s_mapx: db ".MAP",0
+s_maph: db "SPBM",1
+s_mapw: db "MAP",0
+        ENDIF
 segsz:                          ; -> DE = size of a switchable segment
         ld de,8192
         ld a,(target)
@@ -1454,6 +1681,7 @@ rom_flush:                      ; DE = segment size: writes the buffer and fills
         jp rom_werr
 
 rom_finish:                     ; last segment, FARTAB and data size in the header, close
+        call map_end            ; OPTION MAP: globals and close of NAME.MAP
         ld a,(curseg)
         or a
         jr nz,.seg
@@ -3845,7 +4073,11 @@ line_loop:
         jr .line
 .notlab:
         call restore_lex
-.stmt:  ld a,(dbgf)
+.stmt:
+        IFDEF ROMMODE
+        call map_stmt
+        ENDIF
+        ld a,(dbgf)
         or a
         jr z,.go
         ld a,(ttype)
@@ -4791,6 +5023,13 @@ st_option:
         ld de,s_debug
         call str_eq
         jr z,.dbg
+        IFDEF ROMMODE
+        ld hl,tbuf
+        ld de,s_mapw
+        call str_eq
+        jr nz,st_skip
+        call map_open           ; OPTION MAP: map file for the debugger of the PC
+        ENDIF
         IFNDEF ROMMODE
         IFNDEF BINMODE
         ld hl,tbuf
@@ -6346,6 +6585,9 @@ end_func:                       ; C = 1 SUB / 2 FUNCTION
 .dn:    pop hl
         ld (dbglast),hl
 .nodbg:
+        ENDIF
+        IFDEF ROMMODE
+        call map_func           ; OPTION MAP: record of the SUB/FUNCTION
         ENDIF
         ld hl,fskiph
         call patch_chain

@@ -2151,9 +2151,10 @@ OPTION NUMBERED | LABELS | MIXED
 OPTION TARGET type
 OPTION DEBUG
 OPTION BREAK
+OPTION MAP
 ```
 
-Compilation directives, to be placed at the start of the source. NUMBERED: the program has line numbers and no labels; LABELS: labels only; MIXED (default): both. TARGET selects the output format (see OPTION TARGET). DEBUG enables the debugger (see DEBUG). BREAK lets CTRL+STOP stop a program started from the editor (see OPTION BREAK).
+Compilation directives, to be placed at the start of the source. NUMBERED: the program has line numbers and no labels; LABELS: labels only; MIXED (default): both. TARGET selects the output format (see OPTION TARGET). DEBUG enables the debugger (see DEBUG). BREAK lets CTRL+STOP stop a program started from the editor (see OPTION BREAK). MAP (cartridges) writes the map file used by the Visual Studio Code debugger (see OPTION MAP).
 
 Example:
 
@@ -2173,7 +2174,7 @@ OPTION TARGET DOS | BIN
 OPTION TARGET ROM_16 | ROM_32 | ROM_ASCII8 | ROM_ASCII16 | ROM_KONAMI | ROM_KONAMISCC
 ```
 
-When it is the first line, it selects what the compiler produces. DOS (default, also COM): NAME.COM program for MSX-DOS. BIN: NAME.BIN program for MSX-BASIC, without DOS (see BIN). ROM_16 and ROM_32: plain 16 or 32 KB cartridge. ROM_ASCII8, ROM_ASCII16, ROM_KONAMI and ROM_KONAMISCC (also ROM_SCC): banked cartridges, with segments (see SEGMENT and SEGMENTS). The old names ROM16, ROM32, ASCII8, ASCII16, KONAMI, SCC remain valid. A cartridge waits for a key at the end and restarts the machine; cartridges have no files, no BLOAD/BSAVE and no full debugger; the inline assembler works.
+When it is the first line, it selects what the compiler produces. DOS (default, also COM): NAME.COM program for MSX-DOS. BIN: NAME.BIN program for MSX-BASIC, without DOS (see BIN). ROM_16 and ROM_32: plain 16 or 32 KB cartridge. ROM_ASCII8, ROM_ASCII16, ROM_KONAMI and ROM_KONAMISCC (also ROM_SCC): banked cartridges, with segments (see SEGMENT and SEGMENTS). The old names ROM16, ROM32, ASCII8, ASCII16, KONAMI, SCC remain valid. A cartridge waits for a key at the end and restarts the machine; cartridges have no files, no BLOAD/BSAVE and no on-screen debugger (the Visual Studio Code extension can debug them, see OPTION MAP); the inline assembler works.
 
 Example:
 
@@ -2295,6 +2296,18 @@ LOOP
 
 See also: `OPTION`, `OPTION DEBUG`
 
+### OPTION MAP
+
+*Also:* `OPT MAP`, `MAP FILE`
+
+```
+OPTION MAP
+```
+
+Cartridges only. The compiler also writes NAME.MAP next to NAME.ROM: for every statement the segment and the address of its code, for every SUB/FUNCTION its range and its local variables, and the global variables. The cartridge itself is byte for byte the one you would get without the option (no hooks, no extra code), so what you debug is what you ship. The map is what lets the Visual Studio Code extension debug a multi-segment cartridge: breakpoints and stepping in any segment (the active segment is recognized from the ROM contents), call stack, local and global variables. You never write this option yourself: the extension adds it to a temporary copy of the project when you start the debugger.
+
+See also: `OPTION`, `OPTION TARGET`, `OPTION DEBUG`
+
 ### OPTION DEBUG
 
 *Also:* `OPT DEBUG`
@@ -2349,4 +2362,4 @@ See also: `DEBUG`
 
 ## Keyword index
 
-`'` `?` `ABS` `AND` `ASC` `BASE` `BEEP` `BIN` `BLOAD` `BREAK` `BSAVE` `CALL` `CASE` `CHR$` `CIRCLE` `CLOSE` `CLS` `COLLISION` `COLOR` `COM` `CONST` `COPY` `CVI` `DATA` `DATAWIN` `DECLARE` `DIM` `DO` `DOS` `DRAW` `ELSE` `ELSEIF` `END` `END FUNCTION` `END IF` `END SELECT` `END SUB` `EOF` `EXIT` `FIELD` `FOR` `FUNCTION` `GET` `GOSUB` `GOTO` `IF` `INCBIN` `INKEY$` `INP` `INPUT` `KILL` `LABELS` `LEFT$` `LEN` `LET` `LINE` `LINE INPUT` `LINENUMBERS` `LOCATE` `LOF` `LOOP` `LSET` `MALLOC` `MAPPERSEGS` `MFREE` `MGET` `MID$` `MIXED` `MKI$` `MOD` `MPUT` `MREAD` `MWRITE` `NAMES` `NEXT` `NOT` `NUMBERED` `OPEN` `OPERATORS` `OPT BREAK` `OPT DEBUG` `OPT LABELS` `OPTION` `OPTION BREAK` `OPTION DEBUG` `OPTION LABELS` `OPTION MIXED` `OPTION NUMBERED` `OPTION TARGET` `OR` `OUT` `PAINT` `PALETTE` `PEEK` `PLAY` `POINT` `POKE` `PRESET` `PRINT` `PSET` `PUT` `PUT SPRITE` `RANDOMIZE` `READ` `REM` `RESTORE` `RETURN` `RIGHT$` `RND` `RSET` `SCREEN` `SEGMENT` `SELECT` `SELECT CASE` `SET` `SET PAGE` `SET SCROLL` `SETBANK` `SGN` `SHARED` `SLEEP` `SOUND` `SPRITE` `STEP` `STICK` `STOP` `STR$` `STRIG` `SUB` `TARGET` `THEN` `TIMER` `TO` `TYPES` `UBOUND` `UNTIL` `VAL` `VARIABLES` `VARPTR` `VBANK` `VCOPY` `VDP` `VFILL` `VIEW` `VPEEK` `VPOKE` `VREAD$` `VWRITE` `WEND` `WHILE` `WINDOW` `WRITE` `XOR`
+`'` `?` `ABS` `AND` `ASC` `BASE` `BEEP` `BIN` `BLOAD` `BREAK` `BSAVE` `CALL` `CASE` `CHR$` `CIRCLE` `CLOSE` `CLS` `COLLISION` `COLOR` `COM` `CONST` `COPY` `CVI` `DATA` `DATAWIN` `DECLARE` `DIM` `DO` `DOS` `DRAW` `ELSE` `ELSEIF` `END` `END FUNCTION` `END IF` `END SELECT` `END SUB` `EOF` `EXIT` `FIELD` `FOR` `FUNCTION` `GET` `GOSUB` `GOTO` `IF` `INCBIN` `INKEY$` `INP` `INPUT` `KILL` `LABELS` `LEFT$` `LEN` `LET` `LINE` `LINE INPUT` `LINENUMBERS` `LOCATE` `LOF` `LOOP` `LSET` `MALLOC` `MAP FILE` `MAPPERSEGS` `MFREE` `MGET` `MID$` `MIXED` `MKI$` `MOD` `MPUT` `MREAD` `MWRITE` `NAMES` `NEXT` `NOT` `NUMBERED` `OPEN` `OPERATORS` `OPT BREAK` `OPT DEBUG` `OPT LABELS` `OPT MAP` `OPTION` `OPTION BREAK` `OPTION DEBUG` `OPTION LABELS` `OPTION MAP` `OPTION MIXED` `OPTION NUMBERED` `OPTION TARGET` `OR` `OUT` `PAINT` `PALETTE` `PEEK` `PLAY` `POINT` `POKE` `PRESET` `PRINT` `PSET` `PUT` `PUT SPRITE` `RANDOMIZE` `READ` `REM` `RESTORE` `RETURN` `RIGHT$` `RND` `RSET` `SCREEN` `SEGMENT` `SELECT` `SELECT CASE` `SET` `SET PAGE` `SET SCROLL` `SETBANK` `SGN` `SHARED` `SLEEP` `SOUND` `SPRITE` `STEP` `STICK` `STOP` `STR$` `STRIG` `SUB` `TARGET` `THEN` `TIMER` `TO` `TYPES` `UBOUND` `UNTIL` `VAL` `VARIABLES` `VARPTR` `VBANK` `VCOPY` `VDP` `VFILL` `VIEW` `VPEEK` `VPOKE` `VREAD$` `VWRITE` `WEND` `WHILE` `WINDOW` `WRITE` `XOR`

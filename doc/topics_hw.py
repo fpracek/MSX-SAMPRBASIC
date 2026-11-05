@@ -132,15 +132,15 @@ T(['MGET', 'MPUT', 'MREAD', 'MWRITE', 'VARPTR'], C, ["MGET(segment, offset)", "M
 
 # ------------------------------------------------------------------ OPTION
 C = 'Options (OPTION)'
-T('OPTION', C, ["OPTION NUMBERED | LABELS | MIXED", "OPTION TARGET type", "OPTION DEBUG", "OPTION BREAK"],
+T('OPTION', C, ["OPTION NUMBERED | LABELS | MIXED", "OPTION TARGET type", "OPTION DEBUG", "OPTION BREAK", "OPTION MAP"],
   "Compilation directives, to be placed at the start of the source. NUMBERED: the program has line numbers and no labels; LABELS: labels only; "
-  "MIXED (default): both. TARGET selects the output format (see OPTION TARGET). DEBUG enables the debugger (see DEBUG). BREAK lets CTRL+STOP stop a program started from the editor (see OPTION BREAK).",
+  "MIXED (default): both. TARGET selects the output format (see OPTION TARGET). DEBUG enables the debugger (see DEBUG). BREAK lets CTRL+STOP stop a program started from the editor (see OPTION BREAK). MAP (cartridges) writes the map file used by the Visual Studio Code debugger (see OPTION MAP).",
   'OPTION LABELS\nPRINT "ok"', ['OPTION TARGET', 'OPTION DEBUG', 'LABELS'])
 T(['OPTION TARGET','TARGET'], C, ["OPTION TARGET DOS | BIN", "OPTION TARGET ROM_16 | ROM_32 | ROM_ASCII8 | ROM_ASCII16 | ROM_KONAMI | ROM_KONAMISCC"],
   "When it is the first line, it selects what the compiler produces. DOS (default, also COM): NAME.COM program for MSX-DOS. BIN: NAME.BIN program for MSX-BASIC, "
   "without DOS (see BIN). ROM_16 and ROM_32: plain 16 or 32 KB cartridge. ROM_ASCII8, ROM_ASCII16, ROM_KONAMI and ROM_KONAMISCC (also ROM_SCC): banked cartridges, with segments "
   "(see SEGMENT and SEGMENTS). The old names ROM16, ROM32, ASCII8, ASCII16, KONAMI, SCC remain valid. A cartridge waits for a key at the end and restarts the machine; cartridges "
-  "have no files, no BLOAD/BSAVE and no full debugger; the inline assembler works.",
+  "have no files, no BLOAD/BSAVE and no on-screen debugger (the Visual Studio Code extension can debug them, see OPTION MAP); the inline assembler works.",
   'OPTION TARGET ROM_16\nPRINT "I am a cartridge"', ['BIN', 'DOS', 'SEGMENT', 'OPTION'])
 T(['BIN'], C, ["OPTION TARGET BIN"],
   "Produces NAME.BIN, a machine-language program for MSX-BASIC, without MSX-DOS. The file is in BLOAD format and starts at address 8400h. From MSX-BASIC: "
@@ -160,4 +160,10 @@ T(['OPTION BREAK','OPT BREAK','BREAK'], C, ["OPTION BREAK"],
   "(NEXT, LOOP, WEND, GOTO), so any loop can be interrupted at the cost of a few microseconds per iteration; a program that never loops back cannot be stopped. "
   "On openMSX the STOP key is Pause: press CTRL+Pause. DOS programs only (not BIN or cartridges); with OPTION DEBUG the debugger is used instead.",
   'OPTION BREAK\nPRINT "CTRL+STOP returns to the editor"\nDO\n  n = n + 1\nLOOP', ['OPTION', 'OPTION DEBUG'])
+T(['OPTION MAP','OPT MAP','MAP FILE'], C, ["OPTION MAP"],
+  "Cartridges only. The compiler also writes NAME.MAP next to NAME.ROM: for every statement the segment and the address of its code, for every SUB/FUNCTION its range and its local variables, "
+  "and the global variables. The cartridge itself is byte for byte the one you would get without the option (no hooks, no extra code), so what you debug is what you ship. "
+  "The map is what lets the Visual Studio Code extension debug a multi-segment cartridge: breakpoints and stepping in any segment (the active segment is recognized from the ROM contents), "
+  "call stack, local and global variables. You never write this option yourself: the extension adds it to a temporary copy of the project when you start the debugger.",
+  None, ['OPTION', 'OPTION TARGET', 'OPTION DEBUG'])
 T(['OPTION DEBUG','OPT DEBUG'], C, ["OPTION DEBUG"], "Compiles with the built-in debugger: the program starts stopped at the first statement. See DEBUG.", 'OPTION DEBUG\na = 1\nb = a + 1', ['DEBUG'])

@@ -1527,9 +1527,10 @@
    "OPTION NUMBERED | LABELS | MIXED",
    "OPTION TARGET type",
    "OPTION DEBUG",
-   "OPTION BREAK"
+   "OPTION BREAK",
+   "OPTION MAP"
   ],
-  "description": "Compilation directives, to be placed at the start of the source. NUMBERED: the program has line numbers and no labels; LABELS: labels only; MIXED (default): both. TARGET selects the output format (see OPTION TARGET). DEBUG enables the debugger (see DEBUG). BREAK lets CTRL+STOP stop a program started from the editor (see OPTION BREAK).",
+  "description": "Compilation directives, to be placed at the start of the source. NUMBERED: the program has line numbers and no labels; LABELS: labels only; MIXED (default): both. TARGET selects the output format (see OPTION TARGET). DEBUG enables the debugger (see DEBUG). BREAK lets CTRL+STOP stop a program started from the editor (see OPTION BREAK). MAP (cartridges) writes the map file used by the Visual Studio Code debugger (see OPTION MAP).",
   "example": "OPTION LABELS\nPRINT \"ok\"",
   "see": [
    "OPTION TARGET",
@@ -1548,7 +1549,7 @@
    "OPTION TARGET DOS | BIN",
    "OPTION TARGET ROM_16 | ROM_32 | ROM_ASCII8 | ROM_ASCII16 | ROM_KONAMI | ROM_KONAMISCC"
   ],
-  "description": "When it is the first line, it selects what the compiler produces. DOS (default, also COM): NAME.COM program for MSX-DOS. BIN: NAME.BIN program for MSX-BASIC, without DOS (see BIN). ROM_16 and ROM_32: plain 16 or 32 KB cartridge. ROM_ASCII8, ROM_ASCII16, ROM_KONAMI and ROM_KONAMISCC (also ROM_SCC): banked cartridges, with segments (see SEGMENT and SEGMENTS). The old names ROM16, ROM32, ASCII8, ASCII16, KONAMI, SCC remain valid. A cartridge waits for a key at the end and restarts the machine; cartridges have no files, no BLOAD/BSAVE and no full debugger; the inline assembler works.",
+  "description": "When it is the first line, it selects what the compiler produces. DOS (default, also COM): NAME.COM program for MSX-DOS. BIN: NAME.BIN program for MSX-BASIC, without DOS (see BIN). ROM_16 and ROM_32: plain 16 or 32 KB cartridge. ROM_ASCII8, ROM_ASCII16, ROM_KONAMI and ROM_KONAMISCC (also ROM_SCC): banked cartridges, with segments (see SEGMENT and SEGMENTS). The old names ROM16, ROM32, ASCII8, ASCII16, KONAMI, SCC remain valid. A cartridge waits for a key at the end and restarts the machine; cartridges have no files, no BLOAD/BSAVE and no on-screen debugger (the Visual Studio Code extension can debug them, see OPTION MAP); the inline assembler works.",
   "example": "OPTION TARGET ROM_16\nPRINT \"I am a cartridge\"",
   "see": [
    "BIN",
@@ -1655,6 +1656,25 @@
   "example": "OPTION BREAK\nPRINT \"CTRL+STOP returns to the editor\"\nDO\n  n = n + 1\nLOOP",
   "see": [
    "OPTION",
+   "OPTION DEBUG"
+  ],
+  "availability": "MSX1 and MSX2"
+ },
+ {
+  "names": [
+   "OPTION MAP",
+   "OPT MAP",
+   "MAP FILE"
+  ],
+  "category": "Options (OPTION)",
+  "syntax": [
+   "OPTION MAP"
+  ],
+  "description": "Cartridges only. The compiler also writes NAME.MAP next to NAME.ROM: for every statement the segment and the address of its code, for every SUB/FUNCTION its range and its local variables, and the global variables. The cartridge itself is byte for byte the one you would get without the option (no hooks, no extra code), so what you debug is what you ship. The map is what lets the Visual Studio Code extension debug a multi-segment cartridge: breakpoints and stepping in any segment (the active segment is recognized from the ROM contents), call stack, local and global variables. You never write this option yourself: the extension adds it to a temporary copy of the project when you start the debugger.",
+  "example": null,
+  "see": [
+   "OPTION",
+   "OPTION TARGET",
    "OPTION DEBUG"
   ],
   "availability": "MSX1 and MSX2"

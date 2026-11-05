@@ -47,7 +47,7 @@ Keep names within the MSX 8.3 limit. In the editor on the MSX, *Save As* accepts
 
 ## Debugger
 
-Set breakpoints in the gutter and press `Ctrl+F5` (*Debug: SamPr Basic in openMSX*), or use *Run > Start Debugging* with a `samprbasic` launch configuration (`program`, `stopOnEntry`). The extension compiles a temporary copy of the project with `OPTION DEBUG` (your source is untouched), starts openMSX and attaches to it. You get continue / step over / step into / step out / pause, the call stack with SUB names, locals and parameters, globals and arrays, and expression evaluation (`V(2)`, `N$`) in Watch and Debug Console. DOS and BIN targets are supported; ROM cartridges are not.
+Set breakpoints in the gutter and press `Ctrl+F5` (*Debug: SamPr Basic in openMSX*), or use *Run > Start Debugging* with a `samprbasic` launch configuration (`program`, `stopOnEntry`). The extension compiles a temporary copy of the project with `OPTION DEBUG` (your source is untouched), starts openMSX and attaches to it. You get continue / step over / step into / step out / pause, the call stack with SUB names, locals and parameters, globals and arrays, and expression evaluation (`V(2)`, `N$`) in Watch and Debug Console. DOS, BIN and **ROM cartridge** targets are supported. For a cartridge (also with several segments: `NAME000.SPB`, `NAME001.SPB`...) the compiler writes a map file (`OPTION MAP`, added to the temporary copy) and the debugger uses address breakpoints on the ROM, so the cartridge being debugged is identical to the one you ship; breakpoints and stepping work across segments, and the call stack and variables are shown as for the other targets.
 
 ## Commands
 

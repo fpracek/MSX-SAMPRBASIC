@@ -1,4 +1,5 @@
 {
   "dos": { "base": 256,   "rtDbg": 617,   "rtEnd": 307,   "dbgt": 49826 },
-  "bin": { "base": 33792, "rtDbg": 34153, "rtEnd": 33843, "dbgt": 53778 }
+  "bin": { "base": 33792, "rtDbg": 34153, "rtEnd": 33843, "dbgt": 53778 },
+  "rom": { "base": 16640, "rtDbg": 0, "rtEnd": 16691, "dbgt": 0 }
 }

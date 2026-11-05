@@ -18,6 +18,15 @@ proc spb_hit {} {
   debug break
   spb_event stopped [reg HL] [reg IX] [reg PC]
 }
+set ::spb_mode 0
+set ::spb_sp 0
+set ::spb_stopped 0
+proc spb_rhit {} {
+  if {$::spb_stopped} return
+  set ::spb_stopped 1
+  debug break
+  spb_event stopped [reg HL] [reg IX] [reg PC] [reg SP]
+}
 proc spb_end {} {
   spb_event ended
 }
