@@ -28,7 +28,18 @@ D_QB    equ 1600                ; E command: text (24 bytes) and name pattern (1
 D_REGS  equ 32                  ; R#0-R#27 (28 bytes)
 D_LBUF  equ 64                  ; 40 bytes: text line
 D_BUF   equ 128                 ; 960 bytes name table + 512 bytes glyphs
+        IFDEF ROMMODE
+D_SEG   equ 104                 ; ROM: bank of the code being run (0 = fixed segment)
+D_TB    equ 105                 ; ROM: bank of the variable table
+D_CA    equ 106                 ; word: address of the local-variable record being examined
+D_CB    equ 108                 ; its bank
+D_GR    equ 0670h               ; 16-byte copy of a global-variable record
+D_RB    equ 0680h               ; copy of a local-variable record (8-byte header + up to 24 x 16)
+DBGSIZE equ 0810h
+DBGDESC equ 7F80h               ; descriptor written by the compiler: [bank][address] of the variable table (banked cartridges)
+        ELSE
 DBGSIZE equ 0670h
+        ENDIF
 
 rt_dbg:                         ; HL = source line; preserves all registers
         push af
@@ -51,6 +62,19 @@ rt_dbg:                         ; HL = source line; preserves all registers
         ld (ix+D_FR+1),b
         ld (ix+D_LINE),l
         ld (ix+D_LINE+1),h
+        IFDEF ROMMODE
+        push hl                 ; segment of the statement: fixed if the caller is below 8000h, otherwise the bank in the window
+        ld hl,14
+        add hl,sp
+        inc hl
+        ld a,(hl)
+        cp 80h
+        ld a,0
+        jr c,.sg
+        ld a,(CURBANK)
+.sg:    ld (ix+D_SEG),a
+        pop hl
+        ENDIF
         ld a,(ix+D_MODE)
         or a
         jr nz,.stop
@@ -529,9 +553,60 @@ dbg_draw:
         ld a,23
         jp dbg_row
 
+        IFDEF ROMMODE
+dbg_desc:                       ; -> HL = address of the variable table (0: none), (ix+D_TB) = its bank; IX = DBGP
+        ld ix,(DBGP)
+        ld hl,0
+        ld a,(rt_target)
+        cp 3
+        ret c                   ; ROM_16 / ROM_32: no descriptor
+        ld a,(DBGDESC)
+        ld (ix+D_TB),a
+        ld hl,(DBGDESC+1)
+        ret
+
+dbg_bcopy:                      ; A = bank (0 = fixed segment), HL = source, DE = destination, BC = length
+        or a
+        jr nz,.sw
+        ldir
+        ret
+.sw:    di
+        exx
+        ld hl,(CWREG)
+        ld b,a
+        ld a,(CURBANK)
+        ld c,a
+        ld (hl),b               ; the bank in the window...
+        exx
+        ldir
+        exx
+        ld (hl),c               ; ...and the previous one again
+        exx
+        ei
+        ret
+
+dbg_tcopy:                      ; HL = source in the bank of the table, BC = length -> copy at IY (the scratch of the global record)
+        ld ix,(DBGP)
+        push ix
+        pop de
+        push hl
+        ld hl,D_GR
+        add hl,de
+        ex de,hl
+        push de
+        pop iy
+        pop hl
+        ld a,(ix+D_TB)
+        jp dbg_bcopy
+        ENDIF
+
 dbg_vars:
+        IFDEF ROMMODE
+        call dbg_desc
+        ELSE
         ld ix,(DBGP)
         ld hl,(DBGT)
+        ENDIF
         ld a,h
         or l
         jr nz,.have
@@ -540,11 +615,25 @@ dbg_vars:
         call dbg_cat
         ld a,2
         jp dbg_row
-.have:  ld a,(hl)
+.have:
+        IFDEF ROMMODE
+        ld (ix+D_VPTR),l
+        ld (ix+D_VPTR+1),h
+        ld bc,1
+        call dbg_tcopy          ; number of variables
+        ld a,(iy+0)
+        ld (ix+D_VN),a
+        inc (ix+D_VPTR)
+        jr nz,.n1
+        inc (ix+D_VPTR+1)
+.n1:
+        ELSE
+        ld a,(hl)
         inc hl
         ld (ix+D_VN),a
         ld (ix+D_VPTR),l
         ld (ix+D_VPTR+1),h
+        ENDIF
         ld a,(ix+D_VPG)
         add a,a
         add a,a
@@ -567,8 +656,13 @@ dbg_vars:
         ld (ix+D_VPTR),l
         ld (ix+D_VPTR+1),h
         pop hl
+        IFDEF ROMMODE
+        ld bc,16
+        call dbg_tcopy          ; IY = copy of the record in RAM
+        ELSE
         push hl
         pop iy                  ; IY = record
+        ENDIF
         ld a,(iy+14)
         or (iy+15)
         jr nz,.loop             ; arrays are not shown
@@ -669,12 +763,22 @@ dbg_cats:                       ; HL = string [len][data] -> (DE), at most 22 ch
         ret
 
 dbg_nextpg:
+        IFDEF ROMMODE
+        call dbg_desc
+        ld a,h
+        or l
+        ret z
+        ld bc,1
+        call dbg_tcopy
+        ld b,(iy+0)
+        ELSE
         ld ix,(DBGP)
         ld hl,(DBGT)
         ld a,h
         or l
         ret z
         ld b,(hl)
+        ENDIF
         ld a,(ix+D_VPG)
         inc a
         ld c,a

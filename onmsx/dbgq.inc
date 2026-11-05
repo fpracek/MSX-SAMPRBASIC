@@ -45,6 +45,7 @@ dbg_findr:                      ; -> IY = record of the routine containing the c
 .no:    scf
         ret
 
+        ENDIF
 dbg_laddr:                      ; IY = local record -> HL = address of the value; C if not displayable (shared, arrays)
         ld a,(iy+12)
         cp 2
@@ -75,6 +76,7 @@ dbg_laddr:                      ; IY = local record -> HL = address of the value
 .no:    scf
         ret
 
+        IFNDEF ROMMODE
 dbg_vlocals:                    ; rows of the current routine's local variables (prefix '>')
         call dbg_findr
         ret c
@@ -437,8 +439,123 @@ dbg_query:                      ; E command: variable name (also A(3), N$) -> va
         ld (ix+D_QX),a
         ret
         ELSE
-dbg_vlocals:
-        ret
 dbg_query:
         ret
+; ROM: the records are in the segments of their routines: the chain is walked copying each header to RAM
+dbg_vlocals:                    ; rows of the local variables of the current routine (prefix '>')
+        call dbg_desc
+        ld a,h
+        or l
+        ret z
+        ld bc,1
+        call dbg_tcopy          ; n
+        ld l,(iy+0)
+        ld h,0
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        inc hl
+        ld de,(DBGDESC+1)
+        add hl,de               ; the pointer to the last record follows the globals: [addr w][bank]
+        ld bc,3
+        call dbg_tcopy
+        ld ix,(DBGP)
+        ld a,(iy+0)
+        ld (ix+D_CA),a
+        ld a,(iy+1)
+        ld (ix+D_CA+1),a
+        ld a,(iy+2)
+        ld (ix+D_CB),a
+.w:     ld ix,(DBGP)
+        ld l,(ix+D_CA)
+        ld h,(ix+D_CA+1)
+        ld a,h
+        or l
+        ret z
+        push ix
+        pop iy
+        ld de,D_RB
+        add iy,de               ; IY = copy of the record
+        push iy
+        pop de
+        ld a,(ix+D_CB)
+        ld bc,8
+        call dbg_bcopy          ; header: prev w, prev bank, start w, end w, n
+        ld ix,(DBGP)
+        ld a,(ix+D_CB)
+        cp (ix+D_SEG)
+        jr nz,.nx
+        ld l,(ix+D_LINE)
+        ld h,(ix+D_LINE+1)
+        ld e,(iy+3)
+        ld d,(iy+4)
+        or a
+        sbc hl,de               ; line - start
+        jr c,.nx
+        ld e,(ix+D_LINE)
+        ld d,(ix+D_LINE+1)
+        ld l,(iy+5)
+        ld h,(iy+6)
+        or a
+        sbc hl,de               ; end - line
+        jr nc,.found
+.nx:    ld a,(iy+0)
+        ld (ix+D_CA),a
+        ld a,(iy+1)
+        ld (ix+D_CA+1),a
+        ld a,(iy+2)
+        ld (ix+D_CB),a
+        jr .w
+.found: ld a,(iy+7)
+        cp 25
+        jr c,.nl
+        ld a,24
+        ld (iy+7),a
+.nl:    or a
+        ret z
+        ld l,a
+        ld h,0
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        ld b,h
+        ld c,l
+        ld l,(ix+D_CA)
+        ld h,(ix+D_CA+1)
+        ld de,8
+        add hl,de               ; source: the locals after the 8-byte header
+        push hl
+        push iy
+        pop hl
+        ld de,8
+        add hl,de
+        ex de,hl                ; DE = copy + 8
+        pop hl
+        ld a,(ix+D_CB)
+        call dbg_bcopy
+        ld ix,(DBGP)
+        ld b,(iy+7)
+        push iy
+        pop hl
+        ld de,8
+        add hl,de
+.r:     ld a,b
+        or a
+        ret z
+        push bc
+        push hl
+        push hl
+        pop iy
+        call dbg_laddr
+        jr c,.sk
+        ld c,'>'
+        call dbg_vline
+.sk:    pop hl
+        ld de,16
+        add hl,de
+        pop bc
+        dec b
+        jr .r
         ENDIF

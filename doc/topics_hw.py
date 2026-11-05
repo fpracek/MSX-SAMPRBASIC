@@ -166,4 +166,4 @@ T(['OPTION MAP','OPT MAP','MAP FILE'], C, ["OPTION MAP"],
   "The map is what lets the Visual Studio Code extension debug a multi-segment cartridge: breakpoints and stepping in any segment (the active segment is recognized from the ROM contents), "
   "call stack, local and global variables. You never write this option yourself: the extension adds it to a temporary copy of the project when you start the debugger.",
   None, ['OPTION', 'OPTION TARGET', 'OPTION DEBUG'])
-T(['OPTION DEBUG','OPT DEBUG'], C, ["OPTION DEBUG"], "Compiles with the built-in debugger: the program starts stopped at the first statement. See DEBUG.", 'OPTION DEBUG\na = 1\nb = a + 1', ['DEBUG'])
+T(['OPTION DEBUG','OPT DEBUG'], C, ["OPTION DEBUG", "OPTION DEBUG GLOBALS | ALL (cartridges)"], "Compiles with the built-in debugger: the program starts stopped at the first statement. See DEBUG. In banked cartridges the optional word chooses what the debugger shows: nothing (lines only, the default), GLOBALS (global variables) or ALL (also local variables and parameters).", 'OPTION DEBUG\na = 1\nb = a + 1', ['DEBUG'])

@@ -1845,10 +1845,17 @@ OPTION DEBUG
 ------------
 
 OPTION DEBUG
+OPTION DEBUG GLOBALS | ALL
+    (cartridges)
 
 Compiles with the built-in debugger:
 the program starts stopped at the
-first statement. See DEBUG.
+first statement. See DEBUG. In banked
+cartridges the optional word chooses
+what the debugger shows: nothing
+(lines only, the default), GLOBALS
+(global variables) or ALL (also local
+variables and parameters).
 
 Example:
   OPTION DEBUG
@@ -1928,10 +1935,22 @@ a SUB the local variables and
 parameters appear first with the >
 prefix. CTRL-STOP while running re-
 enters the debugger. The program
-screen stays intact. In cartridges the
-debugger works but does not show
-variables. Normal programs (without
-OPTION DEBUG) pay nothing.
+screen stays intact. In cartridges
+OPTION DEBUG alone follows the lines
+only; OPTION DEBUG GLOBALS also shows
+the global variables and OPTION DEBUG
+ALL the local variables and parameters
+too (banked cartridges: ASCII8,
+ASCII16, KONAMI, SCC; the E command is
+not available). The tables go in the
+last segment, and the debugger takes
+about 2 KB of the fixed segment 0, so
+place OPTION DEBUG after the part of
+file 000 you do not need to follow:
+hooks are inserted only from that
+point and in all the other segments.
+Normal programs (without OPTION DEBUG)
+pay nothing.
 
 Example:
   OPTION DEBUG

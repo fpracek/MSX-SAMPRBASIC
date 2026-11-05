@@ -1686,9 +1686,10 @@
   ],
   "category": "Options (OPTION)",
   "syntax": [
-   "OPTION DEBUG"
+   "OPTION DEBUG",
+   "OPTION DEBUG GLOBALS | ALL (cartridges)"
   ],
-  "description": "Compiles with the built-in debugger: the program starts stopped at the first statement. See DEBUG.",
+  "description": "Compiles with the built-in debugger: the program starts stopped at the first statement. See DEBUG. In banked cartridges the optional word chooses what the debugger shows: nothing (lines only, the default), GLOBALS (global variables) or ALL (also local variables and parameters).",
   "example": "OPTION DEBUG\na = 1\nb = a + 1",
   "see": [
    "DEBUG"
@@ -1725,7 +1726,7 @@
   "syntax": [
    "OPTION DEBUG"
   ],
-  "description": "Write OPTION DEBUG in the source and press F5: the program starts stopped at the first statement, in a text screen showing the current line, the global scalar variables with their value and the list of breakpoints. Keys: SPACE (or S, ENTER) runs one statement; R runs to the next breakpoint; B number ENTER sets or clears a breakpoint (ENTER alone = current line, 0 = clear them all); C clears all breakpoints; V next page of variables; E asks for a variable name (local, parameter, global, array element such as V(3) or N$) and shows its value; Q ends the program. Inside a SUB the local variables and parameters appear first with the > prefix. CTRL-STOP while running re-enters the debugger. The program screen stays intact. In cartridges the debugger works but does not show variables. Normal programs (without OPTION DEBUG) pay nothing.",
+  "description": "Write OPTION DEBUG in the source and press F5: the program starts stopped at the first statement, in a text screen showing the current line, the global scalar variables with their value and the list of breakpoints. Keys: SPACE (or S, ENTER) runs one statement; R runs to the next breakpoint; B number ENTER sets or clears a breakpoint (ENTER alone = current line, 0 = clear them all); C clears all breakpoints; V next page of variables; E asks for a variable name (local, parameter, global, array element such as V(3) or N$) and shows its value; Q ends the program. Inside a SUB the local variables and parameters appear first with the > prefix. CTRL-STOP while running re-enters the debugger. The program screen stays intact. In cartridges OPTION DEBUG alone follows the lines only; OPTION DEBUG GLOBALS also shows the global variables and OPTION DEBUG ALL the local variables and parameters too (banked cartridges: ASCII8, ASCII16, KONAMI, SCC; the E command is not available). The tables go in the last segment, and the debugger takes about 2 KB of the fixed segment 0, so place OPTION DEBUG after the part of file 000 you do not need to follow: hooks are inserted only from that point and in all the other segments. Normal programs (without OPTION DEBUG) pay nothing.",
   "example": "OPTION DEBUG\ns = 0\nFOR i = 1 TO 3\n  s = s + i\nNEXT i\nPRINT s",
   "see": [
    "OPTION DEBUG"

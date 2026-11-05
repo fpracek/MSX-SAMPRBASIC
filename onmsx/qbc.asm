@@ -141,14 +141,14 @@ pseg    equ ST+225              ; b  current segment during the pre-scan
 nfar    equ ST+226              ; b  voci usate in FARTAB
 romopen equ ST+227              ; b  the ROM file has already been created
         IFDEF ROMMODE
-FARTABC equ 4300h
-SEGT    equ 4380h
-FCBSV   equ 43A8h
-FARX    equ 4394h
-FCBMAP  equ 0C000h              ; OPTION MAP: FCB of NAME.MAP (the chain loader is not needed while compiling)
-MAPBUF  equ 0C030h              ; 128-byte buffer of the map file
-MAPPOS  equ 0C0B0h              ; 3 bytes: position in the file
-MPFILL  equ 0C0B3h              ; bytes in MAPBUF
+FARTABC equ 0C580h              ; high RAM (the code of the cartridge compiler reaches the source at 4400h): free space after LOCT
+SEGT    equ 0C000h              ; the chain loader at C000h is not needed while compiling
+FARX    equ 0C014h
+FCBSV   equ 0C028h
+FCBMAP  equ 0C04Dh              ; OPTION MAP: FCB of NAME.MAP
+MAPBUF  equ 0C072h              ; 64-byte buffer of the map file
+MAPPOS  equ 0C0B2h              ; 3 bytes: position in the file
+MPFILL  equ 0C0B5h              ; bytes in MAPBUF
 mpf     equ ST+214              ; OPTION MAP active
         ELSE
         IFDEF BINMODE
@@ -204,6 +204,10 @@ mfkind  equ 0C21Fh              ; b  type of the file found by mf_have: 0 none, 
 mfbin   equ ST+231              ; b  1 = the current segment is a .BIN (no epilogue to emit)
 mfred   equ 0C21Dh              ; b  1 = the received name was a segment other than 000
 dbglast equ 0C214h             ; w  OPTION DEBUG: last local variables record emitted (0 = none)
+dbgl    equ ST+215              ; ROM: OPTION DEBUG level 0 line only, 1 GLOBALS, 2 ALL
+dbgd    equ ST+246              ; ROM: 3 bytes: descriptor of the variable table (bank, address)
+dbglb   equ 0C21Eh              ; ROM: bank of the last local-variable record
+DBGDESC equ 7F80h               ; ROM: descriptor in the fixed segment (read by the runtime)
 dbgfs   equ 0C216h              ; w  OPTION DEBUG: first line of the body of the routine being compiled
 ca_rec  equ ST+208              ; w  chiamata in corso: record
 chfail  equ ST+210              ; w  chain for CASE a TO b
@@ -216,7 +220,11 @@ MAXFUN  equ 20
 PART    equ 0C600h               ; parameters: 64 x 16 bytes (name 12, type)
 MAXPAR  equ 64
 LOCT    equ 0C400h               ; locals/parameters of the function being compiled: 24 x 16 bytes
+        IFDEF ROMMODE
+MAXLOC  equ 24                  ; (the FARTAB table of the cartridge compiler follows LOCT)
+        ELSE
 MAXLOC  equ 32
+        ENDIF
 
 T_EOL   equ 0
 T_NUM   equ 1
@@ -1460,7 +1468,7 @@ map_byte:                       ; A -> map file (all registers are kept)
         ld (hl),b
         inc a
         ld (MPFILL),a
-        cp 128
+        cp 64
         call z,map_flush
         pop hl
         pop de
@@ -1681,6 +1689,7 @@ rom_flush:                      ; DE = segment size: writes the buffer and fills
         jp rom_werr
 
 rom_finish:                     ; last segment, FARTAB and data size in the header, close
+        call dbg_tables         ; OPTION DEBUG GLOBALS/ALL: variable table at the end of the last segment
         call map_end            ; OPTION MAP: globals and close of NAME.MAP
         ld a,(curseg)
         or a
@@ -1693,6 +1702,7 @@ rom_finish:                     ; last segment, FARTAB and data size in the head
         jr .go
 .seg:   call segsz
 .go:    call rom_flush
+        call dbg_patch          ; descriptor of the variable table
         ld a,(curseg)
         or a
         jr z,.close             ; a single segment: the header is already complete
@@ -1729,6 +1739,116 @@ rom_finish:                     ; last segment, FARTAB and data size in the head
 .close: ld de,fcb
         ld c,F_CLOSE
         call BDOS
+        ret
+
+dbg_bank:                       ; -> A = bank number of the current segment (0 = the fixed one)
+        ld a,(curseg)
+        or a
+        ret z
+        jp segbank
+
+dbg_frec:                       ; ROM debugger: [prev w][prev bank][start line w][end line w][n][n 16-byte records] after a SUB/FUNCTION
+        call get_pc
+        push hl
+        ld hl,(dbglast)
+        call emit_w
+        ld a,(dbglb)
+        call emit_a
+        ld hl,(dbgfs)
+        call emit_w
+        ld hl,(lineno)
+        call emit_w
+        ld a,(nloc)
+        call emit_a
+        ld a,(nloc)
+        or a
+        jr z,.dn
+        ld l,a
+        ld h,0
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        ld b,h
+        ld c,l
+        ld hl,LOCT
+.dl:    ld a,(hl)
+        inc hl
+        call emit_a
+        dec bc
+        ld a,b
+        or c
+        jr nz,.dl
+.dn:    pop hl
+        ld (dbglast),hl
+        call dbg_bank
+        ld (dbglb),a
+        ret
+
+dbg_tables:                     ; [n][n 16-byte VART records][last locals record w][its bank]
+        ld a,(dbgf)
+        or a
+        ret z
+        ld a,(dbgl)
+        or a
+        ret z
+        ld a,(target)
+        cp 3
+        ret c                   ; only banked cartridges have the descriptor
+        call dbg_bank
+        ld (dbgd),a
+        call get_pc
+        ld (dbgd+1),hl
+        ld a,(nvar)
+        call emit_a
+        ld a,(nvar)
+        or a
+        jr z,.nv
+        ld l,a
+        ld h,0
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        add hl,hl
+        ld b,h
+        ld c,l
+        ld hl,VART
+.dt:    ld a,(hl)
+        inc hl
+        call emit_a
+        dec bc
+        ld a,b
+        or c
+        jr nz,.dt
+.nv:    ld hl,(dbglast)
+        call emit_w
+        ld a,(dbglb)
+        jp emit_a
+
+dbg_patch:                      ; the descriptor goes to 7F80h of the fixed segment (file offset 3F80h)
+        ld a,(dbgf)
+        or a
+        ret z
+        ld a,(dbgl)
+        or a
+        ret z
+        ld a,(target)
+        cp 3
+        ret c
+        ld hl,DBGDESC-4000h
+        ld (fcb+33),hl
+        xor a
+        ld (fcb+35),a
+        ld (fcb+36),a
+        ld de,dbgd
+        ld c,F_DMA
+        call BDOS
+        ld hl,3
+        ld de,fcb
+        ld c,F_BWR
+        call BDOS
+        or a
+        jp nz,rom_werr
         ret
 
 rec_index:                      ; HL = record SUB/FUNCTION -> A = indice
@@ -3533,15 +3653,24 @@ compile:
         ld (brkf),a
         ld (dbglast),a
         ld (dbglast+1),a
+        ld (dbglb),a
+        ld (dbgl),a
         ld (target),a
         ld (curseg),a
         ld (pseg),a
         ld (nfar),a
         ld (romopen),a
         IFDEF ROMMODE
+        xor a
+        ld (mpf),a              ; OPTION MAP off (ST may hold leftovers of the DOS compiler)
         ld hl,FARTABC
         ld de,FARTABC+1
         ld bc,127
+        ld (hl),0
+        ldir
+        ld hl,SEGT              ; SEGT, FARX and FCBSV (where the chain loader was)
+        ld de,SEGT+1
+        ld bc,76
         ld (hl),0
         ldir
         ENDIF
@@ -4887,6 +5016,10 @@ emit_brk:                       ; OPTION BREAK: break-key check before a backwar
         ENDIF
 
 s_debug: db "DEBUG",0
+        IFDEF ROMMODE
+s_dglob: db "GLOBALS",0
+s_dall: db "ALL",0
+        ENDIF
         IFNDEF ROMMODE
 s_break: db "BREAK",0
         ENDIF
@@ -5045,6 +5178,24 @@ st_option:
         jr st_skip
 .dbg:   ld a,1
         ld (dbgf),a
+        IFDEF ROMMODE
+        call next_tok           ; OPTION DEBUG [GLOBALS | ALL]
+        ld a,(ttype)
+        cp T_ID
+        jr nz,.nl
+        ld hl,tbuf
+        ld de,s_dglob
+        call str_eq
+        ld a,1
+        jr z,.sl
+        ld hl,tbuf
+        ld de,s_dall
+        call str_eq
+        ld a,2
+        jr nz,.nl
+.sl:    ld (dbgl),a
+.nl:
+        ENDIF
         IFNDEF ROMMODE
         ld a,21h                ; ld hl,table ; ld (DBGT),hl  (the address is written at the end of compilation)
         call emit_a
@@ -6587,6 +6738,9 @@ end_func:                       ; C = 1 SUB / 2 FUNCTION
 .nodbg:
         ENDIF
         IFDEF ROMMODE
+        ld a,(dbgl)
+        cp 2
+        call z,dbg_frec         ; OPTION DEBUG ALL: record of the local variables
         call map_func           ; OPTION MAP: record of the SUB/FUNCTION
         ENDIF
         ld hl,fskiph
@@ -8423,7 +8577,7 @@ ldr_img: INCBIN "build/ldr.bin"
 ldr_size equ $-ldr_img
 comend:
         IFDEF ROMMODE
-        ASSERT comend < FARTABC
+        ASSERT comend < SRC
         ELSE
         ASSERT comend < LABT
         ENDIF

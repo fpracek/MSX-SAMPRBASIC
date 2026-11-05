@@ -2314,9 +2314,10 @@ See also: `OPTION`, `OPTION TARGET`, `OPTION DEBUG`
 
 ```
 OPTION DEBUG
+OPTION DEBUG GLOBALS | ALL (cartridges)
 ```
 
-Compiles with the built-in debugger: the program starts stopped at the first statement. See DEBUG.
+Compiles with the built-in debugger: the program starts stopped at the first statement. See DEBUG. In banked cartridges the optional word chooses what the debugger shows: nothing (lines only, the default), GLOBALS (global variables) or ALL (also local variables and parameters).
 
 Example:
 

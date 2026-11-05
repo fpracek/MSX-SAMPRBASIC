@@ -18,7 +18,8 @@ T(['DEBUG', 'DEBUGGER'], C, ["OPTION DEBUG"],
   "breakpoint; B number ENTER sets or clears a breakpoint (ENTER alone = current line, 0 = clear them all); C clears all breakpoints; V next "
   "page of variables; E asks for a variable name (local, parameter, global, array element such as V(3) or N$) and shows its value; "
   "Q ends the program. Inside a SUB the local variables and parameters appear first with the > prefix. CTRL-STOP while running re-enters the debugger. "
-  "The program screen stays intact. In cartridges the debugger works but does not show variables. Normal programs (without OPTION DEBUG) pay nothing.",
+  "The program screen stays intact. In cartridges `OPTION DEBUG` alone follows the lines only; `OPTION DEBUG GLOBALS` also shows the global variables and `OPTION DEBUG ALL` the local variables and parameters too (banked cartridges: ASCII8, ASCII16, KONAMI, SCC; the E command is not available). "
+  "The tables go in the last segment, and the debugger takes about 2 KB of the fixed segment 0, so place `OPTION DEBUG` after the part of file 000 you do not need to follow: hooks are inserted only from that point and in all the other segments. Normal programs (without OPTION DEBUG) pay nothing.",
   "OPTION DEBUG\ns = 0\nFOR i = 1 TO 3\n  s = s + i\nNEXT i\nPRINT s", ['OPTION DEBUG'])
 T(['EDITOR', 'MENU', 'KEYS'], C, ["Esc = menu, arrows, F1-F4"],
   "Start it with `SAMPRBAS name` (also with a path, on MSX-DOS 2). Keyboard menu: Esc opens the File menu; F1 File, F2 Edit, F3 Find, F4 Help; Run is on the right; left/right arrows change menu, up/down the items, Enter "
