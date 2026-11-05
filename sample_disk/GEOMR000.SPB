@@ -1,0 +1,119 @@
+OPTION TARGET ROM_ASCII16
+OPTION LABELS
+' GEOMETRY RUN - ROM cartridge version in 3 segments (compile with F5: it produces GEOMR.ROM)
+' Space or up arrow: jump. ESC: quit. Same game as GEOMRUN.SPB, split into segments.
+' ASCII16 cartridge: 16 KB banks. One file per segment (name = 5 characters + 3 digits):
+'   GEOMR000.SPB  segment 0, the fixed bank (runtime + this file): startup and the main loops
+'   GEOMR001.SPB  segment 1: game logic (world scroll, music, player, obstacles, explosion)
+'   GEOMR002.SPB  segment 2: graphics generation (tiles, sprites) used once at startup
+' Routines in other segments are ordinary SUBs: CALL switches the bank and restores it.
+' GOSUB and GOTO cannot cross segments, so the logic of the DOS version became SUBs.
+DIM cv(3), sv(3), hv(3), pw(8), t8(7), rt(319), pt(11), bp(15), ap(15), sk(15), bk(15), pk(15)
+DIM ok(7), ox(7), oy(7), vs(7), pa(8), pb(8), pvx(8), pvy(8), dg(4), cl(121)
+' the text font lives in the text screen: keep it, SCREEN 4 does not load one
+a$ = VREAD$(4472, 176) : b$ = VREAD$(4648, 176)
+pw(0) = 1
+FOR i = 1 TO 8 : pw(i) = pw(i - 1) * 2 : NEXT i
+' all 8 rotations of each scrolling tile, computed once (division is slow, VPOKE is fast)
+FOR t = 0 TO 4
+ FOR r = 0 TO 7 : READ t8(r) : NEXT r
+ FOR n = 0 TO 7
+  FOR r = 0 TO 7
+   p = t8(r)
+   rt(t * 64 + n * 8 + r) = ((p * pw(n)) MOD 256) + (p \ pw(8 - n))
+  NEXT r
+ NEXT n
+NEXT t
+FOR i = 0 TO 3 : READ cv(i) : NEXT i
+FOR i = 0 TO 3 : READ sv(i) : NEXT i
+FOR i = 0 TO 3 : READ hv(i) : NEXT i
+FOR i = 0 TO 11 : READ pt(i) : NEXT i
+FOR i = 0 TO 15 : READ n : bp(i) = pt(n MOD 12) * 2 \ pw(n \ 12) : NEXT i
+FOR i = 0 TO 15 : READ n : ap(i) = pt(n MOD 12) * 2 \ pw(n \ 12) : NEXT i
+FOR i = 0 TO 121 : READ cl(i) : NEXT i
+' base patterns of the scrolling tiles: grass line, ground, roofs, windows, stars
+DATA 255,255,128,128,128,128,128,128
+DATA 255,128,128,128,128,128,128,128
+DATA 0,16,56,124,254,255,255,255
+DATA 255,219,255,219,255,219,255,219
+DATA 0,0,8,0,0,0,64,0
+' rotation tables for the cube (cos, sin x 256, half size)
+DATA 256,237,181,98, 0,98,181,237, 16,13,12,13
+' PSG periods of C4..B4, bass line and arpeggio (semitones above C3)
+DATA 427,403,381,359,339,320,302,285,269,254,240,226
+DATA 9,9,21,9, 5,5,17,5, 0,0,12,0, 7,7,19,7
+DATA 21,24,28,24, 17,21,24,21, 24,28,31,28, 19,23,26,23
+' colors for the graphics routines of segment 2 (labels cannot be reached across segments, so they are read into cl())
+DATA 1,4,4,5,5,13,13,9,9,10
+DATA 15,9, 11,9, 10,8, 10,8, 9,6, 9,6, 8,4, 8,4
+DATA 15,11,1,15,7,11
+DATA 15,11,1,15,7,11
+DATA 15,11,1,15,15,11
+DATA 15,11,1,9,15,11
+DATA 15,11,1,9,15,10
+DATA 15,10,1,9,15,10
+DATA 15,10,1,9,15,10
+DATA 15,10,1,9,15,9
+DATA 15,10,1,8,15,9
+DATA 15,9,1,8,15,9
+DATA 15,9,1,8,15,8
+DATA 15,9,1,8,15,8
+DATA 15,9,1,8,15,8
+DATA 15,8,1,6,15,6
+DATA 15,8,1,6,7,6
+DATA 15,8,1,6,7,6
+SCREEN 4, 2
+COLOR 15, 1, 1
+CLS
+VWRITE 376, a$ : VWRITE 552, b$ : VFILL 8192 + 376, 352, 241
+VWRITE 6144 + 96 + 11, "LOADING..."
+CALL make_tiles
+CALL make_sprites
+SOUND 7, 56
+best = 0
+title:
+CALL reset_game
+state = 0
+CALL text(1)
+DO
+ CALL scene
+ IF quitf = 1 THEN GOTO quit
+ IF STRIG(0) OR STICK(0) = 1 THEN EXIT DO
+LOOP
+CALL text(0)
+state = 1
+DO
+ CALL scene
+ IF quitf = 1 THEN GOTO quit
+ jm = STRIG(0) OR STICK(0) = 1
+ IF state = 1 THEN
+  CALL player_step
+  CALL spawn_step
+  acc = acc + spd
+  IF acc >= 24 THEN
+   acc = acc - 24
+   score = score + 1
+   i = 0
+   DO
+    dg(i) = dg(i) + 1
+    IF dg(i) < 10 THEN EXIT DO
+    dg(i) = 0
+    i = i + 1
+   LOOP UNTIL i > 4
+   FOR i = 0 TO 4 : VPOKE 6144 + 11 - i, 48 + dg(i) : NEXT i
+   IF score = 50 THEN spd = 7
+   IF score = 110 THEN spd = 8
+   IF score = 180 THEN spd = 9
+   IF score = 260 THEN spd = 10
+  END IF
+ ELSE
+  CALL explosion_step
+  dead = dead + 1
+  IF dead = 40 THEN CALL text(2)
+  IF dead > 40 AND jm THEN GOTO title
+ END IF
+LOOP
+quit:
+SOUND 8, 0 : SOUND 9, 0 : SOUND 10, 0
+SCREEN 0
+END

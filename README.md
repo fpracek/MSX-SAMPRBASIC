@@ -54,6 +54,8 @@ To try everything on a PC with [openMSX](https://openmsx.org): `start_nms8250.ba
 
 ![GEOMRUN](doc/img/geomrun.png)
 
+There is also a **cartridge version in three segments**, `GEOMR000.SPB` + `GEOMR001.SPB` + `GEOMR002.SPB` (ASCII16 ROM; F5 on any of them produces `GEOMR.ROM`): the same game split into startup/main loops, game logic and graphics generation, a worked example of `OPTION TARGET ROM_ASCII16` with one file per segment.
+
 ## What it produces: `OPTION TARGET`
 
 | Value | Result |

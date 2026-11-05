@@ -237,14 +237,23 @@ async function cmdSegment(): Promise<void> {
 // ---------------------------------------------------------------- new project
 async function cmdNewProject(): Promise<void> {
   const samples = path.join(extPath, "samples");
-  const names = fs.readdirSync(samples).filter((f) => f.toUpperCase().endsWith(".SPB"));
-  const pick = await vscode.window.showQuickPick(names, { placeHolder: "Sample program to copy into the workspace" });
+  const all = fs.readdirSync(samples).filter((f) => f.toUpperCase().endsWith(".SPB"));
+  // a cartridge in several segments is NAMEnnn.SPB (5 characters + 3 digits): offer the project once and copy all its files
+  const seg = (f: string) => /^(.{5})(\d{3})\.SPB$/i.exec(f);
+  const items: { label: string; description?: string; files: string[] }[] = [];
+  for (const f of all.sort()) {
+    const m = seg(f);
+    if (!m) { items.push({ label: f, files: [f] }); continue; }
+    const root = m[1].toUpperCase();
+    const parts = all.filter((g) => { const n = seg(g); return n && n[1].toUpperCase() === root; });
+    if (m[2] === "000") items.push({ label: f, description: `ROM cartridge in ${parts.length} segments (${parts.join(", ")})`, files: parts });
+  }
+  const pick = await vscode.window.showQuickPick(items, { placeHolder: "Sample program to copy into the workspace" });
   if (!pick) return;
   const folder = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
   if (!folder) { vscode.window.showWarningMessage("Open a folder first."); return; }
-  const dest = path.join(folder, pick);
-  fs.copyFileSync(path.join(samples, pick), dest);
-  await vscode.window.showTextDocument(vscode.Uri.file(dest));
+  for (const f of pick.files) fs.copyFileSync(path.join(samples, f), path.join(folder, f));
+  await vscode.window.showTextDocument(vscode.Uri.file(path.join(folder, pick.files[0])));
 }
 
 // ---------------------------------------------------------------- activation

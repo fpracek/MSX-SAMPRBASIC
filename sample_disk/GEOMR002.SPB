@@ -1,0 +1,132 @@
+' GEOMETRY RUN - segment 2: graphics generation, used once at startup.
+' It calls routines of segment 1 (tile): a CALL can cross segments in any direction.
+
+' Sky gradient with one tile per row (a color per pixel row), city, ground and the five scrolling tiles.
+SUB make_tiles
+ SHARED cl
+ VFILL 6144, 192, 32
+ a = cl(0)
+ FOR tr = 6 TO 14
+  b = cl(tr - 5)
+  c = 100 + tr
+  bank = tr \ 8
+  FOR r = 0 TO 7
+   IF r < 5 THEN
+    pat = 0
+    fg = a
+   ELSEIF r = 6 THEN
+    pat = 85
+    fg = b
+   ELSE
+    pat = 170
+    fg = b
+   END IF
+   VPOKE bank * 2048 + c * 8 + r, pat
+   VPOKE 8192 + bank * 2048 + c * 8 + r, fg * 16 + a
+  NEXT r
+  VFILL 6144 + tr * 32, 32, c
+  a = b
+ NEXT tr
+ FOR r = 0 TO 7
+  VPOKE 8192 + 134 * 8 + r, 15 * 16 + 1
+  VPOKE 8192 + 2048 + 130 * 8 + r, 16 + a
+  VPOKE 8192 + 4096 + 131 * 8 + r, 16 + 11
+ NEXT r
+ VFILL 6144 + 15 * 32, 32, 130
+ VFILL 6144 + 16 * 32, 64, 131
+ FOR r = 0 TO 7
+  g1 = cl(10 + r * 2) : g2 = cl(11 + r * 2)
+  VPOKE 8192 + 4096 + 132 * 8 + r, g1 * 16 + 1
+  VPOKE 8192 + 4096 + 133 * 8 + r, g2 * 16 + 1
+ NEXT r
+ VFILL 6144 + 18 * 32, 32, 132
+ VFILL 6144 + 19 * 32, 160, 133
+ CALL tile(5152, 0) : CALL tile(5160, 64) : CALL tile(3088, 128) : CALL tile(5144, 192) : CALL tile(1072, 256)
+END SUB
+
+' The cube (4 rotation steps x 3 layers), the spike, the block and the particle.
+SUB make_sprites
+ SHARED cv, sv, hv
+ FOR f = 0 TO 3
+  CALL cube(f * 3, cv(f), sv(f), hv(f))
+  VPOKE 6144 + 117 + f, 46
+ NEXT f
+ CALL shape(12, 3)
+ CALL shape(13, 4)
+ CALL shape(14, 5)
+ CALL setcols
+END SUB
+
+SUB setcols
+ SHARED sk, bk, pk, cl
+ e$ = "" : d$ = "" : o$ = ""
+ FOR r = 0 TO 15
+  e = cl(26 + r * 6) : b = cl(27 + r * 6) : o = cl(28 + r * 6) : s = cl(29 + r * 6) : k = cl(30 + r * 6) : q = cl(31 + r * 6)
+  e$ = e$ + CHR$(e)
+  d$ = d$ + CHR$(b)
+  o$ = o$ + CHR$(o)
+  sk(r) = s : bk(r) = k : pk(r) = q
+ NEXT r
+ COLOR SPRITE$(0) = e$
+ COLOR SPRITE$(1) = d$
+ COLOR SPRITE$(2) = o$
+END SUB
+
+' The cube: outline, body and eyes of one rotation step in a single pass (no divisions: compare against thresholds)
+SUB cube(num, ca, sa, h)
+ SHARED pw
+ h1 = h * 256 : h2 = (h - 3) * 256
+ e$ = "" : d$ = "" : o$ = ""
+ FOR q = 0 TO 3
+  qx = (q \ 2) * 8
+  qy = (q MOD 2) * 8
+  FOR r = 0 TO 7
+   b0 = 0 : b1 = 0 : b2 = 0
+   y = 2 * (r + qy) - 15
+   FOR c = 0 TO 7
+    x = 2 * (c + qx) - 15
+    u = x * ca + y * sa
+    IF ABS(u) <= h1 THEN
+     v = y * ca - x * sa
+     IF ABS(v) <= h1 THEN
+      m = pw(7 - c)
+      b2 = b2 + m
+      IF ABS(u) <= h2 AND ABS(v) <= h2 THEN b1 = b1 + m
+      IF ABS(v + 1024) <= 768 AND (ABS(u + 1536) <= 512 OR ABS(u - 1536) <= 512) THEN b0 = b0 + m
+     END IF
+    END IF
+   NEXT c
+   e$ = e$ + CHR$(b0) : d$ = d$ + CHR$(b1) : o$ = o$ + CHR$(b2)
+  NEXT r
+ NEXT q
+ SPRITE$(num) = e$ : SPRITE$(num + 1) = d$ : SPRITE$(num + 2) = o$
+END SUB
+
+' spike, hollow block and particle patterns
+SUB shape(num, kind)
+ SHARED pw
+ s$ = ""
+ FOR q = 0 TO 3
+  qx = (q \ 2) * 8
+  qy = (q MOD 2) * 8
+  FOR r = 0 TO 7
+   byt = 0
+   py = r + qy
+   FOR c = 0 TO 7
+    px = c + qx
+    lit = 0
+    IF kind = 3 THEN
+     IF ABS(2 * px - 15) <= py + 1 THEN lit = 1
+    ELSEIF kind = 4 THEN
+     IF px < 2 OR px > 13 OR py < 2 OR py > 13 THEN lit = 1
+     IF px > 4 AND px < 11 AND py > 4 AND py < 11 THEN lit = 1
+    ELSE
+     IF px > 4 AND px < 11 AND py > 4 AND py < 11 THEN lit = 1
+    END IF
+    IF lit = 1 THEN byt = byt + pw(7 - c)
+   NEXT c
+   s$ = s$ + CHR$(byt)
+  NEXT r
+ NEXT q
+ SPRITE$(num) = s$
+END SUB

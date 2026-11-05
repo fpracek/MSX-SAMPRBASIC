@@ -275,6 +275,9 @@ A large program is written in **one file per segment**. With a segmented OPTION 
 - You can press F5 from **any** file of the project: the compiler always starts from 000. Errors report the right file and line and the editor opens that file.
 - A SUB or FUNCTION in another segment is called as usual; GOTO and GOSUB do not cross segments; each file holds about 15 KB of source.
 - You switch from one file to another with File > Segment... (F8).
+- `OPTION TARGET` must be the **very first line** of file 000: even a comment before it stops the compiler from recognizing the cartridge and file 001 is then rejected with error 13.
+- Outside segment 0 only **SUB and FUNCTION** definitions are allowed (no main-program statements). Labels are per segment: GOSUB, GOTO and `RESTORE label` cannot cross segments, so keep the DATA in file 000 and read it into an array that the routines of the other segments share with `SHARED`. A project can have at most 20 SUB/FUNCTION in total.
+- Complete example: `GEOMR000.SPB`, `GEOMR001.SPB` and `GEOMR002.SPB` in the sample disk are the cartridge version of the GEOMRUN game (segment 0: startup and main loops; 1: game logic; 2: graphics generation); F5 produces GEOMR.ROM.
 
 ### .BIN files: precompiled segments
 

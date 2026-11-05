@@ -1,0 +1,310 @@
+' GEOMETRY RUN - segment 1: game logic. Only SUB and FUNCTION can live outside segment 0.
+' The variables of the main program are reached with SHARED.
+
+' One frame of the world: scrolling tiles, ESC check and the tune.
+SUB scene
+ SHARED fp, spd, fc, cp, sp, quitf, state, mt, ms, hs, sfx, hat, bp, ap
+ SLEEP 2
+ fp = fp + spd
+ IF fp >= 8 THEN fp = fp - 8
+ IF fp >= 8 THEN fp = fp - 8
+ CALL tl(0, fp * 8)
+ CALL tl(1, 64 + fp * 8)
+ fc = fc + 1
+ IF fc = 4 THEN
+  fc = 0
+  k$ = INKEY$
+  IF k$ = CHR$(27) THEN quitf = 1
+ END IF
+ IF fc = 1 OR fc = 3 THEN
+  cp = cp + spd
+  IF cp >= 8 THEN cp = cp - 8
+  IF cp >= 8 THEN cp = cp - 8
+  CALL tl(2, 128 + cp * 8)
+  CALL tl(3, 192 + cp * 8)
+ END IF
+ IF fc = 2 THEN
+  sp = sp + spd
+  IF sp >= 8 THEN sp = sp - 8
+  IF sp >= 8 THEN sp = sp - 8
+  CALL tl(4, 256 + sp * 8)
+ END IF
+ ' the tune: bass on voice A, arpeggio on B, hi-hat on C (not while exploding)
+ IF state <> 2 THEN
+  mt = mt + 1
+  IF mt >= 3 THEN
+   mt = 0
+   ms = ms + 1
+   IF ms = 16 THEN ms = 0
+   p = bp(ms)
+   SOUND 0, p MOD 256 : SOUND 1, p \ 256 : SOUND 8, 11
+   p = ap(ms)
+   SOUND 2, p MOD 256 : SOUND 3, p \ 256 : SOUND 9, 10
+   hs = 1 - hs
+   IF hs = 1 AND sfx = 0 THEN
+    SOUND 6, 6 : SOUND 7, 28 : SOUND 10, 9
+    hat = 1
+   END IF
+  ELSE
+   SOUND 9, 10 - mt * 3
+   IF hat = 1 THEN
+    hat = 0
+    SOUND 10, 0
+   END IF
+  END IF
+  IF sfx > 0 THEN
+   sfx = sfx - 1
+   SOUND 4, 150 - sfx * 14 : SOUND 5, 0 : SOUND 10, 12 : SOUND 7, 56
+   IF sfx = 0 THEN SOUND 10, 0
+  END IF
+ END IF
+END SUB
+
+' Jump physics, obstacle movement and collisions, player sprite.
+SUB player_step
+ SHARED py, vy, ground, jm, sfx, fcnt, fr, lfr, ok, ox, oy, vs, spd, state
+ prevb = py + 16
+ IF ground = 1 AND jm THEN
+  vy = -13
+  sfx = 6
+  fcnt = 0
+ END IF
+ vy = vy + 2
+ IF vy > 14 THEN vy = 14
+ py = py + vy
+ ground = 0
+ IF py + 16 >= 144 THEN
+  py = 128
+  vy = 0
+  ground = 1
+ END IF
+ aa = 7693
+ FOR i = 0 TO 5
+  k = ok(i)
+  IF k > 0 THEN
+   x = ox(i) - spd
+   ox(i) = x
+   IF x < 0 THEN
+    ok(i) = 0
+    CALL hide(3 + i)
+   ELSE
+    IF x < 256 THEN
+     IF vs(i) = 0 THEN
+      vs(i) = 1
+      VPOKE aa - 1, oy(i) - 1 : VPOKE aa + 1, 44 + k * 4
+     END IF
+     VPOKE aa, x
+    END IF
+    IF x < 78 AND x > -16 THEN
+     y = oy(i)
+     IF k = 1 THEN
+      IF x + 5 < 78 AND x + 11 > 66 AND y + 6 < py + 15 AND y + 15 > py + 2 THEN CALL crash
+     ELSEIF x + 16 > 66 THEN
+      IF vy >= 0 AND prevb <= y + 2 AND py + 16 >= y THEN
+       py = y - 16
+       vy = 0
+       ground = 1
+      ELSEIF py + 16 > y + 2 AND py < y + 15 THEN
+       CALL crash
+      END IF
+     END IF
+    END IF
+   END IF
+  END IF
+  aa = aa + 4
+ NEXT i
+ IF state <> 1 THEN EXIT SUB
+ IF ground = 1 THEN
+  fr = 0
+ ELSE
+  fcnt = fcnt + 1
+  IF fcnt >= 4 THEN
+   fcnt = 0
+   fr = fr + 1
+   IF fr > 3 THEN fr = 0
+  END IF
+ END IF
+ VPOKE 7680, py - 1 : VPOKE 7684, py - 1 : VPOKE 7688, py - 1
+ IF fr <> lfr THEN
+  lfr = fr
+  VPOKE 7682, fr * 12 : VPOKE 7686, fr * 12 + 4 : VPOKE 7690, fr * 12 + 8
+ END IF
+END SUB
+
+' Random obstacles: spikes, blocks and stairs enter from the right.
+SUB spawn_step
+ SHARED gap, spd
+ gap = gap - spd
+ IF gap > 0 THEN EXIT SUB
+ SELECT CASE RND(8)
+  CASE 0, 1, 6
+   CALL addob(256, 128, 1)
+   w = 16
+  CASE 2
+   CALL addob(256, 128, 1) : CALL addob(272, 128, 1)
+   w = 32
+  CASE 3
+   CALL addob(256, 128, 1) : CALL addob(272, 128, 1) : CALL addob(288, 128, 1)
+   w = 48
+  CASE 4
+   CALL addob(256, 128, 2)
+   w = 16
+  CASE 5
+   CALL addob(256, 128, 2) : CALL addob(272, 128, 2) : CALL addob(272, 112, 2)
+   w = 32
+  CASE ELSE
+   CALL addob(256, 128, 2) : CALL addob(304, 128, 1)
+   w = 64
+ END SELECT
+ gap = w + 90 + RND(110) + (spd - 6) * 12
+END SUB
+
+SUB crash
+ SHARED state, dead, spd, pa, pb, pvx, pvy, py, score, best
+ state = 2
+ dead = 0
+ spd = 0
+ SOUND 8, 0 : SOUND 9, 0
+ SOUND 6, 20 : SOUND 7, 31 : SOUND 10, 16 : SOUND 12, 60 : SOUND 13, 0
+ FOR j = 0 TO 8
+  pa(j) = 68
+  pb(j) = py + 4
+  pvx(j) = RND(13) - 6
+  pvy(j) = -2 - RND(8)
+  CALL tint(11 + j, 3)
+ NEXT j
+ CALL hide(0) : CALL hide(1) : CALL hide(2)
+ IF score > best THEN best = score
+ CALL num5(6144 + 20, best)
+END SUB
+
+SUB explosion_step
+ SHARED pa, pb, pvx, pvy, dead
+ FOR j = 0 TO 8
+  pa(j) = pa(j) + pvx(j)
+  pb(j) = pb(j) + pvy(j)
+  pvy(j) = pvy(j) + 1
+  IF pb(j) > 140 THEN
+   pb(j) = 140
+   pvy(j) = -pvy(j) \ 2
+   pvx(j) = pvx(j) \ 2
+  END IF
+  IF pa(j) > 0 AND pa(j) < 248 THEN
+   CALL spr(11 + j, pa(j), pb(j), 14)
+  ELSE
+   CALL hide(11 + j)
+  END IF
+ NEXT j
+ IF dead = 12 THEN SOUND 10, 0 : SOUND 7, 56
+END SUB
+
+SUB reset_game
+ SHARED ok, vs, dg, py, vy, ground, fr, lfr, spd, score, acc, gap, sfx, state, best
+ FOR i = 0 TO 5 : ok(i) = 0 : vs(i) = 0 : CALL hide(3 + i) : NEXT i
+ FOR j = 0 TO 8 : CALL hide(11 + j) : NEXT j
+ FOR i = 0 TO 4 : dg(i) = 0 : NEXT i
+ py = 128 : vy = 0 : ground = 1 : fr = 0 : lfr = 0
+ spd = 6 : score = 0 : acc = 0 : gap = 100 : sfx = 0 : state = 0
+ SOUND 7, 56
+ VWRITE 6144 + 1, "SCORE"
+ VWRITE 6144 + 14, "BEST"
+ CALL num5(6144 + 7, 0)
+ CALL num5(6144 + 20, best)
+ CALL spr(0, 64, py, 0)
+ CALL spr(1, 64, py, 1)
+ CALL spr(2, 64, py, 2)
+ CALL text(0)
+END SUB
+
+' Text on the black band: 0 = stars, 1 = title, 2 = game over.
+SUB text(n)
+ VFILL 6144 + 96, 32, 32
+ VFILL 6144 + 160, 32, 32
+ IF n = 0 THEN
+  VFILL 6144 + 96, 32, 134
+  VFILL 6144 + 160, 32, 134
+ ELSEIF n = 1 THEN
+  VWRITE 6144 + 96 + 10, "GEOMETRY RUN"
+  VWRITE 6144 + 160 + 5, "PRESS SPACE TO JUMP / START"
+ ELSE
+  VWRITE 6144 + 96 + 11, "GAME OVER"
+  VWRITE 6144 + 160 + 8, "SPACE TO TRY AGAIN"
+ END IF
+END SUB
+
+SUB num5(a, v)
+ VPOKE a, 48 + (v \ 10000) MOD 10
+ VPOKE a + 1, 48 + (v \ 1000) MOD 10
+ VPOKE a + 2, 48 + (v \ 100) MOD 10
+ VPOKE a + 3, 48 + (v \ 10) MOD 10
+ VPOKE a + 4, 48 + v MOD 10
+END SUB
+
+' Sprite attributes (mode 2, VRAM 7680): y, x, pattern. PUT SPRITE would reset the per-line colors.
+SUB spr(pl, x, y, pat)
+ VPOKE 7680 + pl * 4, y - 1
+ VPOKE 7681 + pl * 4, x
+ VPOKE 7682 + pl * 4, pat * 4
+END SUB
+
+SUB hide(pl)
+ VPOKE 7680 + pl * 4, 209
+END SUB
+
+SUB addob(x, y, kind)
+ SHARED ok, ox, oy, vs
+ FOR i = 0 TO 5
+  IF ok(i) = 0 THEN
+   ok(i) = kind
+   ox(i) = x
+   oy(i) = y
+   vs(i) = 0
+   CALL tint(3 + i, kind)
+   EXIT FOR
+  END IF
+ NEXT i
+END SUB
+
+' One color per sprite line (MSX2 sprite mode 2): 1 = spike, 2 = block, 3 = particle.
+SUB tint(pl, w)
+ SHARED sk, bk, pk
+ c$ = ""
+ FOR r = 0 TO 15
+  IF w = 1 THEN
+   c$ = c$ + CHR$(sk(r))
+  ELSEIF w = 2 THEN
+   c$ = c$ + CHR$(bk(r))
+  ELSE
+   c$ = c$ + CHR$(pk(r))
+  END IF
+ NEXT r
+ COLOR SPRITE$(pl) = c$
+END SUB
+
+' Writes the prerotated rows of a scrolling tile (only the rows that change): k = 0 grass line,
+' 1 ground, 2 roofs, 3 windows, 4 stars.
+SUB tl(k, i)
+ SHARED rt
+ SELECT CASE k
+  CASE 0
+   VPOKE 5154, rt(i + 2) : VPOKE 5155, rt(i + 3) : VPOKE 5156, rt(i + 4)
+   VPOKE 5157, rt(i + 5) : VPOKE 5158, rt(i + 6) : VPOKE 5159, rt(i + 7)
+  CASE 1
+   VPOKE 5161, rt(i + 1) : VPOKE 5162, rt(i + 2) : VPOKE 5163, rt(i + 3) : VPOKE 5164, rt(i + 4)
+   VPOKE 5165, rt(i + 5) : VPOKE 5166, rt(i + 6) : VPOKE 5167, rt(i + 7)
+  CASE 2
+   VPOKE 3089, rt(i + 1) : VPOKE 3090, rt(i + 2) : VPOKE 3091, rt(i + 3) : VPOKE 3092, rt(i + 4)
+  CASE 3
+   VPOKE 5145, rt(i + 1) : VPOKE 5147, rt(i + 3) : VPOKE 5149, rt(i + 5) : VPOKE 5151, rt(i + 7)
+  CASE ELSE
+   VPOKE 1074, rt(i + 2) : VPOKE 1078, rt(i + 6)
+ END SELECT
+END SUB
+
+' All 8 rows of a tile (used once at startup).
+SUB tile(a, i)
+ SHARED rt
+ FOR r = 0 TO 7
+  VPOKE a + r, rt(i + r)
+ NEXT r
+END SUB
