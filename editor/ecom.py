@@ -208,6 +208,7 @@ def main():
     rows, vs, bl = load('c11_exit')
     joined = ' '.join(rows.values())
     check('A>' in joined, 'ritorno al prompt del DOS')
+    check(sum(1 for v in rows.values() if v.strip()) <= 2, 'the editor screen is cleared on exit (only the DOS prompt remains)')
     for n in ('c1_open', 'c3_prompt', 'c8_med'):
         etest.render(n)
     print('FALLITI:', etest.FAILS)

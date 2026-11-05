@@ -1,3 +1,4 @@
+
 ' GEOMETRY RUN - segment 1: game logic. Only SUB and FUNCTION can live outside segment 0.
 ' The variables of the main program are reached with SHARED.
 

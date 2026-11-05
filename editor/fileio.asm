@@ -1422,6 +1422,8 @@ k_quit:
 exit_program:
         call leave_screen
         BIOS INITXT
+        xor a                   ; Z set: BIOS CLS. INITXT reloads the font only: the editor text would stay on screen, drawn with the wrong glyphs
+        BIOS CLS
         jp 0
 
 leave_screen:

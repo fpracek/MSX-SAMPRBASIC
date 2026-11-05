@@ -12,6 +12,7 @@ CHGET   equ 009Fh
 CHSNS   equ 009Ch
 KILBUF  equ 0156h
 INITXT  equ 006Ch
+CLS     equ 00C3h
 ERAFNK  equ 00CCh
 GTPAD   equ 00DBh
 GTTRIG  equ 00D8h
