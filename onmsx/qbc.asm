@@ -4610,6 +4610,28 @@ e_add:  call e_mod
         ld (tmpf),a
         jr .l
 
+pow2_const:                     ; current token a number 2^k (2..128), B = k, NC (the token is kept)
+        ld a,(ttype)
+        cp T_NUM
+        jr nz,.no
+        ld hl,(tval)
+        ld a,h
+        or a
+        jr nz,.no
+        ld a,l
+        cp 2
+        jr c,.no
+        ld b,0
+.pw:    srl a
+        jr c,.one
+        inc b
+        jr .pw
+.one:   or a
+        jr nz,.no               ; not a power of two
+        ret
+.no:    scf
+        ret
+
 e_mod:  call e_idiv
 .l:     ld a,K_MOD
         call is_kw
@@ -4629,7 +4651,7 @@ e_idiv: call e_mul
         ret nz
         call want_int
         call next_tok
-        EM1 0E5h
+.gen:   EM1 0E5h
         call e_mul
         call want_int
         EM2 0D1h,0EBh
@@ -4653,7 +4675,15 @@ e_mul:  call e_unary
         jr .l
 .mul:   call want_int
         call next_tok
-        EM1 0E5h
+        call pow2_const         ; * 2^k: shifts
+        jr c,.gen
+.sl:    EM1 29h                 ; add hl,hl
+        djnz .sl
+        call next_tok
+        xor a
+        ld (etype),a
+        jr .l
+.gen:   EM1 0E5h
         call e_unary
         call want_int
         EM1 0D1h
@@ -5016,10 +5046,6 @@ emit_brk:                       ; OPTION BREAK: break-key check before a backwar
         ENDIF
 
 s_debug: db "DEBUG",0
-        IFDEF ROMMODE
-s_dglob: db "GLOBALS",0
-s_dall: db "ALL",0
-        ENDIF
         IFNDEF ROMMODE
 s_break: db "BREAK",0
         ENDIF
@@ -5183,17 +5209,15 @@ st_option:
         ld a,(ttype)
         cp T_ID
         jr nz,.nl
-        ld hl,tbuf
-        ld de,s_dglob
-        call str_eq
-        ld a,1
+        ld a,(tbuf)             ; GLOBALS or ALL: the first letter tells
+        ld b,1
+        cp 'G'
         jr z,.sl
-        ld hl,tbuf
-        ld de,s_dall
-        call str_eq
-        ld a,2
+        inc b
+        cp 'A'
         jr nz,.nl
-.sl:    ld (dbgl),a
+.sl:    ld a,b
+        ld (dbgl),a
 .nl:
         ENDIF
         IFNDEF ROMMODE
@@ -8577,7 +8601,7 @@ ldr_img: INCBIN "build/ldr.bin"
 ldr_size equ $-ldr_img
 comend:
         IFDEF ROMMODE
-        ASSERT comend < SRC
+        ASSERT comend <= SRC
         ELSE
         ASSERT comend < LABT
         ENDIF

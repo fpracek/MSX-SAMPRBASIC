@@ -2,7 +2,7 @@
   "name": "samprbasic",
   "displayName": "SamPr Basic for MSX",
   "description": "SamPr Basic: BASIC compiler and IDE for MSX (MSX-DOS programs, MSX-BASIC BIN files, ROM cartridges). Same files and same workflow as the editor that runs on the MSX.",
-  "version": "1.3.0",
+  "version": "1.3.1",
   "publisher": "fpracek",
   "engines": {
     "vscode": "^1.90.0"

@@ -417,7 +417,7 @@ See also: `DIM`, `CONST`, `OPERATORS`
 NOT  AND  OR  XOR
 ```
 
-Arithmetic: `+ - * /` and `\` (integer division, `/` between integers too) and `MOD` (remainder). Comparisons: `= <> < > <= >=` (also between strings, in alphabetical order). Bitwise logical operators on integers: `NOT AND OR XOR`. `+` concatenates strings. When in doubt about precedence use parentheses: arithmetic operators come first, then comparisons, then logical ones.
+Arithmetic: `+ - * /` and `\` (integer division, `/` between integers too) and `MOD` (remainder). Comparisons: `= <> < > <= >=` (also between strings, in alphabetical order). Bitwise logical operators on integers: `NOT AND OR XOR`. `+` concatenates strings. When in doubt about precedence use parentheses: arithmetic operators come first, then comparisons, then logical ones. Speed: a multiplication by a constant power of two (`x * 8`) compiles to shifts (a few microseconds), any other `*` costs about 350 us and `\` or `/` about 630 us: in time-critical loops use shifts, additions or lookup tables.
 
 Example:
 

@@ -31,7 +31,7 @@ T(['TYPES', 'VARIABLES', 'NAMES'], C, ["a   a$   a(10)   a$(10)"],
 T(['OPERATORS', 'AND', 'OR', 'XOR', 'NOT', 'MOD'], C, ["+  -  *  /  \\  MOD", "=  <>  <  >  <=  >=", "NOT  AND  OR  XOR"],
   "Arithmetic: `+ - * /` and `\\` (integer division, `/` between integers too) and `MOD` (remainder). Comparisons: `= <> < > <= >=` (also between strings, "
   "in alphabetical order). Bitwise logical operators on integers: `NOT AND OR XOR`. `+` concatenates strings. When in doubt about "
-  "precedence use parentheses: arithmetic operators come first, then comparisons, then logical ones.",
+  "precedence use parentheses: arithmetic operators come first, then comparisons, then logical ones. Speed: a multiplication by a constant power of two (`x * 8`) compiles to shifts (a few microseconds), any other `*` costs about 350 us and `\` or `/` about 630 us: in time-critical loops use shifts, additions or lookup tables.",
   'PRINT 7 \\ 2; 7 MOD 2\nPRINT 5 AND 3; 5 OR 3; 5 XOR 3\nPRINT "ab" + "cd"; "a" < "b"', ['TYPES'])
 T('CONST', C, ["CONST name = [-]number {, name = number}"],
   "Defines numeric constants. They can be used in expressions and as the size in DIM; assigning a value to a constant is an error.",

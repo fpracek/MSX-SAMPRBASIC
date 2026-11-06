@@ -166,7 +166,13 @@ operators on integers: NOT AND OR XOR.
 + concatenates strings. When in doubt
 about precedence use parentheses:
 arithmetic operators come first, then
-comparisons, then logical ones.
+comparisons, then logical ones. Speed:
+a multiplication by a constant power
+of two (x * 8) compiles to shifts (a
+few microseconds), any other * costs
+about 350 us and \ or / about 630 us:
+in time-critical loops use shifts,
+additions or lookup tables.
 
 Example:
   PRINT 7 \ 2; 7 MOD 2
@@ -2093,13 +2099,14 @@ Source about 12.5 KB per file (15 KB
 in cartridges); program 16 KB; 96
 labels; 100 variables and arrays; 20
 SUB/FUNCTION (8 parameters each, 64 in
-total); 29 local integers and 256
-bytes per local string; 24 nested
-blocks; names significant to 11
-characters; about 590 lines in OPTION
-NUMBERED; strings of 255 characters;
-integers from -32768 to 32767; open
-files: 3.
+total); 29 local integers (24 names in
+a cartridge, shared variables
+included) and 256 bytes per local
+string; 24 nested blocks; names
+significant to 11 characters; about
+590 lines in OPTION NUMBERED; strings
+of 255 characters; integers from
+-32768 to 32767; open files: 3.
 See also: ERRORS
 MSX1
 ----
