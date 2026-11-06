@@ -33,3 +33,11 @@ demo/msx_game_marks.json
 demo/comments*.json
 demo/after.json
 demo/c2_*.json
+sample_disk/CHRON*.SPB
+sample_disk/INTER.BIN
+sample_disk/LEVELS*.BIN
+sample_disk/MENU.BIN
+sample_disk/MUSIC*.BIN
+sample_disk/SPRITES.BIN
+sample_disk/TILES.BIN
+sample_disk/chrono.rom

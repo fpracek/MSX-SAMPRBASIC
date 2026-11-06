@@ -134,6 +134,20 @@ def main():
     end, after = compile_case('mc', {'FAUST000.SPB': MAIN, 'FAUST001.SPB': S1, 'FAUST002.SPB': 'OPTION DEBUG\n' + S2}, 'FAUST000.SPB', wait=30.0)
     txt = ''.join(end + after)
     check('FAUST002.SPB' in txt and 'E1 13' in txt, "OPTION fuori dal file 000: errore 13 sul file 002: " + txt[-70:])
+    print('--- E: inline assembler in the file 000 and in a segment file')
+    MAINE = 'OPTION TARGET SCC' + chr(10) + 'cnt = 5' + chr(10) + '__ASM' + chr(10) + ' ld hl,(cnt)' + chr(10) + ' inc hl' + chr(10) + ' ld (cnt),hl' + chr(10) + '__ENDASM' + chr(10) + 'PRINT cnt' + chr(10) + 'CALL FAR sub1' + chr(10) + 'PRINT cnt' + chr(10) + 'END' + chr(10)
+    S1E = chr(10).join(['SUB sub1', '  SHARED cnt', '  __ASM', '   ld hl,(cnt)', '   inc hl', '   inc hl', '   ld (cnt),hl', '  __ENDASM', 'END SUB', ''])
+    end, after = compile_case('me', {'FAUST000.SPB': MAINE, 'FAUST001.SPB': S1E}, 'FAUST000.SPB', wait=30.0)
+    rom = os.path.join(DISK, 'faust.rom')
+    check(os.path.exists(rom), 'ROM with assembler blocks produced: ' + ''.join(end + after)[-70:])
+    if os.path.exists(rom):
+        shutil.copy(rom, os.path.join(BUILD, 'faust.rom'))
+        tcl = qtest.TCL + '\nset OUTDIR "%s"\nafter time 16 {dump mrom}\nafter time 18 exit\n' % BUILD.replace(chr(92), '/')
+        open(os.path.join(BUILD, 'mtest2.tcl'), 'w').write(tcl)
+        subprocess.run([qtest.OPENMSX, '-machine', os.environ.get('GMACHINE', 'Philips_NMS_8250'), '-cart', os.path.join(BUILD, 'faust.rom'),
+                        '-romtype', 'KonamiSCC', '-script', os.path.join(BUILD, 'mtest2.tcl')], timeout=300)
+        got = [l.rstrip() for l in open(os.path.join(BUILD, 'mrom.txt'))]
+        check(got[:2] == [' 6', ' 8'], 'the blocks of both files run: %r' % got[:3])
     print('FALLITI: %d' % FAILS)
     sys.exit(1 if FAILS else 0)
 

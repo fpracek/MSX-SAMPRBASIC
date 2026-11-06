@@ -1893,8 +1893,12 @@ can be changed except IX (frame of
 SUB/FUNCTION) and the stack must be
 left balanced. The debugger does not
 stop inside the blocks. It also works
-in cartridges. OPTION ASM as the first
-line makes the WHOLE file assembly (an
+in cartridges, in every file of a
+multi-file cartridge; code that must
+be always reachable (an interrupt
+routine) goes in file 000, the fixed
+segment. OPTION ASM as the first line
+makes the WHOLE file assembly (an
 assembler editor): the block ends at
 the end of the file, or at an optional
 __ENDASM; there are no BASIC variables

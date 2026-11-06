@@ -773,6 +773,7 @@ mf_load:                        ; A = number: reads NAMEnnn into SRC (the ROM's 
         pop af
         call mf_setname
         call read_source
+        call chk_asm            ; inline assembler blocks of this file
         ld hl,FCBSV
         ld de,fcb
         ld bc,37
@@ -1567,8 +1568,7 @@ map_func:                       ; end of a SUB/FUNCTION
         call get_pc
         call map_word
         ld a,(nloc)
-        call map_byte
-        ld a,(nloc)
+        call map_byte           ; (keeps A)
         or a
         ret z
         ld l,a
@@ -1597,7 +1597,6 @@ map_end:                        ; global variables, end mark, close
         call map_byte
         ld a,(nvar)
         call map_byte
-        ld a,(nvar)
         or a
         jr z,.e
         ld l,a
@@ -3704,7 +3703,9 @@ compile:
         ld (fcur),hl
         ld (fexit),hl
         ld (fskiph),hl
+        IFNDEF ROMMODE
         call load_rt            ; the runtime (RT.BIN) is the start of the output
+        ENDIF
         IFDEF BINMODE
         ld hl,(rtsz)            ; BIN: the code must not reach the runtime's RAM
         ld de,IMGBASE
@@ -3727,6 +3728,7 @@ compile:
         call prescan            ; SUB/FUNCTION signatures (forward references)
         IFDEF ROMMODE
         call mf_prescan
+        call load_rt            ; the runtime comes after the prescan: QASM.OVL (read by mf_load) uses the output buffer
         ENDIF
         ld hl,SRC
         ld (lp),hl
