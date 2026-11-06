@@ -225,7 +225,8 @@ __ENDASM
 - Numbers: `123, $7F, 0x7F, 7FH, %101, 101B, 'a'`; `$` is the current address.
 - Directives: DB/DEFB, DW/DEFW, DS/DEFS, EQU.
 - A name not defined in the block is a **global BASIC variable** (also a string) or, in jumps, a **BASIC label**.
-- JR and DJNZ only to local labels.
+- JR and DJNZ only to local labels (or to `$+n` / `$-n`, relative to the instruction itself). At most 64 symbols (labels) per block; expressions only with + and -.
+- A block can hold about 1900 bytes of machine code, data included: the assembler writes the bytes as text in a buffer of 8960 characters (error 18 when it is full). For a larger program split it in several blocks, or in SUBs.
 - All registers may be modified except **IX** (routine frame); the stack must be left balanced.
 - The debugger does not stop inside the blocks. It also works in cartridges.
 - Errors 17-20: syntax, value out of range, duplicate symbol / missing __ENDASM, QASM.OVL not found.

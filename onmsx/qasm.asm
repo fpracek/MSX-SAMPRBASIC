@@ -17,9 +17,9 @@ ER_RNG  equ 18
 ER_SYM  equ 19
 ER_BIG  equ 10
 
-TMP     equ 0A000h              ; block exit
+TMP     equ VARS+0800h          ; block exit buffer: from the end of the variables to TMPEND (8960 characters of output text)
 TMPEND  equ 0BF00h
-VARS    equ 9800h
+VARS    equ 9400h
 LBUF    equ VARS                ; current line (256)
 OP1BUF  equ VARS+101h           ; operand 1 (255) preceded by a sentinel
 OP2BUF  equ VARS+201h
