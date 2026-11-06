@@ -148,6 +148,22 @@ def main():
                         '-romtype', 'KonamiSCC', '-script', os.path.join(BUILD, 'mtest2.tcl')], timeout=300)
         got = [l.rstrip() for l in open(os.path.join(BUILD, 'mrom.txt'))]
         check(got[:2] == [' 6', ' 8'], 'the blocks of both files run: %r' % got[:3])
+    print('--- F: 60 SUBs in 3 segments (more than 20 SUBs and 32 far routines)')
+    nl_ = chr(10)
+    m0 = 'OPTION TARGET SCC' + nl_ + 't = 0' + nl_ + nl_.join('CALL FAR s%d' % k for k in range(1, 61)) + nl_ + 'PRINT t' + nl_ + 'END' + nl_
+    f1 = nl_.join('SUB s%d' % k + nl_ + '  SHARED t' + nl_ + '  t = t + %d' % k + nl_ + 'END SUB' for k in range(1, 31)) + nl_
+    f2 = nl_.join('SUB s%d' % k + nl_ + '  SHARED t' + nl_ + '  t = t + %d' % k + nl_ + 'END SUB' for k in range(31, 61)) + nl_
+    end, after = compile_case('mf', {'FAUST000.SPB': m0, 'FAUST001.SPB': f1, 'FAUST002.SPB': f2}, 'FAUST000.SPB', wait=40.0)
+    rom = os.path.join(DISK, 'faust.rom')
+    check(os.path.exists(rom), 'ROM with 60 SUBs produced: ' + ''.join(end + after)[-70:])
+    if os.path.exists(rom):
+        shutil.copy(rom, os.path.join(BUILD, 'faust.rom'))
+        tcl = qtest.TCL + chr(10) + 'set OUTDIR "%s"' % BUILD.replace(chr(92), '/') + chr(10) + 'after time 16 {dump mrom}' + chr(10) + 'after time 18 exit' + chr(10)
+        open(os.path.join(BUILD, 'mtest2.tcl'), 'w').write(tcl)
+        subprocess.run([qtest.OPENMSX, '-machine', os.environ.get('GMACHINE', 'Philips_NMS_8250'), '-cart', os.path.join(BUILD, 'faust.rom'),
+                        '-romtype', 'KonamiSCC', '-script', os.path.join(BUILD, 'mtest2.tcl')], timeout=300)
+        got = [l.rstrip() for l in open(os.path.join(BUILD, 'mrom.txt'))]
+        check(got[:1] == [' 1830'], 'the 60 routines run: %r' % got[:2])
     print('FALLITI: %d' % FAILS)
     sys.exit(1 if FAILS else 0)
 

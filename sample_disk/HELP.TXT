@@ -2099,18 +2099,19 @@ LIMITS
 
 Compiler limits
 
-Source about 12.5 KB per file (15 KB
+Source about 12.5 KB per file (13 KB
 in cartridges); program 16 KB; 96
 labels; 100 variables and arrays; 20
-SUB/FUNCTION (8 parameters each, 64 in
-total); 29 local integers (24 names in
-a cartridge, shared variables
-included) and 256 bytes per local
-string; 24 nested blocks; names
-significant to 11 characters; about
-590 lines in OPTION NUMBERED; strings
-of 255 characters; integers from
--32768 to 32767; open files: 3.
+SUB/FUNCTION (64 in a cartridge; 8
+parameters each, 64 in total; at most
+64 routines outside the fixed
+segment); 29 local integers and 256
+bytes per local string; 24 nested
+blocks; names significant to 11
+characters; about 590 lines in OPTION
+NUMBERED; strings of 255 characters;
+integers from -32768 to 32767; open
+files: 3.
 See also: ERRORS
 MSX1
 ----

@@ -49,7 +49,7 @@ rt_wstr:                        ; WRITE: quoted string
 ; --- calls between segments: A = index into the FARTAB table (4 bytes: bank, 0, address)
 ; The return state is kept in a software stack (address + bank) at C000h-C08Fh, so the stack frame
 ; as seen by the called routine remains [return][arguments]
-FARTAB  equ 7F00h
+FARTAB  equ 7E00h
 FSTK    equ 0C000h
 rt_farcall:
         ld l,a

@@ -54,7 +54,7 @@ The BIOS (CALSLT) destroys IX: the runtime saves it around every BIOS call.
 Strings: each variable is a fixed 256-byte buffer; temporaries live on a bump heap released at the end of the
 statement (and after IF/WHILE conditions). Names `A$` and `A` are distinct; `A%` = `A`.
 `OPTION NUMBERED` (lines ordered by number, numbers only), `OPTION LABELS` (labels only), `OPTION MIXED` (default).
-Limits: 14 KB source (tables moved to 3800h), 16 KB program, 96 labels, 100 variables/arrays, 20 SUB/FUNCTION (max 8 parameters, 64 in total), 32 local names per function, about 590 lines in OPTION NUMBERED, 24 nested blocks, names significant to 12 characters, program data up to (0006h)-0C00h.
+Limits: 14 KB source (tables moved to 3800h), 16 KB program, 96 labels, 100 variables/arrays, 20 SUB/FUNCTION (64 in cartridges, whose table FUNT, the FARTAB of 64 entries at 7E00h of the fixed segment and SEGT/FARX live in the tail of the source area 7880h-7FFFh, so the source is limited to 13.1 KB; max 8 parameters, 64 in total), 32 local names per function, about 590 lines in OPTION NUMBERED, 24 nested blocks, names significant to 12 characters, program data up to (0006h)-0C00h.
 
 ## Error codes (editor tail)
 1 syntax · 2 nonexistent label/line · 3 not yet supported (strings, arrays, functions) · 4 illegal character

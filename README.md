@@ -113,7 +113,7 @@ cd editor && python etest.py        # editor (and many more: esel, emenu, ecom, 
 
 ## Known limits
 
-16-bit integers only (no floating point; an experimental implementation lives in the git tag `float-archive`). Source of about 12.5 KB per file (15 KB for cartridges), compiled program up to 16 KB (cartridges have several segments). BIN programs have no files, RAM mapper or debugger.
+16-bit integers only (no floating point; an experimental implementation lives in the git tag `float-archive`). Source of about 12.5 KB per file (13 KB for cartridges, which also allow 64 SUB/FUNCTIONs instead of 20), compiled program up to 16 KB (cartridges have several segments). BIN programs have no files, RAM mapper or debugger.
 
 ---
 

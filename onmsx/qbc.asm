@@ -19,7 +19,7 @@ F_BRD   equ 27h
 
         IFDEF ROMMODE
 SRC     equ 4400h               ; the cartridge compiler has no OPTION NUMBERED: the tables live in high RAM
-SRCMAX  equ 3BFEh
+SRCMAX  equ 347Eh               ; the tail of the source area (7880h-7FFFh) holds the tables of the SUBs (FUNT, FARTAB...)
         ELSE
         IFDEF BINMODE
 SRC     equ 4F00h
@@ -55,7 +55,11 @@ IMGBASE equ 8400h               ; BIN: image loaded at 8400h with BLOAD
 IMGBASE equ 0100h
         ENDIF
         ENDIF
+        IFDEF ROMMODE
+OUTLIM  equ 0BEh                ; high byte: beyond BE00h (7E00h virtual: FARTAB of 64 entries follows) the program is too large
+        ELSE
 OUTLIM  equ 0BFh                ; high byte: beyond BF00h the program is too large
+        ENDIF
 LDR     equ 0C000h
 
         IFDEF ROMMODE
@@ -141,9 +145,10 @@ pseg    equ ST+225              ; b  current segment during the pre-scan
 nfar    equ ST+226              ; b  voci usate in FARTAB
 romopen equ ST+227              ; b  the ROM file has already been created
         IFDEF ROMMODE
-FARTABC equ 0C580h              ; high RAM (the code of the cartridge compiler reaches the source at 4400h): free space after LOCT
-SEGT    equ 0C000h              ; the chain loader at C000h is not needed while compiling
-FARX    equ 0C014h
+FUNT    equ 7880h               ; SUB/FUNCTION: 64 x 24 bytes, then FARTAB under construction (64 x 4), SEGT and FARX (64 each):
+FARTABC equ 7E80h               ; the tail of the source area (the source ends below 7880h)
+SEGT    equ 7F80h
+FARX    equ 7FC0h
 FCBSV   equ 0C028h
 FCBMAP  equ 0C04Dh              ; OPTION MAP: FCB of NAME.MAP
 MAPBUF  equ 0C072h              ; 64-byte buffer of the map file
@@ -214,17 +219,19 @@ chfail  equ ST+210              ; w  chain for CASE a TO b
 rf_rec  equ ST+212              ; w
 ENT     equ 0CA00h              ; NUMBERED line index: 6 bytes (number, pointer, line) in high RAM
 ENTMAX  equ 0D7F0h
+        IFNDEF ROMMODE
 FUNT    equ 0C220h              ; SUB/FUNCTION: 20 x 24 bytes (high RAM, only during compilation)
+        ENDIF
 FUNREC  equ 24
+        IFDEF ROMMODE
+MAXFUN  equ 64
+        ELSE
 MAXFUN  equ 20
+        ENDIF
 PART    equ 0C600h               ; parameters: 64 x 16 bytes (name 12, type)
 MAXPAR  equ 64
 LOCT    equ 0C400h               ; locals/parameters of the function being compiled: 24 x 16 bytes
-        IFDEF ROMMODE
-MAXLOC  equ 24                  ; (the FARTAB table of the cartridge compiler follows LOCT)
-        ELSE
 MAXLOC  equ 32
-        ENDIF
 
 T_EOL   equ 0
 T_NUM   equ 1
@@ -1705,14 +1712,14 @@ rom_finish:                     ; last segment, FARTAB and data size in the head
         ld a,(curseg)
         or a
         jr z,.close             ; a single segment: the header is already complete
-        ld hl,7F00h-4000h       ; FARTAB is at 7F00h, i.e. at 3F00h in the file
+        ld hl,7E00h-4000h       ; FARTAB is at 7E00h, i.e. at 3E00h in the file
         ld (fcb+33),hl
         xor a
         ld (fcb+35),a
         ld de,FARTABC
         ld c,F_DMA
         call BDOS
-        ld hl,128
+        ld hl,256
         ld de,fcb
         ld c,F_BWR
         call BDOS
@@ -1904,7 +1911,7 @@ rom_regfunc:                    ; new routine (index nfunc-1): pre-scan segment 
         or a
         jr z,.d
         ld a,(nfar)
-        cp 32
+        cp 64
         jp nc,err_many
         ld (hl),a
         inc a
@@ -3664,12 +3671,12 @@ compile:
         ld (mpf),a              ; OPTION MAP off (ST may hold leftovers of the DOS compiler)
         ld hl,FARTABC
         ld de,FARTABC+1
-        ld bc,127
+        ld bc,255
         ld (hl),0
         ldir
         ld hl,SEGT              ; SEGT, FARX and FCBSV (where the chain loader was)
         ld de,SEGT+1
-        ld bc,76
+        ld bc,127
         ld (hl),0
         ldir
         ENDIF
